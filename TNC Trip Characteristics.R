@@ -13,12 +13,12 @@ setwd(wd)
 
 # Bring in data
 
-TNC_Trips 	<- "M:/Data/HomeInterview/2018 TNC Survey/2019-02-28_Bay_Area_TNC_Datasets/Bay_Area_TNC_Fall2018_Trips.csv"
-TNC_Persons 	<- "M:/Data/HomeInterview/2018 TNC Survey/2019-02-28_Bay_Area_TNC_Datasets/Bay_Area_TNC_Fall2018_Persons.csv"
+TNC_Trips 	    <- "M:/Data/HomeInterview/2018 TNC Survey/2019-02-28_Bay_Area_TNC_Datasets/Bay_Area_TNC_Fall2018_Trips.csv"
+TNC_Persons 	  <- "M:/Data/HomeInterview/2018 TNC Survey/2019-02-28_Bay_Area_TNC_Datasets/Bay_Area_TNC_Fall2018_Persons.csv"
 TNC_Locations 	<- "M:/Data/HomeInterview/2018 TNC Survey/2019-02-28_Bay_Area_TNC_Datasets/Bay_Area_TNC_Fall2018_Locations.csv"
 TNC_Households 	<- "M:/Data/HomeInterview/2018 TNC Survey/2019-02-28_Bay_Area_TNC_Datasets/Bay_Area_TNC_Fall2018_Households.csv"
-TNC_Vehicles 	<- "M:/Data/HomeInterview/2018 TNC Survey/2019-02-28_Bay_Area_TNC_Datasets/Bay_Area_TNC_Fall2018_Vehicles.csv"
-TNC_Days 	<- "M:/Data/HomeInterview/2018 TNC Survey/2019-02-28_Bay_Area_TNC_Datasets/Bay_Area_TNC_Fall2018_Persons.csv"
+TNC_Vehicles 	  <- "M:/Data/HomeInterview/2018 TNC Survey/2019-02-28_Bay_Area_TNC_Datasets/Bay_Area_TNC_Fall2018_Vehicles.csv"
+TNC_Days 	      <- "M:/Data/HomeInterview/2018 TNC Survey/2019-02-28_Bay_Area_TNC_Datasets/Bay_Area_TNC_Fall2018_Persons.csv"
 
 trips       <- read.csv(TNC_Trips,header=TRUE) %>% mutate(weight=1)
 persons     <- read.csv(TNC_Persons,header=TRUE) 
