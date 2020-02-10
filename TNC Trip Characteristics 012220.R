@@ -37,29 +37,33 @@ household_income <- household %>%
 
 person_weighted <- left_join(person,weight, by="person_id") %>%    # Include only persons with a weight value 
   filter(!is.na(wt_alladult_WkDay)) %>% 
-  left_join(.,household_income,by="hh_id") 
-
-%>% 
+  left_join(.,household_income,by="hh_id") %>% 
   mutate(
     incomerc=case_when(
-      adjustedinc <25000                         ~"1_less to 25k",
-      adjustedinc >=25000 & adjustedinc <50000   ~"2_25k to 49,999",
-      adjustedinc >=50000 & adjustedinc <75000   ~"3_50k to 74,999",
-      adjustedinc >=75000 & adjustedinc <100000  ~"4_75k to 99,999",
-      adjustedinc >=100000 & adjustedinc <150000 ~"5_100k to 149,999",
-      adjustedinc >=150000 & adjustedinc <200000 ~"6_150k to 199,999",
-      adjustedinc >=200000                       ~"7_200k+",
-      TRUE                                       ~"Uncoded, group quarters"),
+      income_imputed == 1   ~"1_less to 25k",
+      income_imputed == 2   ~"2_25k to 49,999",
+      income_imputed == 3   ~"3_50k to 74,999",
+      income_imputed == 4   ~"4_75k to 99,999",
+      income_imputed == 5   ~"5_100k to 149,999",
+      income_imputed == 6   ~"6_150k to 199,999",
+      income_imputed == 7   ~"7_200k to 249,999",
+      income_imputed == 8   ~"8_250k+",
+      TRUE                  ~"Uncoded"),
     racerc=case_when(
-      HISP>1                            ~"5_Hispanic",
-      HISP==1 & RAC1P==1                ~"1_White",
-      HISP==1 & RAC1P==2                ~"2_Black",
-      HISP==1 & RAC1P==3                ~"4_Other",
-      HISP==1 & RAC1P==4                ~"4_Other",
-      HISP==1 & RAC1P==5                ~"4_Other",
-      HISP==1 & (RAC1P==6 | RAC1P==7)   ~"3_Asian_PI",
-      HISP==1 & RAC1P>=8                ~"4_Other",
-      TRUE                              ~"Uncoded"),
+      ethnicity_white == 1 & ethnicity_multi == 0                       ~"1_White",
+      ethnicity_af_am == 1 & ethnicity_multi == 0                       ~"2_Black",
+      ethnicity_asian == 1 & ethnicity_multi == 0                       ~"3_Asian",
+      ethnicity_aiak == 1 & ethnicity_multi ==  0                       ~"4_Other",
+      ethnicity_hapi == 1 & ethnicity_multi ==  0                       ~"4_Other",
+      ethnicity_mideast == 1 & ethnicity_multi == 0                     ~"4_Other",
+      ethnicity_other == 1 & ethnicity_multi ==    0                    ~"4_Other",
+      ethnicity_no_answer %in% c (1,-9998) & raceeth_imputed == 1       ~"1_White",
+      ethnicity_no_answer %in% c (1,-9998) & raceeth_imputed == 2       ~"2_Black",
+      ethnicity_no_answer %in% c (1,-9998) & raceeth_imputed == 3       ~"3_Asian",  # Note this includes PI in data.
+      ethnicity_no_answer %in% c (1,-9998) & raceeth_imputed == 4       ~"5_Hispanic",
+      ethnicity_hisp == 1                                               ~"5_Hispanic",
+      ethnicity_multi == 1                                              ~"4_Other",
+      TRUE                                                              ~"Uncoded"),
     agerc=case_when(
       age==4           ~"1_between 18 and 24",
       age==5           ~"2_between 25 and 34",
@@ -70,12 +74,17 @@ person_weighted <- left_join(person,weight, by="person_id") %>%    # Include onl
       TRUE                  ~"Uncoded")
   )
 
+trial <- person_weighted %>% 
+  filter(ethnicity_multi==1) %>% 
+  select(ethnicity_af_am,ethnicity_aiak,ethnicity_asian,ethnicity_hapi,ethnicity_hisp,ethnicity_white,ethnicity_mideast,
+         ethnicity_other,ethnicity_multi,ethnicity_no_answer,raceeth_imputed)
 
 %>% 
   select(SERIALNO,SPORDER,PUMA,PUMA_Name,County_Name,wt_alladult_WkDay,age,JWTR,HINCP,adjustedinc, agerc,incomerc,racerc,RELP)
 
 
-
+trial <- person_weighted %>% 
+  select(income_imputed,income_detailed,income_followup,income_aggregate)
   
 
 # Get median distance by mode
@@ -220,6 +229,7 @@ other <- trip %>%
 
 
 missing_mode <- trip %>% filter(mode_type==-9998 & mode_1>0)
+
 
 
 
