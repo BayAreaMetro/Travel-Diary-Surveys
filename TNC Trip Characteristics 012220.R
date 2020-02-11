@@ -33,9 +33,9 @@ trip_other <- read_tsv(TNC_Trip_Other,col_names=TRUE)
 weight     <- read.csv(TNC_Weights,header = TRUE)
 
 household_income <- household %>% 
-  select(hh_id,income_detailed,income_followup,income_aggregate)
+  select(hh_id,income_detailed,income_followup,income_aggregate,home_county_fips,num_people)
 
-person_weighted <- left_join(person,weight, by="person_id") %>%    # Include only persons with a weight value 
+adults <- left_join(person,weight, by="person_id") %>%    # Include only persons with a weight value 
   filter(!is.na(wt_alladult_WkDay)) %>% 
   left_join(.,household_income,by="hh_id") %>% 
   mutate(
@@ -71,21 +71,65 @@ person_weighted <- left_join(person,weight, by="person_id") %>%    # Include onl
       age==7           ~"4_between 45 and 54",
       age==8           ~"5_between 55 and 64",
       age==9 | age==10 ~"6_65+",
-      TRUE                  ~"Uncoded")
-  )
+      TRUE                  ~"Uncoded"),
+    num_peoplerc=case_when(
+      num_people==1                ~"1 Person HH",
+      num_people==2                ~"2 Person HH",
+      num_people==3                ~"3 Person HH",
+      num_people==4                ~"4 Person HH",
+      num_people>=5                ~"5+ Person HH",
+      TRUE                         ~"Uncoded"),
+    County_Name=case_when(
+      home_county_fips=="001"  ~ "Alameda",
+      home_county_fips=="013"  ~ "Contra Costa",
+      home_county_fips=="041"  ~ "Marin",
+      home_county_fips=="055"  ~ "Napa",
+      home_county_fips=="075"  ~ "San Francisco",
+      home_county_fips=="081"  ~ "San Mateo",
+      home_county_fips=="085"  ~ "Santa Clara",
+      home_county_fips=="095"  ~ "Solano",
+      home_county_fips=="097"  ~ "Sonoma")
+  )%>% 
+  select(person_id,hh_id,County_Name, wt_alladult_WkDay,home_county_fips,incomerc,racerc,agerc,num_peoplerc)
 
-trial <- person_weighted %>% 
-  filter(ethnicity_multi==1) %>% 
-  select(ethnicity_af_am,ethnicity_aiak,ethnicity_asian,ethnicity_hapi,ethnicity_hisp,ethnicity_white,ethnicity_mideast,
-         ethnicity_other,ethnicity_multi,ethnicity_no_answer,raceeth_imputed)
+# Summarize income
 
-%>% 
-  select(SERIALNO,SPORDER,PUMA,PUMA_Name,County_Name,wt_alladult_WkDay,age,JWTR,HINCP,adjustedinc, agerc,incomerc,racerc,RELP)
+incomesum <- adults %>% 
+  group_by(County_Name,incomerc) %>% 
+  summarize(total=sum(wt_alladult_WkDay)) %>% 
+  spread (., incomerc, total, fill=0)
 
+# Summarize race
 
-trial <- person_weighted %>% 
-  select(income_imputed,income_detailed,income_followup,income_aggregate)
-  
+racesum <- adults %>% 
+  group_by(County_Name,racerc) %>% 
+  summarize(total=sum(wt_alladult_WkDay)) %>% 
+  spread (., racerc, total, fill=0)
+
+# Summarize age
+
+agesum <- adults %>% 
+  group_by(County_Name,agerc) %>% 
+  summarize(total=sum(wt_alladult_WkDay)) %>% 
+  spread (., agerc, total, fill=0)
+
+# Summarize persons by HH size
+
+num_peoplesum <- adults %>% 
+  group_by(County_Name,num_peoplerc) %>% 
+  summarize(total=sum(wt_alladult_WkDay)) %>% 
+  spread (., num_peoplerc, total, fill=0)
+
+write.csv(incomesum, "TNC Survey Adults by Income.csv", row.names = FALSE, quote = T)
+write.csv(racesum, "TNC SUrvey Adults by Race.csv", row.names = FALSE, quote = T)
+write.csv(agesum, "TNC Survey Adults by Age.csv", row.names = FALSE, quote = T)
+write.csv(num_peoplesum, "TNC Survey Adults by HH Size.csv", row.names = FALSE, quote = T)
+weight_trial <- positive %>% 
+  group_by(County_Name) %>% 
+  summarize(count=n(),minimum=min(wt_alladult_WkDay),maximum=max(wt_alladult_WkDay),median=median(wt_alladult_WkDay),mean=mean(wt_alladult_WkDay))
+
+print(weight_trial)
+
 
 # Get median distance by mode
 # Recode modes
@@ -231,7 +275,8 @@ other <- trip %>%
 missing_mode <- trip %>% filter(mode_type==-9998 & mode_1>0)
 
 
-
+trial <- adults %>% 
+  filter(home_county_fips=="041")
 
 
  
