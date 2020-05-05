@@ -83,6 +83,8 @@ destination <- as.data.frame(st_join(place_destination_space,TAZ_shape, join=st_
   select(-geometry)
 
 # Join origin and destination TAZs to original place_detail file
+# Join unlinked trips to the geocoded origins and destinations
+# Filter out TRIPNO="NA", which is associated the first place of the day (the home location, before traveling)
 
 place_detail <- left_join(place_detail,origin,by=c("SAMPN","PERNO","PLANO")) 
 place_detail <- left_join(place_detail,destination, by=c("SAMPN","PERNO","PLANO"))
