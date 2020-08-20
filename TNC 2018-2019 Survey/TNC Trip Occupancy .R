@@ -1,4 +1,4 @@
-# TNC Occupancy.R
+# TNC Trip Occupancy.R
 # Summarize TNC trips by occupancy
 # SI
 
