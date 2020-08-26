@@ -19,18 +19,18 @@ load("M:/Data/HomeInterview/TNC Survey/Data/Final Version/Raw/R/person.rdata")
 load("M:/Data/HomeInterview/TNC Survey/Data/Final Version/Raw/R/household.rdata")
 
 
-# Join home county to trips, give county names and an SF/non-SF designation, recode, subset relevant vars
+# Join home county to trips, give county names and an SF/non-SF designation, recode key variables
 
 person_emp <- person %>% 
-  select(person_id,employment)
+  select(person_id,employment,job_type,is_active_participant) %>% 
+  filter(is_active_participant==1 & employment %in% c(1,2,3))     # Include employed, active participants only
 
 home_fips <- household %>% 
   select(hh_id,home_county_fips)
 
-temp <- left_join(day,person_emp,by="person_id")
+temp <- inner_join(day,person_emp,by="person_id")
 
 joined <- left_join(temp,home_fips,by="hh_id") %>% 
-  filter(employment %in% c(1,2,3)) %>%               # Filter only employed people
   mutate(
   county_name=case_when(
     home_county_fips=="001"   ~ "Alameda",
@@ -59,13 +59,20 @@ joined <- left_join(temp,home_fips,by="hh_id") %>%
     telework_time>=420 & telework_time<480          ~ "420 to 479 minutes",
     telework_time>=480                              ~ "480+ minutes",
     TRUE                                            ~ "No value given"
+  ),
+  job_typerc=case_when(
+    job_type==1                                     ~ "1_One location, may telework",
+    job_type==2                                     ~ "2_Work location varies",
+    job_type==3                                     ~ "3_Work at home only",
+    job_type==4                                     ~ "4_Drive/travel for work",
+    TRUE                                            ~ "5_No value given"
   )
-)
+) 
 
-# Sum by occupancy and SF or not,for weekdays only (using weekday weight)
+# Sum person days by SF or not,for weekdays only (using weekday weight), by job type and number of telecommute hours
 
 final <- joined %>% 
-  group_by(sf_or_not,telecommute) %>% 
+  group_by(sf_or_not,job_typerc,telecommute) %>% 
   summarize(total=sum(daywt_alladult_wkday))
 
 write.csv(final, file="Weekday Telecommute Time by SF or Not.csv", quote = T,row.names = FALSE)
