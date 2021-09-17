@@ -7,16 +7,26 @@ suppressMessages(library(tidyverse))
 # Set up working directory
 
 file_location <- "M:/Data/HomeInterview/TNC Survey/Task Order 8 Additional Data Refinement/Final Deliverables/"
-wd <- "C:/Users/sisrael/Documents/GitHub/Travel-Diary-Surveys/TNC 2018-2019 Survey/"  # work directory
+wd <- "M:/Data/Requests/Louisa Leung/TNC Data/"  # work directory
 setwd(wd)
-output <- "H:/Presentations/Planning Section 2021/"
 
 # Bring in data
+# Filter trips with no weekday trip weight
+# Convert skims to list format for later merging
 
 trip_location 	<- paste0(file_location,"Final Updated Dataset as of 4-1-2021/RSG_HTS_February2021_bayarea/trip_linked.tsv")
 hh_location     <- paste0(file_location,"Final Updated Dataset as of 4-1-2021/RSG_HTS_February2021_bayarea/hh.tsv")
-trip            <- read_tsv(trip_location,col_names=TRUE)
+skim_location   <- "Z:/Projects/2015_TM152_IPA_17/skims/skims_csv/HWYSKMPM_TOLLDISTS2.csv"
+
+trip            <- read_tsv(trip_location,col_names=TRUE) %>% 
+  filter(daywt_alladult_wkday>0)
 hh              <- read_tsv(hh_location,col_names=TRUE)
+skim            <- read.csv(skim_location,header = TRUE) %>% 
+  gather(d_taz,skim_distance,-TOLLDISTS2) %>% 
+  rename(o_taz=TOLLDISTS2) %>% 
+  mutate(d_taz=as.numeric(str_replace(d_taz,"X","")))
+  
+
 
 hh_join <- hh %>% select(hh_id,home_county_fips) %>% 
   mutate(home_county_name=recode(home_county_fips,
@@ -29,6 +39,8 @@ hh_join <- hh %>% select(hh_id,home_county_fips) %>%
                      "85"="Santa Clara",
                      "95"="Solano",
                      "97"="Sonoma"))
+
+# Join HH location county and skim distance
 
 sum1_data <- trip %>% 
   left_join(.,hh_join,by="hh_id") %>% 
@@ -51,9 +63,20 @@ sum1_data <- trip %>%
       mode_type_imputed==13                                ~ "4_other",
       TRUE                                                 ~ "Not coded"))
 
-summary1 <- final %>% 
+summary1 <- sum1_data %>% 
   group_by(home_county_name,mode_rc) %>% 
-  summarize(total=sum(daywt_alladult_wkday)) %>% 
+  summarize(total=sum(daywt_alladult_wkday),total_records=n()) 
+
+
+%>% 
+  spread(mode_rc,total,fill=0) 
+
+trial <-  sum1_data %>%
+  filter(daywt_alladult_wkday>0) %>% 
+  group_by(home_county_name,mode_rc) %>% 
+  summarize(total=sum(daywt_alladult_wkday),total_records=n()) 
+
+%>% 
   spread(mode_rc,total,fill=0) 
 
 
