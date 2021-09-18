@@ -3,6 +3,7 @@
 # Import Libraries
 
 suppressMessages(library(tidyverse))
+library(spatstat)
 
 # Set up working directory
 
@@ -11,22 +12,26 @@ wd <- "M:/Data/Requests/Louisa Leung/TNC Data/"  # work directory
 setwd(wd)
 
 # Bring in data
-# Filter trips with no weekday trip weight
-# Convert skims to list format for later merging
+# Filter out trips with no weekday trip weight and with a trip end outside the region
 
 trip_location 	<- paste0(file_location,"Final Updated Dataset as of 4-1-2021/RSG_HTS_February2021_bayarea/trip_linked.tsv")
 hh_location     <- paste0(file_location,"Final Updated Dataset as of 4-1-2021/RSG_HTS_February2021_bayarea/hh.tsv")
-skim_location   <- "Z:/Projects/2015_TM152_IPA_17/skims/skims_csv/HWYSKMPM_TOLLDISTS2.csv"
 
-trip            <- read_tsv(trip_location,col_names=TRUE) %>% 
-  filter(daywt_alladult_wkday>0)
+trip_in         <- read_tsv(trip_location,col_names=TRUE) 
+
+trip <- trip_in %>% 
+  filter(daywt_alladult_wkday>0 & o_taz>0 & d_taz>0)
+
 hh              <- read_tsv(hh_location,col_names=TRUE)
+
+skim_location <- "Z:/Projects/2015_TM152_IPA_17/skims/skims_csv/HWYSKMPM_TOLLDISTS2.csv"
+
 skim            <- read.csv(skim_location,header = TRUE) %>% 
   gather(d_taz,skim_distance,-TOLLDISTS2) %>% 
   rename(o_taz=TOLLDISTS2) %>% 
   mutate(d_taz=as.numeric(str_replace(d_taz,"X","")))
-  
 
+# Make data modifications
 
 hh_join <- hh %>% select(hh_id,home_county_fips) %>% 
   mutate(home_county_name=recode(home_county_fips,
@@ -40,44 +45,34 @@ hh_join <- hh %>% select(hh_id,home_county_fips) %>%
                      "95"="Solano",
                      "97"="Sonoma"))
 
-# Join HH location county and skim distance
+# Join HH location county and recode trips
 
 sum1_data <- trip %>% 
   left_join(.,hh_join,by="hh_id") %>% 
   filter(!(mode_type_imputed %in% c(-9998,995))) %>% 
+  left_join(.,skim,by=c("o_taz","d_taz")) %>% 
   mutate(
     mode_rc=case_when(
-      mode_type_imputed==1                                 ~ "1_walk",
-      mode_type_imputed==2                                 ~ "2_bike",
-      mode_type_imputed==3                                 ~ "3_car",
-      mode_type_imputed==4                                 ~ "4_other",
-      mode_type_imputed==5                                 ~ "5_transit",
-      mode_type_imputed==6                                 ~ "4_other",
-      mode_type_imputed==7                                 ~ "4_other",
-      mode_type_imputed==8                                 ~ "4_other",
-      mode_type_imputed==9 & mode_uber !=1 & mode_lyft !=1 ~ "6_TNC not pooled",
-      mode_type_imputed==9 & (mode_uber==1 | mode_lyft==1) ~ "7_TNC pooled",
-      mode_type_imputed==10                                ~ "3_car",
-      mode_type_imputed==11                                ~ "2_bike",
-      mode_type_imputed==12                                ~ "4_other",
-      mode_type_imputed==13                                ~ "4_other",
+      mode_type_imputed==1                                 ~ "walk",
+      mode_type_imputed==2                                 ~ "bike",
+      mode_type_imputed==3                                 ~ "car",
+      mode_type_imputed==4                                 ~ "taxi",
+      mode_type_imputed==5                                 ~ "transit",
+      mode_type_imputed==6                                 ~ "schoolbus",
+      mode_type_imputed==7                                 ~ "other",
+      mode_type_imputed==8                                 ~ "shuttle/vanpool",
+      mode_type_imputed==9 & mode_uber !=1 & mode_lyft !=1 ~ "TNC not pooled",
+      mode_type_imputed==9 & (mode_uber==1 | mode_lyft==1) ~ "TNC pooled",
+      mode_type_imputed==10                                ~ "carshare",
+      mode_type_imputed==11                                ~ "bikeshare",
+      mode_type_imputed==12                                ~ "scootershare",
+      mode_type_imputed==13                                ~ "long distance",
       TRUE                                                 ~ "Not coded"))
 
 summary1 <- sum1_data %>% 
   group_by(home_county_name,mode_rc) %>% 
-  summarize(total=sum(daywt_alladult_wkday),total_records=n()) 
-
-
-%>% 
-  spread(mode_rc,total,fill=0) 
-
-trial <-  sum1_data %>%
-  filter(daywt_alladult_wkday>0) %>% 
-  group_by(home_county_name,mode_rc) %>% 
-  summarize(total=sum(daywt_alladult_wkday),total_records=n()) 
-
-%>% 
-  spread(mode_rc,total,fill=0) 
+  summarize(total=sum(daywt_alladult_wkday),total_records=n()) %>% 
+  ungroup()
 
 
 sum2_data <- sum1_data %>% 
@@ -98,6 +93,12 @@ sum2_data <- sum1_data %>%
                           "11"	=	"Spent the night at non-home location",
                           "12"	=	"Other/Missing",
                           "14"	=	"School-related"))
+
+summary2 <- sum2_data %>% 
+  filter(mode_rc %in% c("TNC not pooled","TNC pooled")) %>% 
+  group_by(mode_rc,home_county_name,dest_purp) %>% 
+  summarize(avg_dist=weighted.mean(distance,daywt_alladult_wkday),total_records=n()) %>% 
+  ungroup()
 
 sum3_data <- sum2_data %>% 
   filter(tnc_wait_time!=995 & mode_rc %in% c("6_TNC not pooled","7_TNC pooled")) 
