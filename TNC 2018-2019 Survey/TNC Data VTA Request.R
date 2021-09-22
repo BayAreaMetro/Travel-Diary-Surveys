@@ -67,18 +67,10 @@ sum1_data <- trip %>%
       mode_type_imputed==11                                ~ "bikeshare",
       mode_type_imputed==12                                ~ "scootershare",
       mode_type_imputed==13                                ~ "long distance",
-      TRUE                                                 ~ "Not coded"))
-
-summary1 <- sum1_data %>% 
-  group_by(home_county_name,mode_rc) %>% 
-  summarize(total=sum(daywt_alladult_wkday),total_records=n()) %>% 
-  ungroup()
-
-
-sum2_data <- sum1_data %>% 
+      TRUE                                                 ~ "Not coded"),
+    imputed_distance=if_else((distance>1.5*skim_distance | distance<skim_distance/1.5),skim_distance,distance)) %>% 
   mutate(temp1=if_else(d_purpose_category_imputed==-1 &
-                               d_purpose_category !=-9998,d_purpose_category,d_purpose_category_imputed)) %>% 
-  filter(temp1 !=-1) %>% 
+                         d_purpose_category !=-9998,d_purpose_category,d_purpose_category_imputed)) %>% 
   mutate(dest_purp=recode(temp1,
                           "1"     =	"Home",
                           "2"     =	"Work",
@@ -94,14 +86,30 @@ sum2_data <- sum1_data %>%
                           "12"	=	"Other/Missing",
                           "14"	=	"School-related"))
 
+
+summary1_TNC <- sum1_data %>% 
+  filter(temp1 !=-1 & mode_rc %in% c("TNC not pooled","TNC pooled")) %>% 
+  group_by(home_county_name,mode_rc) %>% 
+  summarize(total_TNC=sum(daywt_alladult_wkday),total_records=n()) %>% 
+  ungroup()
+
+summary1_All <- sum1_data %>% 
+  group_by(home_county_name) %>% 
+  summarize(total_trips=sum(daywt_alladult_wkday),total_records=n()) %>% 
+  ungroup()
+
+sum2_data <- sum1_data
+
 summary2 <- sum2_data %>% 
-  filter(mode_rc %in% c("TNC not pooled","TNC pooled")) %>% 
   group_by(mode_rc,home_county_name,dest_purp) %>% 
-  summarize(avg_dist=weighted.mean(distance,daywt_alladult_wkday),total_records=n()) %>% 
+  summarize(avg_distance=weighted.mean(distance,daywt_alladult_wkday), 
+            avg_skim_distance=weighted.mean(skim_distance,daywt_alladult_wkday),
+            avg_imputed_distance=weighted.mean(imputed_distance,daywt_alladult_wkday),
+            total_records=n()) %>% 
   ungroup()
 
 sum3_data <- sum2_data %>% 
-  filter(tnc_wait_time!=995 & mode_rc %in% c("6_TNC not pooled","7_TNC pooled")) 
+  filter(tnc_wait_time!=995)
 
 summary3 <- sum3_data %>%  
   group_by(home_county_name,mode_rc,dest_purp) %>% 
@@ -113,39 +121,12 @@ summary4 <- sum3_data %>%
   summarize(avg_fixed_cost=weighted.mean(taxi_cost,daywt_alladult_wkday, na.rm=TRUE),data_records=n()) %>% 
   ungroup()
 
+# Output the data
 
-  
+write.csv(summary1_All,"2019 TNC Mode Share by Purpose - All Trips.csv", row.names = F)
+write.csv(summary1_TNC,"2019 TNC Mode Share by Purpose - TNC Trips.csv", row.names = F)
+write.csv(summary2,"2019 TNC Trip Length by Purpose.csv", row.names = F)
+write.csv(summary3,"2019 TNC Wait Time.csv", row.names = F)
+write.csv(summary4,"2019 TNC Fixed Cost.csv", row.names = F)
 
-write.csv(summary,paste0(output,"2019 TNC Survey Mode Summary.csv"), row.names = F)
-      
-save(trip_linked, file = "M:/Data/HomeInterview/TNC Survey/Task Order 8 Additional Data Refinement/Final Deliverables/Final Updated Dataset as of 4-1-2021/RSG_HTS_February2021_bayarea/trip_linked.Rdata")
-save(hh, file = "M:/Data/HomeInterview/TNC Survey/Task Order 8 Additional Data Refinement/Final Deliverables/Final Updated Dataset as of 4-1-2021/RSG_HTS_February2021_bayarea/hh.Rdata")
-
-unlinked_location     <- paste0(file_location,"Final Updated Dataset as of 4-1-2021/RSG_HTS_February2021_bayarea/trip.tsv")
-unlinked <- read_tsv(unlinked_location,col_names=TRUE)
-trip <- unlinked
-save(trip, file = "M:/Data/HomeInterview/TNC Survey/Task Order 8 Additional Data Refinement/Final Deliverables/Final Updated Dataset as of 4-1-2021/RSG_HTS_February2021_bayarea/trip.Rdata")
-
-trial <- trip_unlinked %>% 
-  filter(!(mode_type_imputed %in% c(-9998,995))) %>% 
-  mutate(
-    mode_rc=case_when(
-      mode_type_imputed==1                    ~ "1_walk",
-      mode_type_imputed==2                    ~ "2_bike",
-      mode_type_imputed==3                    ~ "3_car",
-      mode_type_imputed==4                    ~ "4_other",
-      mode_type_imputed==5                    ~ "5_transit",
-      mode_type_imputed==6                    ~ "4_other",
-      mode_type_imputed==7                    ~ "4_other",
-      mode_type_imputed==8                    ~ "4_other",
-      mode_type_imputed==9 & tnc_pooled==995  ~ "6_TNC not pooled",
-      mode_type_imputed==9 & tnc_pooled<995   ~ "7_TNC pooled",
-      mode_type_imputed==10                    ~ "3_car",
-      mode_type_imputed==11                    ~ "2_bike",
-      mode_type_imputed==12                    ~ "4_other",
-      mode_type_imputed==13                    ~ "4_other",
-      TRUE                                     ~ "Not coded"))
-
-
-trial <- trip %>%
- 
+   
