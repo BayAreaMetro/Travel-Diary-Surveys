@@ -16,3 +16,5 @@ pgPostGIS(conn)
 
 RPostgreSQL::dbDisconnect(conn)
 
+dbGetQuery(conn, "SELECT schema_name
+                 FROM information_schema.schemata;")
