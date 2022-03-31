@@ -1,6 +1,6 @@
-# TNC Trip Characteristics 012220.R
-# Analyze TNC trip characteristics for draft dataset
-# February 6, 2020
+# TNC Trip Characteristics 022820.R
+# Analyze TNC trip characteristics for draft (final?) dataset
+# March 3, 2020
 
 # Import Libraries
 
@@ -8,8 +8,9 @@ suppressMessages(library(tidyverse))
 
 # Set up working directory
 
-file_location <- "M:/Data/HomeInterview/TNC Survey/2020/Draft012220/BayArea_dataset_20200122/"
-wd <- "M:/Data/HomeInterview/TNC Survey/2020/Draft012220/Analysis/"  # work directory
+file_location <- "M:/Data/HomeInterview/TNC Survey/2020/Draft022820/"
+wd <- "M:/Data/HomeInterview/TNC Survey/2020/Draft022820/Analysis/"  # work directory
+root <- "M:/Data/HomeInterview/TNC Survey/2020/Draft022820/"
 setwd(wd)
 
 # Bring in data and most recent weights
@@ -31,6 +32,15 @@ vehicle    <- read_tsv(TNC_Vehicle,col_names=TRUE)
 day        <- read_tsv(TNC_Day,col_names=TRUE) 
 trip_other <- read_tsv(TNC_Trip_Other,col_names=TRUE)
 weight     <- read.csv(TNC_Weights,header = TRUE)
+
+save(trip,file=       paste0(root,"TNC_Trip.Rdata"))
+save(person,file=     paste0(root,"TNC_Person.Rdata"))
+save(location,file=   paste0(root,"TNC_Location.Rdata"))
+save(household,file=  paste0(root,"TNC_Household.Rdata"))
+save(vehicle,file=    paste0(root,"TNC_Vehicle.Rdata"))
+save(day,file=        paste0(root,"TNC_Day.Rdata"))
+save(trip_other,file= paste0(root,"TNC_Trip_Other.Rdata"))
+save(weight,file=     paste0(root,"TNC_Weight.Rdata"))
 
 household_income <- household %>% 
   select(hh_id,income_detailed,income_followup,income_aggregate,home_county_fips,num_people)
