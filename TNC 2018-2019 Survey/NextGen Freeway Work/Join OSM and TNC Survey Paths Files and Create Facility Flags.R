@@ -189,3 +189,7 @@ final <- sum_links %>%
   mutate_at(vars(-hh_id, -person_id, -trip_id),  
              ~if_else(.>=1,1,0))
 
+# Export CSV of trips
+
+write.csv(final,file.path(segment_in,"TNC Survey Trips Per Facility.csv"),row.names = FALSE)
+
