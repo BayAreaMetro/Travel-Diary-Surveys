@@ -78,8 +78,8 @@ CC_Al_24_680To580 <- read.csv(file.path(segment_in,"CC_Al_24_680To580.csv")) %>%
 CC_Al_680_4To580 <- read.csv(file.path(segment_in,"CC_Al_680_4To580.csv")) %>% 
   mutate(facility_links="CC_Al_680_4To580")
 
-CC_4_80To680 <- read.csv(file.path(segment_in,"CC_4_80To680.csv")) %>% 
-  mutate(facility_links="CC_4_80To680")
+CC_4_160To680 <- read.csv(file.path(segment_in,"CC_4_160To680.csv")) %>% 
+  mutate(facility_links="CC_4_160To680")
 
 Sol_80_YoloToCarquinez <- read.csv(file.path(segment_in,"Sol_80_YoloToCarquinez.csv")) %>% 
   mutate(facility_links="Sol_80_YoloToCarquinez")
@@ -112,7 +112,7 @@ all_segments <- bind_rows(
   Al_CC_80_4To580,
   CC_Al_24_680To580,
   CC_Al_680_4To580,
-  CC_4_80To680,
+  CC_4_160To680,
   Sol_80_YoloToCarquinez,
   North_37_101To80,
   Mar_Son_101_12To580) %>% 
@@ -139,7 +139,7 @@ rm(Al_SF_80_PlazaTo101,
    Al_CC_80_4To580,
    CC_Al_24_680To580,
    CC_Al_680_4To580,
-   CC_4_80To680,
+   CC_4_160To680,
    Sol_80_YoloToCarquinez,
    North_37_101To80,
    Mar_Son_101_12To580)
@@ -179,7 +179,7 @@ sum_links <- joined %>%
          Al_CC_80_4To580,
          CC_Al_24_680To580,
          CC_Al_680_4To580,
-         CC_4_80To680,
+         CC_4_160To680,
          Sol_80_YoloToCarquinez,
          North_37_101To80,
          Mar_Son_101_12To580)
@@ -187,9 +187,8 @@ sum_links <- joined %>%
 
 final <- sum_links %>% 
   mutate_at(vars(-hh_id, -person_id, -trip_id),  
-             ~if_else(.>=1,1,0))
+             ~if_else(.>=1,1,as.double(.)))
 
 # Export CSV of trips
 
 write.csv(final,file.path(segment_in,"TNC Survey Trips Per Facility.csv"),row.names = FALSE)
-
