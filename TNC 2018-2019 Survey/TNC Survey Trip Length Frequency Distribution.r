@@ -1,6 +1,5 @@
 # TNC Survey Trip Length Frequency Distribution.r
-# Summarize Mode_Type variable 
-# July 8, 2021
+# Summarize trip lengths for weeklong travel
 
 # Import Libraries
 
@@ -25,13 +24,7 @@ trip            <- read_tsv(trip_location,col_names=TRUE)
 skim            <- read.csv(skim_location) %>% 
   select(orig,dest,skim_distance=DISTDA)
 
-
-#hh_location     <- file.path(file_location,"hh.tsv")
-#person_location <- file.path(file_location,"person.tsv")
-#hh              <- read_tsv(hh_location,col_names=TRUE)
-#person          <- read_tsv(person_location,col_names=TRUE)
-
-# Join data and recode to trip lengths
+# Join data on origin/destination and recode to trip lengths
 
 working <- left_join(trip,skim, by=c("o_taz"="orig","d_taz"="dest")) %>% 
   filter(!is.na(skim_distance)) %>% 
@@ -41,10 +34,14 @@ working <- left_join(trip,skim, by=c("o_taz"="orig","d_taz"="dest")) %>%
     skim_distance>=2 & skim_distance<3                 ~ "2-3 miles",
     skim_distance>=3                                   ~ "3+ miles",
     TRUE                                               ~ "Miscoded"))
+
+# Apply weeklong weights and summarize data
   
 final <- working %>% 
   group_by(trip_bin) %>% 
   summarize(total=sum(daywt_alladult_7day))
+
+# Output summary
 
 write.csv(final,file.path(Output,"2019 TNC Survey Weeklong Trip Distances.csv"), row.names = F)
 
