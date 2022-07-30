@@ -45,10 +45,96 @@ bay_tracts <- tracts(
   county = megaregion,
   year = 2020
 ) %>% 
-  st_transform(.,crs = 26910)
+  st_transform(.,crs = 26910) %>% 
+  select(GEOID,geometry)
 
 # Day file has no location information
-# Household file needs adjustments, but can sub tract for existing block group data
 
-household_out <- houshold %>% 
-  mutate(home_tract_geoid = substr(home_bg_geoid,1,9))
+day_out <- day
+
+rm(day)
+
+# Household file needs geocoding
+
+household_places <- household %>% 
+  filter(!(is.na(reported_home_lat)),!(is.na(reported_home_lon))) %>% 
+  st_as_sf(., coords = c("reported_home_lon", "reported_home_lat"), crs = 4326) %>% 
+  st_transform(., crs=st_crs(bay_tracts))
+
+household_out <- st_join(household_places,bay_tracts, join=st_within,left=TRUE)%>%
+  as.data.frame(.) %>% select(-geometry,-sample_home_lat,-sample_home_lon,-home_bg_geoid) %>% 
+  relocate(home_tract_geoid=GEOID,.before=home_county_fips)
+
+rm(household)
+
+# Location file needs geocoding
+
+location_places <- location %>% 
+  filter(!(is.na(lat)),!(is.na(lon))) %>% 
+  st_as_sf(., coords = c("lon", "lat"), crs = 4326) %>% 
+  st_transform(., crs=st_crs(bay_tracts))
+
+location_out <- st_join(location_places,bay_tracts, join=st_within,left=TRUE)%>%
+  as.data.frame(.) %>% select(-geometry) %>% 
+  rename(location_tract_geoid=GEOID)
+
+rm(location)
+
+# Person file needs geocoding for school and work locations
+
+person_school <- person %>% 
+  filter(!(is.na(school_lat)),!(is.na(school_lon))) %>% 
+  st_as_sf(., coords = c("school_lon", "school_lat"), crs = 4326) %>% 
+  st_transform(., crs=st_crs(bay_tracts))
+
+person_work <- person %>% 
+  filter(!(is.na(work_lat)),!(is.na(work_lon))) %>% 
+  st_as_sf(., coords = c("work_lon", "work_lat"), crs = 4326) %>% 
+  st_transform(., crs=st_crs(bay_tracts))
+
+temp_person_school <- st_join(person_school,bay_tracts, join=st_within,left=TRUE)%>%
+  as.data.frame(.) %>% select(-geometry) %>% 
+  select(person_id,hh_id,person_num,school_tract_geoid=GEOID)
+
+temp_person_work <- st_join(person_work,bay_tracts, join=st_within,left=TRUE)%>%
+  as.data.frame(.) %>% select(-geometry) %>% 
+  select(person_id,hh_id,person_num,work_tract_geoid=GEOID)
+
+person_out <- person %>% 
+  left_join(.,temp_person_school,by=c("person_id","hh_id","person_num")) %>% 
+  left_join(.,temp_person_work,by=c("person_id","hh_id","person_num")) %>% 
+  relocate(school_tract_geoid,.before = school_county_fips) %>% 
+  relocate(work_tract_geoid,.before = work_county_fips) %>% 
+  select(-school_bg_geo_id,-work_bg_geo_id,-school_lat,-school_lon,-work_lat,-work_lon)
+
+rm(person)
+
+# Trip file needs origin/destination recoded
+
+trip_origin <- trip %>% 
+  filter(!(is.na(o_lat)),!(is.na(o_lon))) %>% 
+  st_as_sf(., coords = c("o_lon", "o_lat"), crs = 4326) %>% 
+  st_transform(., crs=st_crs(bay_tracts))
+
+trip_destination <- trip %>% 
+  filter(!(is.na(d_lat)),!(is.na(d_lon))) %>% 
+  st_as_sf(., coords = c("d_lon", "d_lat"), crs = 4326) %>% 
+  st_transform(., crs=st_crs(bay_tracts))
+
+temp_trip_origin <- st_join(trip_origin,bay_tracts, join=st_within,left=TRUE)%>%
+  as.data.frame(.) %>% select(-geometry) %>% 
+  select(person_id,hh_id,person_num,origin_tract_geoid=GEOID)
+
+temp_trip_destination <- st_join(trip_destination,bay_tracts, join=st_within,left=TRUE)%>%
+  as.data.frame(.) %>% select(-geometry) %>% 
+  select(person_id,hh_id,person_num,destination_tract_geoid=GEOID)
+------
+trip_out <- trip %>% 
+  left_join(.,temp_trip_origin,by=c("person_id","hh_id","person_num")) %>% 
+  left_join(.,temp_person_work,by=c("person_id","hh_id","person_num")) %>% 
+  relocate(school_tract_geoid,.before = school_county_fips) %>% 
+  relocate(work_tract_geoid,.before = work_county_fips) %>% 
+  select(-school_bg_geo_id,-work_bg_geo_id,-school_lat,-school_lon,-work_lat,-work_lon)
+
+rm(person)
+  
