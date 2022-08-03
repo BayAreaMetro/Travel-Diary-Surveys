@@ -1,6 +1,12 @@
 # TNC Survey matched to 2020 Census Tracts.r
 # Remove point level data and match 2020 Census geographies
 
+# Set output directory
+
+USERPROFILE   <- gsub("////","/", Sys.getenv("USERPROFILE"))
+BOX_TM        <- file.path(USERPROFILE, "Box", "Modeling and Surveys", "Share Data")
+Output        <- file.path(BOX_TM,"Protected Data","Nick Gunady")
+
 # Bring in libraries
 
 library(tigris)
@@ -38,7 +44,8 @@ trip_other     <- read_tsv(trip_w_other_location,col_names=TRUE)
 vehicle        <- read_tsv(vehicle_location,col_names=TRUE)
 
 
-# Make tracts call for 23-county region (Link 21+Lake and Mendocino counties), convert projection to 26910
+# Make tracts call for 23-county region (Link 21+Lake and Mendocino counties)
+# Convert projection to NAD83 / UTM zone 10N (ESPG 26910)
 
 bay_tracts <- tracts(
   state = "CA",
@@ -47,6 +54,9 @@ bay_tracts <- tracts(
 ) %>% 
   st_transform(.,crs = 26910) %>% 
   select(GEOID,geometry)
+
+# Where geocoding is necessary, assigned CRS=4326, World Geodetic System, then convert to 26910, spatially match
+# Append census tract locations, relocate variables to be near similar geolocation variables
 
 # Day file has no location information
 
@@ -192,4 +202,14 @@ trip_other_out <- trip_other %>%
 
 vehicle_out <- vehicle 
 
-  
+# Output recoded files
+
+write.csv(day_out,file.path(Output,"BATS_2019_Day.csv"),row.names = FALSE)
+write.csv(household_out,file.path(Output,"BATS_2019_Household.csv"),row.names = FALSE)
+write.csv(location_out,file.path(Output,"BATS_2019_Location.csv"),row.names = FALSE)
+write.csv(person_out,file.path(Output,"BATS_2019_Person.csv"),row.names = FALSE)
+write.csv(trip_out,file.path(Output,"BATS_2019_Trip.csv"),row.names = FALSE)
+write.csv(linked_trip_out,file.path(Output,"BATS_2019_Linked_Trip.csv"),row.names = FALSE)
+write.csv(trip_other_out,file.path(Output,"BATS_2019_Trip_Purpose_Other.csv"),row.names = FALSE)
+write.csv(vehicle_out,file.path(Output,"BATS_2019_Vehicle.csv"),row.names = FALSE)
+
