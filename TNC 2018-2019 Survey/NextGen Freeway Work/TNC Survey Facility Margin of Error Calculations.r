@@ -43,8 +43,17 @@ trip            <- read_tsv(trip_location,col_names=TRUE)
 #vehicle        <- read_tsv(vehicle_location,col_names=TRUE)
 
 # Bring in facility flag file (file that indicates whether a given trip traverses a given freeway)
+# Create vector of facilities for analysis
 
 facility_flag <- read.csv(file = file.path(Output,"TNC Survey Trips Per Facility.csv"))
+
+facilities <- c("Al_SF_80_PlazaTo101", "SF_101_80ToSM", 
+"SF_280_StartToSM", "SM_101_SFToSC", "SM_280_SFToSC", "SC_101_SMTo680", 
+"SC_101_680ToGilroy", "SC_237_101To880", "SC_280_SMTo101", "Al_SC_680_101To580", 
+"Al_SC_880_101To238", "Al_880_238ToPlaza", "Al_580_SanJoaquinTo238", 
+"Al_580_238To80", "Al_80_580ToPlaza", "Al_CC_80_4To580", "CC_Al_24_680To580", 
+"CC_Al_680_4To580", "CC_4_160To680", "Sol_80_YoloToCarquinez", 
+"North_37_101To80", "Mar_Son_101_12To580")
 
 # Recode linked trip file using imputed HH income and race/ethnicity from person file
 
@@ -192,50 +201,28 @@ else if (tod=="pm_peak"){
   return(temp_output)
 }
 
-state1 <- purrr::map_dfr(years, ~{ tidycensus::get_acs(survey = "acs1",
-                                                       geography = "state", 
-                                                       variables = myvars, output='wide',
-                                                       year = .x)}, .id = "year") %>% 
+# Iterate over all facilities, by each time period, then bind all together
+
+full_all_day <- purrr::map_dfr(facilities, ~{calculations(df=working,
+                                                       facility = .x, 
+                                                       tod = "all_day")})
+
+full_peak <- purrr::map_dfr(facilities, ~{calculations(df=working,
+                                                          facility = .x, 
+                                                          tod = "peak")})
+
+full_am_peak <- purrr::map_dfr(facilities, ~{calculations(df=working,
+                                                       facility = .x, 
+                                                       tod = "am_peak")})
+
+full_pm_peak <- purrr::map_dfr(facilities, ~{calculations(df=working,
+                                                          facility = .x, 
+                                                          tod = "pm_peak")})
+
+final <- bind_rows(full_all_day,full_peak,full_am_peak,full_pm_peak)
 
 
-trial <- calculations(working,"Al_SF_80_PlazaTo101","test")
-trial2 <- calculations(peak,"Al_SF_80_PlazaTo101")
-trial3 <- calculations(test,"Al_SF_80_PlazaTo101")
+# Output file for analysis in Tableau
 
-# Output recoded files
-
-write.csv(day_out,file.path(Output,"BATS_2019_Day.csv"),row.names = FALSE)
-write.csv(household_out,file.path(Output,"BATS_2019_Household.csv"),row.names = FALSE)
-write.csv(location_out,file.path(Output,"BATS_2019_Location.csv"),row.names = FALSE)
-write.csv(person_out,file.path(Output,"BATS_2019_Person.csv"),row.names = FALSE)
-write.csv(trip_out,file.path(Output,"BATS_2019_Trip.csv"),row.names = FALSE)
-write.csv(linked_trip_out,file.path(Output,"BATS_2019_Linked_Trip.csv"),row.names = FALSE)
-write.csv(trip_other_out,file.path(Output,"BATS_2019_Trip_Purpose_Other.csv"),row.names = FALSE)
-write.csv(vehicle_out,file.path(Output,"BATS_2019_Vehicle.csv"),row.names = FALSE)
-
--------
-  
-  # Join OSM and TNC Survey Paths Files and Create Facility Flags.R
-  # Compile all the freeway files and create flags for links on each facility
-  # Get rid of scientific notation, bring in library
-  
-  options(scipen = 999)
-
-library(tidyverse)
-
-# Input segment directory
-
-dir1        <- "M:/Data/HomeInterview/TNC Survey/SFCTA Map Matching/NextGen Freeway Project"
-segment_in  <- file.path(dir1,"TNC_Survey_OSM_Network")
-
-# Bring in TNC Survey paths file
-
-paths_in <- "M:/Data/HomeInterview/TNC Survey/SFCTA Map Matching/TNC_Survey_Paths.RData"
-paths <- load(paths_in)
-
-temp_df <- working %>% 
-  filter(Al_SF_80_PlazaTo101==1 & daywt_alladult_wkday>0) %>% 
-  mutate(squared_standard_weights=(daywt_alladult_wkday/sum(daywt_alladult_wkday))^2)
-error_summation <- sum(temp_df$squared_standard_weights)
-
+write.csv(final,file.path(Output,"BATS_2019_Facility_Daypart_Summary.csv"),row.names = FALSE)
 
