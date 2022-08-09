@@ -1,6 +1,10 @@
 # TNC Survey Facility Margin of Error Calculations.r
 # Summarize TNC survey data for key variables and calculate margins of error
 
+# Set options to get rid of scientific noation
+
+options(scipen = 999)
+
 # Bring in libraries
 
 suppressMessages(library(tidyverse))
@@ -62,7 +66,8 @@ person_joiner <- person %>%
       raceeth_new_imputed %in% c(-1,5)                   ~ "Other",
       TRUE                                               ~ "Miscoded"
     )
-  )
+  ) %>% 
+  select(hh_id,person_id,income_recoded,race_recoded)
 
 # Recoded trip purpose on linked trip file
 
@@ -90,14 +95,75 @@ working <- left_join(facility_flag,recoded_trip,by=c("hh_id","person_id","trip_i
   left_join(.,person_joiner,by=c("hh_id","person_id"))
 
 # Function to analyze data and calculate standard errors
+# Filter for facility value==1 (i.e., traverses that facility) 
+# Formula for SE of a weighted sample: 
+# https://en.wikipedia.org/wiki/Binomial_proportion_confidence_interval#Standard_error_of_a_proportion_estimation_when_using_weighted_data
+# Takes the form: sqrt(p(1-p)summation((weights standardized to 1)^2))
+# Do separate summaries for race, trip purpose, and income, then concatenate and do additional calculations
 
-calculation <- function(facility){
-  temp <- working %>% 
-    filter(temp[[facility]]==1) 
-  return(temp)
+# Start with input dataset based on desired time of day (df_tod), using depart_hour variable
+
+all_day <- working                                 # all times of day
+peak <- working %>%                                # morning and evening peak
+  filter(depart_hour %in% c(6,7,8,9,15,16,17,18))
+am_peak <- working %>%                             # morning peak
+  filter(depart_hour %in% c(6,7,8,9))
+pm_peak <- working %>%                             # evening peak
+  filter(depart_hour %in% c(15,16,17,18))
+
+# Now create function
+
+calculations <- function(df_tod,facility){
+  temp_output <- data.frame()
+  temp_df <- df_tod %>% 
+    filter(.[[facility]]==1) %>% 
+    mutate(squared_standard_weights=(daywt_alladult_wkday/sum(daywt_alladult_wkday))^2)
+  
+# Store value of summed squared standardized weights in a variable for later use  
+  error_summation <- sum(temp_df$squared_standard_weights)
+  
+# Store total trips for calculating shares within each summary
+  total_trips <- sum(temp_df$daywt_alladult_wkday)
+  
+# Summarize data by race/ethnicity
+
+  race <- temp_df %>% 
+    group_by(race_recoded) %>% 
+    summarize(share_value=sum(daywt_alladult_wkday)/total_trips) %>% 
+    mutate(category="ethnicity") %>% 
+    rename(metric=race_recoded) %>% 
+    ungroup()
+  
+  purpose <- temp_df %>% 
+    group_by(purpose_recoded) %>% 
+    summarize(share_value=sum(daywt_alladult_wkday)/total_trips) %>% 
+    mutate(category="trip_purpose") %>% 
+    rename(metric=purpose_recoded) %>% 
+    ungroup()
+  
+  income <- temp_df %>% 
+    group_by(income_recoded) %>% 
+    summarize(share_value=sum(daywt_alladult_wkday)/total_trips) %>% 
+    mutate(category="income") %>% 
+    rename(metric=income_recoded) %>% 
+    ungroup()
+  
+# Calculate standard error, 90 percent confidence interval, lower and upper bound values
+  
+  temp_output <- bind_rows(temp_output,race,purpose,income) %>% 
+    mutate(roadway=facility,
+           standard_error=sqrt((share_value*(1-share_value)*error_summation)),
+           ci_90=1.645*standard_error,
+           lower_bound=if_else(share_value-ci_90>=0,share_value-ci_90,0),
+           upper_bound=share_value+ci_90) %>% 
+    relocate(roadway,.before = metric) %>% 
+    relocate(category,.after = roadway)
+  
+  return(temp_output)
 }
 
-trial <- calculation(facility="Al_SF_80_PlazaTo101")
+trial <- calculations(all_day,"Al_SF_80_PlazaTo101")
+trial2 <- calculations(peak,"Al_SF_80_PlazaTo101")
 
 # Output recoded files
 
@@ -129,5 +195,10 @@ segment_in  <- file.path(dir1,"TNC_Survey_OSM_Network")
 
 paths_in <- "M:/Data/HomeInterview/TNC Survey/SFCTA Map Matching/TNC_Survey_Paths.RData"
 paths <- load(paths_in)
+
+temp_df <- working %>% 
+  filter(Al_SF_80_PlazaTo101==1 & daywt_alladult_wkday>0) %>% 
+  mutate(squared_standard_weights=(daywt_alladult_wkday/sum(daywt_alladult_wkday))^2)
+error_summation <- sum(temp_df$squared_standard_weights)
 
 
