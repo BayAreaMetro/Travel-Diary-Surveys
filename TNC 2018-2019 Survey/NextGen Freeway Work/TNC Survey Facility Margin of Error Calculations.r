@@ -112,13 +112,41 @@ pm_peak <- working %>%                             # evening peak
   filter(depart_hour %in% c(15,16,17,18))
 
 # Now create function
+# tod=time of day ("all_day","peak","am_peak","pm_peak")
+# df_tod=data frame used for that time of day
+# facility is the roadway analyzed
 
-calculations <- function(df_tod,facility){
-  temp_output <- data.frame()
-  temp_df <- df_tod %>% 
-    filter(.[[facility]]==1) %>% 
-    mutate(squared_standard_weights=(daywt_alladult_wkday/sum(daywt_alladult_wkday))^2)
-  
+#calculations <- function(df_tod,facility){
+ # temp_output <- data.frame()
+  #temp_df <- df_tod %>% 
+   # filter(.[[facility]]==1) %>% 
+    #mutate(squared_standard_weights=(daywt_alladult_wkday/sum(daywt_alladult_wkday))^2)
+
+calculations <- function(df,facility,tod){
+temp_output <- data.frame()
+
+stopifnot(tod %in% c("all_day","peak","am_peak","pm_peak"))
+
+if (tod=="all_day"){
+temp_df <- df %>% 
+  filter(.[[facility]]==1) %>%
+mutate(squared_standard_weights=(daywt_alladult_wkday/sum(daywt_alladult_wkday))^2)}
+
+else if (tod=="peak"){
+  temp_df <- df %>% 
+    filter(.[[facility]]==1,.$depart_hour %in% c(6,7,8,9,15,16,17,18)) %>%
+    mutate(squared_standard_weights=(daywt_alladult_wkday/sum(daywt_alladult_wkday))^2)}
+
+else if (tod=="am_peak"){
+  temp_df <- df %>% 
+    filter(.[[facility]]==1,.$depart_hour %in% c(6,7,8,9)) %>%
+    mutate(squared_standard_weights=(daywt_alladult_wkday/sum(daywt_alladult_wkday))^2)}
+
+else if (tod=="pm_peak"){
+  temp_df <- df %>% 
+    filter(.[[facility]]==1,.$depart_hour %in% c(15,16,17,18)) %>%
+    mutate(squared_standard_weights=(daywt_alladult_wkday/sum(daywt_alladult_wkday))^2)}
+
 # Store value of summed squared standardized weights in a variable for later use  
   error_summation <- sum(temp_df$squared_standard_weights)
   
@@ -155,15 +183,24 @@ calculations <- function(df_tod,facility){
            standard_error=sqrt((share_value*(1-share_value)*error_summation)),
            ci_90=1.645*standard_error,
            lower_bound=if_else(share_value-ci_90>=0,share_value-ci_90,0),
-           upper_bound=share_value+ci_90) %>% 
+           upper_bound=share_value+ci_90,
+           time_period=tod) %>% 
     relocate(roadway,.before = metric) %>% 
-    relocate(category,.after = roadway)
+    relocate(category,.after = roadway) %>% 
+    relocate(time_period,.after = category)
   
   return(temp_output)
 }
 
-trial <- calculations(all_day,"Al_SF_80_PlazaTo101")
+state1 <- purrr::map_dfr(years, ~{ tidycensus::get_acs(survey = "acs1",
+                                                       geography = "state", 
+                                                       variables = myvars, output='wide',
+                                                       year = .x)}, .id = "year") %>% 
+
+
+trial <- calculations(working,"Al_SF_80_PlazaTo101","test")
 trial2 <- calculations(peak,"Al_SF_80_PlazaTo101")
+trial3 <- calculations(test,"Al_SF_80_PlazaTo101")
 
 # Output recoded files
 
