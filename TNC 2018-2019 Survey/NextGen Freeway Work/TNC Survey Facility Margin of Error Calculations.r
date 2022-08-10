@@ -166,21 +166,21 @@ else if (tod=="pm_peak"){
 
   race <- temp_df %>% 
     group_by(race_recoded) %>% 
-    summarize(share_value=sum(daywt_alladult_wkday)/total_trips) %>% 
+    summarize(total=sum(daywt_alladult_wkday),share_value=sum(daywt_alladult_wkday)/total_trips) %>% 
     mutate(category="ethnicity") %>% 
     rename(metric=race_recoded) %>% 
     ungroup()
   
   purpose <- temp_df %>% 
     group_by(purpose_recoded) %>% 
-    summarize(share_value=sum(daywt_alladult_wkday)/total_trips) %>% 
+    summarize(total=sum(daywt_alladult_wkday),share_value=sum(daywt_alladult_wkday)/total_trips) %>% 
     mutate(category="trip_purpose") %>% 
     rename(metric=purpose_recoded) %>% 
     ungroup()
   
   income <- temp_df %>% 
     group_by(income_recoded) %>% 
-    summarize(share_value=sum(daywt_alladult_wkday)/total_trips) %>% 
+    summarize(total=sum(daywt_alladult_wkday),share_value=sum(daywt_alladult_wkday)/total_trips) %>% 
     mutate(category="income") %>% 
     rename(metric=income_recoded) %>% 
     ungroup()
@@ -190,9 +190,9 @@ else if (tod=="pm_peak"){
   temp_output <- bind_rows(temp_output,race,purpose,income) %>% 
     mutate(roadway=facility,
            standard_error=sqrt((share_value*(1-share_value)*error_summation)),
-           ci_90=1.645*standard_error,
-           lower_bound=if_else(share_value-ci_90>=0,share_value-ci_90,0),
-           upper_bound=share_value+ci_90,
+           ci_95=1.96*standard_error,
+           lower_bound=if_else(share_value-ci_95>=0,share_value-ci_95,0),
+           upper_bound=share_value+ci_95,
            time_period=tod) %>% 
     relocate(roadway,.before = metric) %>% 
     relocate(category,.after = roadway) %>% 
@@ -201,7 +201,7 @@ else if (tod=="pm_peak"){
   return(temp_output)
 }
 
-# Iterate over all facilities, by each time period, then bind all together
+# Iterate function over all 22 facilities, by each time period, then bind all together
 
 full_all_day <- purrr::map_dfr(facilities, ~{calculations(df=working,
                                                        facility = .x, 
