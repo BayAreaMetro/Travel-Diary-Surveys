@@ -110,26 +110,12 @@ working <- left_join(facility_flag,recoded_trip,by=c("hh_id","person_id","trip_i
 # Takes the form: sqrt(p(1-p)summation((weights standardized to 1)^2))
 # Do separate summaries for race, trip purpose, and income, then concatenate and do additional calculations
 
-# Start with input dataset based on desired time of day (df_tod), using depart_hour variable
-
-all_day <- working                                 # all times of day
-peak <- working %>%                                # morning and evening peak
-  filter(depart_hour %in% c(6,7,8,9,15,16,17,18))
-am_peak <- working %>%                             # morning peak
-  filter(depart_hour %in% c(6,7,8,9))
-pm_peak <- working %>%                             # evening peak
-  filter(depart_hour %in% c(15,16,17,18))
 
 # Now create function
 # tod=time of day ("all_day","peak","am_peak","pm_peak")
 # df_tod=data frame used for that time of day
 # facility is the roadway analyzed
 
-#calculations <- function(df_tod,facility){
- # temp_output <- data.frame()
-  #temp_df <- df_tod %>% 
-   # filter(.[[facility]]==1) %>% 
-    #mutate(squared_standard_weights=(daywt_alladult_wkday/sum(daywt_alladult_wkday))^2)
 
 calculations <- function(df,facility,tod){
 temp_output <- data.frame()
@@ -162,7 +148,7 @@ else if (tod=="pm_peak"){
 # Store total trips for calculating shares within each summary
   total_trips <- sum(temp_df$daywt_alladult_wkday)
   
-# Summarize data by race/ethnicity
+# Summarize data by race/ethnicity, trip purpose, and income
 
   race <- temp_df %>% 
     group_by(race_recoded) %>% 
