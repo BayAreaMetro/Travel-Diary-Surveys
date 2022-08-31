@@ -190,6 +190,12 @@ if (tod=="off_peak"){
     ungroup()
   
 # Calculate standard error, 95 percent confidence interval, lower and upper bound values
+# CV reliability
+# U.S. Census case studies:
+# • High reliability: CVs less than 15%
+# • Medium Reliability: CVs between 15‐30% ‐ be careful
+# • Low Reliability: CVs over 30% ‐ use with extreme caution  
+# Page 2,http://sites.tufts.edu/gis/files/2013/11/Amercian-Community-Survey_Margin-of-error-tutorial.pdf
   
   temp_output <- bind_rows(temp_output,race,purpose,income) %>% 
     mutate(roadway=facility,
@@ -198,6 +204,13 @@ if (tod=="off_peak"){
            lower_bound=if_else(share_value-ci_95>=0,share_value-ci_95,0),
            upper_bound=share_value+ci_95,
            range=upper_bound-lower_bound,
+           cv=(standard_error/share_value)*100,  
+           est_reliability=case_when(
+             is.nan(cv)       ~ "Low",          # When the share value is zero (usually due to no n)
+             cv<15            ~ "High",
+             cv>=15 & cv <30  ~ "Medium",
+             cv>=30           ~ "Low",
+             TRUE             ~ "Miscoded"),
            time_period=tod) %>% 
     relocate(roadway,.before = metric) %>% 
     relocate(category,.after = roadway) %>% 
