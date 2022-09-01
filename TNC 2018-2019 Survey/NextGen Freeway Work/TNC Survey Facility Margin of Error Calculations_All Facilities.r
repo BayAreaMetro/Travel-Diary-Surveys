@@ -55,6 +55,38 @@ full_facilities_list <- c("Al_SF_80_PlazaTo101", "SF_101_80ToSM",
                 "CC_Al_680_4To580", "CC_4_160To680", "Sol_80_YoloToCarquinez", 
                 "North_37_101To80", "Mar_Son_101_12To580","All_Freeways")
 
+# Function for imputing discrete value from PUMS distribution
+# Start by bringing in 2015-2019 PUMS data
+
+HH_RDATA = "M:/Data/Census/PUMS/PUMS 2015-19/hbayarea1519.Rdata"
+load (HH_RDATA)
+
+# Adjust income to inflation-correct values for 2019
+# Remove group quarters and vacant housing
+
+bay_income <- hbayarea1519 %>% 
+  mutate(adjustment = ADJINC/1000000,
+         income=HINCP*adjustment) %>% 
+  filter(!is.na(income))  
+
+# Create income function that samples from appropriate bins
+
+discrete_income <- function(income_imputed){
+  temp <- bay_income %>% 
+    filter(
+      case_when(
+        income_imputed==1               ~ .$income<25000,
+        income_imputed==2               ~ .$income>=25000 & .$income<50000,
+        income_imputed==3               ~ .$income>=50000 & .$income<75000,
+        income_imputed==4               ~ .$income>=75000 & .$income<100000,
+        income_imputed==5               ~ .$income>=100000 & .$income<150000,
+        income_imputed==6               ~ .$income>=150000 & .$income<200000,
+        income_imputed==7               ~ .$income>=200000 & .$income<250000,
+        income_imputed==8               ~ .$income>=250000))
+  value <- sample(temp$income,replace = T,size = 1,prob = temp$WGTP)
+  return(value)
+}
+
 # Recode linked trip file using imputed HH income and race/ethnicity from person file
 
 person_joiner <- person %>% 
@@ -76,7 +108,10 @@ person_joiner <- person %>%
       TRUE                                               ~ "Miscoded"
     )
   ) %>% 
-  select(hh_id,person_id,income_recoded,race_recoded,income_imputed,raceeth_new_imputed)
+  rowwise() %>% 
+  discrete_income=mutate(new_income=discrete_income(income_range)) %>% 
+  ungroup() %>% 
+  select(hh_id,person_id,income_recoded,race_recoded,income_imputed,raceeth_new_imputed,discrete_income)
 
 # Recoded trip purpose on linked trip file
 
