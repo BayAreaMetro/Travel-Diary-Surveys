@@ -1,4 +1,4 @@
-# TNC Survey Facility Margin of Error Calculations.r
+# TNC Survey Facility Margin of Error Calculations_All Facilities.r
 # Summarize TNC survey data for key variables and calculate margins of error
 
 # Set options to get rid of scientific noation
@@ -54,13 +54,6 @@ full_facilities_list <- c("Al_SF_80_PlazaTo101", "SF_101_80ToSM",
                 "Al_580_238To80", "Al_80_580ToPlaza", "Al_CC_80_4To580", "CC_Al_24_680To580", 
                 "CC_Al_680_4To580", "CC_4_160To680", "Sol_80_YoloToCarquinez", 
                 "North_37_101To80", "Mar_Son_101_12To580","All_Freeways")
-
-# Now extract just the top 8 used for analyses
-
-facilities <- c("Al_SF_80_PlazaTo101", "SM_101_SFToSC", "SC_237_101To880", 
-                "Al_SC_680_101To580", "Al_880_238ToPlaza","Al_580_SanJoaquinTo238", 
-                "CC_Al_24_680To580","Sol_80_YoloToCarquinez", "North_37_101To80", 
-                "All_Freeways")
 
 # Recode linked trip file using imputed HH income and race/ethnicity from person file
 
@@ -221,23 +214,23 @@ if (tod=="off_peak"){
 
 # Iterate function over all 22 facilities, by each time period, then bind all together
 
-full_all_day <- purrr::map_dfr(facilities, ~{calculations(df=working,
+full_all_day <- purrr::map_dfr(full_facilities_list, ~{calculations(df=working,
                                                        facility = .x, 
                                                        tod = "all_day")})
 
-full_peak <- purrr::map_dfr(facilities, ~{calculations(df=working,
+full_peak <- purrr::map_dfr(full_facilities_list, ~{calculations(df=working,
                                                           facility = .x, 
                                                           tod = "peak")})
 
-full_am_peak <- purrr::map_dfr(facilities, ~{calculations(df=working,
+full_am_peak <- purrr::map_dfr(full_facilities_list, ~{calculations(df=working,
                                                        facility = .x, 
                                                        tod = "am_peak")})
 
-full_pm_peak <- purrr::map_dfr(facilities, ~{calculations(df=working,
+full_pm_peak <- purrr::map_dfr(full_facilities_list, ~{calculations(df=working,
                                                           facility = .x, 
                                                           tod = "pm_peak")})
 
-full_off_peak <- purrr::map_dfr(facilities, ~{calculations(df=working,
+full_off_peak <- purrr::map_dfr(full_facilities_list, ~{calculations(df=working,
                                                           facility = .x, 
                                                           tod = "off_peak")})
 
