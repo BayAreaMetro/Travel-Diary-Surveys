@@ -8,6 +8,7 @@ options(scipen = 999)
 # Bring in libraries
 
 suppressMessages(library(tidyverse))
+library(spatstat)
 
 # Set output directory
 
@@ -23,8 +24,8 @@ temp                   <- "M:/Data/HomeInterview/TNC Survey/Data/Task 8 Data Ref
 file_location          <- file.path(temp,"Final Updated Dataset as of 10-18-2021","RSG_HTS_Oct2021_bayarea")
 person_location        <- file.path(file_location,"person.tsv")
 trip_location          <- file.path(file_location,"trip.tsv")
-trip_linked_location  <- file.path(file_location,"trip_linked.tsv")
-#hh_location           <- file.path(file_location,"hh.tsv")
+trip_linked_location   <- file.path(file_location,"trip_linked.tsv")
+hh_location            <- file.path(file_location,"hh.tsv")
 #day_location          <- file.path(file_location,"day.tsv")
 #location_location     <- file.path(file_location,"location.tsv")
 #trip_w_other_location <- file.path(file_location,"trip_with_purpose_other.tsv")
@@ -35,8 +36,9 @@ trip_linked_location  <- file.path(file_location,"trip_linked.tsv")
 
 person          <- read_tsv(person_location,col_names=TRUE)
 trip            <- read_tsv(trip_location,col_names=TRUE)      
-linked_trip    <- read_tsv(trip_linked_location,col_names=TRUE)
-#household      <- read_tsv(hh_location,col_names=TRUE)
+linked_trip     <- read_tsv(trip_linked_location,col_names=TRUE)
+household       <- read_tsv(hh_location,col_names=TRUE) %>% 
+  select(hh_id,income_detailed)
 #day            <- read_tsv(day_location,col_names=TRUE)
 #location       <- read_tsv(location_location,col_names=TRUE)
 #trip_other     <- read_tsv(trip_w_other_location,col_names=TRUE)
@@ -64,17 +66,33 @@ load (HH_RDATA)
 # Adjust income to inflation-correct values for 2019
 # Remove group quarters and vacant housing
 
-bay_income <- hbayarea1519 %>% 
+bay_income <- hbayarea1519 %>%
   mutate(adjustment = ADJINC/1000000,
          income=HINCP*adjustment) %>% 
   filter(!is.na(income))  
 
-# Create income function that samples from appropriate bins
+# Calculate area median income
 
-discrete_income <- function(income_imputed){
+bay_median <- weighted.median(x=bay_income$income,w=bay_income$WGTP)
+
+# Create income function that samples from appropriate PUMS bins to get a discrete income value from categorical data
+# Start with more detailed income (which has missing data) then use imputed records to catch missing records
+
+set.seed(1)
+discrete_income_f <- function(income_detailed,income_imputed){
   temp <- bay_income %>% 
     filter(
       case_when(
+        income_detailed==1              ~ .$income<15000,
+        income_detailed==2              ~ .$income>=15000 & .$income<25000,
+        income_detailed==3              ~ .$income>=25000 & .$income<35000,
+        income_detailed==4              ~ .$income>=35000 & .$income<50000,
+        income_detailed==5              ~ .$income>=50000 & .$income<75000,
+        income_detailed==6              ~ .$income>=75000 & .$income<100000,
+        income_detailed==7              ~ .$income>=100000 & .$income<150000,
+        income_detailed==8              ~ .$income>=150000 & .$income<200000,
+        income_detailed==9              ~ .$income>=200000 & .$income<250000,
+        income_detailed==10             ~ .$income>=250000,
         income_imputed==1               ~ .$income<25000,
         income_imputed==2               ~ .$income>=25000 & .$income<50000,
         income_imputed==3               ~ .$income>=50000 & .$income<75000,
@@ -88,15 +106,20 @@ discrete_income <- function(income_imputed){
 }
 
 # Recode linked trip file using imputed HH income and race/ethnicity from person file
+# Join with household file to append detailed_income variable
+# Run discrete income function defined above to get a discrete income variable for each categorical income
+# Get share of regional median income and group those values into a new ami variable
+# Select significant variables of interest
 
 person_joiner <- person %>% 
+  left_join(.,household,by="hh_id") %>% 
   filter(is_active_participant==1) %>%                   # Only include participants
   mutate(
     income_recoded=case_when(
       income_imputed %in% c(1,2)                         ~ "Under $50,000",
       income_imputed %in% c(3,4)                         ~ "$50,000-$99,999",
-      income_imputed==5                                  ~ "$100,000-$149,999",
-      income_imputed %in% c(6,7,8)                       ~ "Over $150,000",
+      income_imputed %in% c(5,6)                         ~ "$100,000-$199,999",
+      income_imputed %in% c(7,8)                         ~ "Over $200,000",
       TRUE                                               ~ "Miscoded"
     ),
     race_recoded=case_when(
@@ -109,9 +132,17 @@ person_joiner <- person %>%
     )
   ) %>% 
   rowwise() %>% 
-  discrete_income=mutate(new_income=discrete_income(income_range)) %>% 
+  mutate(discrete_income=discrete_income_f(income_detailed,income_imputed)) %>%  # Run discrete income generator function defined above
   ungroup() %>% 
-  select(hh_id,person_id,income_recoded,race_recoded,income_imputed,raceeth_new_imputed,discrete_income)
+  mutate(
+    ami_recoded=case_when(
+      discrete_income/bay_median< 0.5                                  ~ "Under 50 percent AMI",
+      discrete_income/bay_median>=0.5 & discrete_income/bay_median<1   ~ "50 to 100 percent AMI",
+      discrete_income/bay_median>=1 & discrete_income/bay_median<2     ~ "100 to 200 percent AMI",
+      discrete_income/bay_median>=2                                    ~ "Over 200 percent AMI",
+      TRUE                                                             ~ "Miscoded"
+    )) %>% 
+  select(hh_id,person_id,income_recoded,race_recoded,income_detailed,income_imputed,raceeth_new_imputed,ami_recoded,discrete_income)
 
 # Recoded trip purpose on linked trip file
 
@@ -217,6 +248,15 @@ if (tod=="off_peak"){
     rename(metric=income_recoded) %>% 
     ungroup()
   
+  income_ami <- temp_df %>% 
+    group_by(ami_recoded) %>% 
+    summarize(count=n(),total=sum(daywt_alladult_wkday),share_value=sum(daywt_alladult_wkday)/total_trips) %>% 
+    mutate(category="ami_income") %>% 
+    rename(metric=ami_recoded) %>% 
+    ungroup()
+  
+  
+  
 # Calculate standard error, 95 percent confidence interval, lower and upper bound values
 # CV reliability
 # U.S. Census case studies:
@@ -225,7 +265,7 @@ if (tod=="off_peak"){
 # • Low Reliability: CVs over 30% ‐ use with extreme caution  
 # Page 2,http://sites.tufts.edu/gis/files/2013/11/Amercian-Community-Survey_Margin-of-error-tutorial.pdf
   
-  temp_output <- bind_rows(temp_output,race,purpose,income) %>% 
+  temp_output <- bind_rows(temp_output,race,purpose,income,income_ami) %>% 
     mutate(roadway=facility,
            standard_error=sqrt((share_value*(1-share_value)*error_summation)),
            ci_95=1.96*standard_error,
