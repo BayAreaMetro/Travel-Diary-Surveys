@@ -3,9 +3,7 @@
 
 # Set output directory
 
-USERPROFILE   <- gsub("////","/", Sys.getenv("USERPROFILE"))
-BOX_TM        <- file.path(USERPROFILE, "Box", "Modeling and Surveys", "Share Data")
-Output        <- file.path(BOX_TM,"Protected Data","Nick Gunady")
+Output        <- "M:/Data/HomeInterview/TNC Survey/Data/Task 8 Data Refinement Version/Census Tract Matched Version for NDA Sharing/Bay Area Travel Survey 2019 Data"
 
 # Bring in libraries
 
@@ -19,11 +17,9 @@ temp                  <- "M:/Data/HomeInterview/TNC Survey/Data/Task 8 Data Refi
 file_location         <- file.path(temp,"Final Updated Dataset as of 10-18-2021","RSG_HTS_Oct2021_bayarea")
 day_location          <- file.path(file_location,"day.tsv")
 hh_location           <- file.path(file_location,"hh.tsv")
-location_location     <- file.path(file_location,"location.tsv")
 person_location       <- file.path(file_location,"person.tsv")
 trip_location         <- file.path(file_location,"trip.tsv")
 trip_linked_location  <- file.path(file_location,"trip_linked.tsv")
-trip_w_other_location <- file.path(file_location,"trip_with_purpose_other.tsv")
 vehicle_location      <- file.path(file_location,"vehicle.tsv")
 
 # Set up vector of counties for Bay Area and beyond
@@ -36,11 +32,9 @@ megaregion <- c("Alameda","Contra Costa","Marin","Napa","San Francisco","San Mat
 
 day            <- read_tsv(day_location,col_names=TRUE)
 household      <- read_tsv(hh_location,col_names=TRUE)
-location       <- read_tsv(location_location,col_names=TRUE)
 person         <- read_tsv(person_location,col_names=TRUE)
 trip           <- read_tsv(trip_location,col_names=TRUE)
 linked_trip    <- read_tsv(trip_linked_location,col_names=TRUE)
-trip_other     <- read_tsv(trip_w_other_location,col_names=TRUE)
 vehicle        <- read_tsv(vehicle_location,col_names=TRUE)
 
 
@@ -70,19 +64,8 @@ household_places <- household %>%
   st_transform(., crs=st_crs(bay_tracts))
 
 household_out <- st_join(household_places,bay_tracts, join=st_within,left=TRUE)%>%
-  as.data.frame(.) %>% select(-geometry,-sample_home_lat,-sample_home_lon,-home_bg_geoid) %>% 
+  as.data.frame(.) %>% select(-geometry,-sample_home_lat,-sample_home_lon,-home_bg_geoid,-home_taz) %>% 
   relocate(home_tract_geoid=GEOID,.before=home_county_fips)
-
-# Location file needs geocoding
-
-location_places <- location %>% 
-  filter(!(is.na(lat)),!(is.na(lon))) %>% 
-  st_as_sf(., coords = c("lon", "lat"), crs = 4326) %>% 
-  st_transform(., crs=st_crs(bay_tracts))
-
-location_out <- st_join(location_places,bay_tracts, join=st_within,left=TRUE)%>%
-  as.data.frame(.) %>% select(-geometry) %>% 
-  rename(location_tract_geoid=GEOID)
 
 # Person file needs geocoding for school and work locations
 
@@ -109,7 +92,7 @@ person_out <- person %>%
   left_join(.,temp_person_work,by=c("person_id","hh_id","person_num")) %>% 
   relocate(school_tract_geoid,.before = school_county_fips) %>% 
   relocate(work_tract_geoid,.before = work_county_fips) %>% 
-  select(-school_bg_geo_id,-work_bg_geo_id,-school_lat,-school_lon,-work_lat,-work_lon)
+  select(-school_bg_geo_id,-work_bg_geo_id,-school_lat,-school_lon,-work_lat,-work_lon,-school_taz,-work_taz)
 
 # Trip file needs origin/destination recoded
 
@@ -138,7 +121,7 @@ trip_out <- trip %>%
                                          "linked_trip_id","leg_num")) %>% 
   relocate(origin_tract_geoid,.before = o_county_fips) %>% 
   relocate(destination_tract_geoid,.before = d_county_fips) %>% 
-  select(-o_bg_geo_id,-d_bg_geo_id,-o_lat,-o_lon,-d_lat,-d_lon)
+  select(-o_bg_geo_id,-d_bg_geo_id,-o_lat,-o_lon,-d_lat,-d_lon,-o_taz,-d_taz)
 
 # Linked trip file needs origin/destination recoded
 
@@ -167,36 +150,7 @@ linked_trip_out <- linked_trip %>%
                                          "linked_trip_id")) %>% 
   relocate(origin_tract_geoid,.before = o_county_fips) %>% 
   relocate(destination_tract_geoid,.before = d_county_fips) %>% 
-  select(-o_bg_geo_id,-d_bg_geo_id,-o_lat,-o_lon,-d_lat,-d_lon)
-
-# Trip with purpose other needs origin/destination recoded
-
-trip_other_origin <- trip_other %>% 
-  filter(!(is.na(o_lat)),!(is.na(o_lon))) %>% 
-  st_as_sf(., coords = c("o_lon", "o_lat"), crs = 4326) %>% 
-  st_transform(., crs=st_crs(bay_tracts))
-
-trip_other_destination <- trip_other %>% 
-  filter(!(is.na(d_lat)),!(is.na(d_lon))) %>% 
-  st_as_sf(., coords = c("d_lon", "d_lat"), crs = 4326) %>% 
-  st_transform(., crs=st_crs(bay_tracts))
-
-temp_trip_other_origin <- st_join(trip_other_origin,bay_tracts, join=st_within,left=TRUE)%>%
-  as.data.frame(.) %>% select(-geometry) %>% 
-  select(person_id,day_num, hh_id,person_num,trip_id,trip_num,linked_trip_id,leg_num,origin_tract_geoid=GEOID)
-
-temp_trip_other_destination <- st_join(trip_other_destination,bay_tracts, join=st_within,left=TRUE)%>%
-  as.data.frame(.) %>% select(-geometry) %>% 
-  select(person_id,day_num, hh_id,person_num,trip_id,trip_num,linked_trip_id,leg_num,destination_tract_geoid=GEOID)
-
-trip_other_out <- trip_other %>% 
-  left_join(.,temp_trip_other_origin,by=c("person_id","day_num","hh_id","person_num","trip_id","trip_num",
-                                          "linked_trip_id","leg_num")) %>% 
-  left_join(.,temp_trip_other_destination,by=c("person_id","day_num","hh_id","person_num","trip_id","trip_num",
-                                               "linked_trip_id","leg_num")) %>% 
-  relocate(origin_tract_geoid,.before = o_county_fips) %>% 
-  relocate(destination_tract_geoid,.before = d_county_fips) %>% 
-  select(-o_bg_geo_id,-d_bg_geo_id,-o_lat,-o_lon,-d_lat,-d_lon)
+  select(-o_bg_geo_id,-d_bg_geo_id,-o_lat,-o_lon,-d_lat,-d_lon,-o_taz,-d_taz)
 
 # Nothing recoded for vehicle file
 
@@ -206,10 +160,8 @@ vehicle_out <- vehicle
 
 write.csv(day_out,file.path(Output,"BATS_2019_Day.csv"),row.names = FALSE)
 write.csv(household_out,file.path(Output,"BATS_2019_Household.csv"),row.names = FALSE)
-write.csv(location_out,file.path(Output,"BATS_2019_Location.csv"),row.names = FALSE)
 write.csv(person_out,file.path(Output,"BATS_2019_Person.csv"),row.names = FALSE)
 write.csv(trip_out,file.path(Output,"BATS_2019_Trip.csv"),row.names = FALSE)
 write.csv(linked_trip_out,file.path(Output,"BATS_2019_Linked_Trip.csv"),row.names = FALSE)
-write.csv(trip_other_out,file.path(Output,"BATS_2019_Trip_Purpose_Other.csv"),row.names = FALSE)
 write.csv(vehicle_out,file.path(Output,"BATS_2019_Vehicle.csv"),row.names = FALSE)
 
