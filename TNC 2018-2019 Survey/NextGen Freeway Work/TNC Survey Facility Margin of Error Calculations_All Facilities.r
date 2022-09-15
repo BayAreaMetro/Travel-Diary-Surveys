@@ -314,3 +314,5 @@ final <- bind_rows(full_all_day,full_peak,full_am_peak,full_pm_peak,full_off_pea
 # Output file for analysis in Tableau
 
 write.csv(final,file.path(Output,"BATS_2019_Facility_Daypart_Summary.csv"),row.names = FALSE)
+
+
