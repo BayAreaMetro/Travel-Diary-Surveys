@@ -75,6 +75,22 @@ bay_income <- hbayarea1519 %>%
 
 bay_median <- weighted.median(x=bay_income$income,w=bay_income$WGTP)
 
+# Calculate share of PUMS households by percentage AMI
+
+bay_income_med <- bay_income |> 
+mutate(
+  ami_recoded=case_when(
+    income/bay_median< 0.5                                  ~ "Under 50 percent AMI",
+    income/bay_median>=0.5 & income/bay_median<1            ~ "50 to 100 percent AMI",
+    income/bay_median>=1 & income/bay_median<2              ~ "100 to 200 percent AMI",
+    income/bay_median>=2                                    ~ "Over 200 percent AMI",
+    TRUE                                                    ~ "Miscoded"
+  )) |> 
+  group_by(ami_recoded) |> 
+  summarize(count=n(),total=sum(WGTP)) |> 
+  transmute(ami_recoded,PUMS_household_share=total/sum(total)) 
+
+
 # Create income function that samples from appropriate PUMS bins to get a discrete income value from categorical data
 # Start with more detailed income (which has missing data) then use imputed records to catch missing records
 
@@ -310,6 +326,10 @@ full_off_peak <- purrr::map_dfr(full_facilities_list, ~{calculations(df=working,
                                                           tod = "off_peak")})
 
 final <- bind_rows(full_all_day,full_peak,full_am_peak,full_pm_peak,full_off_peak)
+
+# Join PUMS household share of AMI to compare population shares vs. people driving on freeways
+
+final <- left_join(final,bay_income_med,by=c("metric"="ami_recoded"))
 
 # Output file for analysis in Tableau
 
