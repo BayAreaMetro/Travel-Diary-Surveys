@@ -35,6 +35,11 @@ linked_trip     <- read_tsv(trip_linked_location,col_names=TRUE)
 household       <- read_tsv(hh_location,col_names=TRUE) %>% 
   select(hh_id,income_detailed)
 
+# Create vector for car modes to ensure people using freeway segment are in a car for at least one mode
+# Broadly-defined car modes, including bus (but no local bus nor rail)
+
+car_vector <- c(6:22,24:28,33:36,38,47,55,59:60,62:66,76)
+
 # Bring in facility flag file (file that indicates whether a given trip traverses a given freeway)
 # Create vector of facilities for analysis
 
@@ -101,89 +106,6 @@ working <- left_join(facility_flag,recoded_trip,by=c("hh_id","person_id","trip_i
   relocate(All_Freeways,.after = "Mar_Son_101_12To580")
 
 working2 <- working |> 
-  filter(mode_1==30 | mode_2==30 | mode_3==30,CC_Al_24_680To580==1 | Al_580_SanJoaquinTo238) |> 
-  relocate(c(CC_Al_24_680To580,Al_580_SanJoaquinTo238), .after = All_Freeways) |> 
-  mutate(
-    mode_1rc = recode(mode_1,
-                      "1"="walk or bike",
-                      "2"="walk or bike",
-                      "4"="walk or bike",
-                      "6"="drive",
-                      "7"="drive",
-                      "16"="drive",
-                      "28"="bus",
-                      "30"="bart",
-                      "33"="drive",
-                      "34"="drive",
-                      "39"="light rail",
-                      "41"="intercity rail (ACE,Amtrak,Caltrain)",
-                      "43"="walk or bike",
-                      "46"="bus",
-                      "55"="express bus",
-                      "62"="employee shuttle",
-                      "63"="paratransit",
-                      "64"="tnc",
-                      "65"="tnc",
-                      "67"="bus",
-                      "68"="cable car",
-                      "77"="walk or bike",
-                      "995"="NA",
-                      "997"="other mode"),
-    mode_2rc = recode(mode_2,
-                      "1"="walk or bike",
-                      "2"="walk or bike",
-                      "4"="walk or bike",
-                      "6"="drive",
-                      "7"="drive",
-                      "16"="drive",
-                      "28"="bus",
-                      "30"="bart",
-                      "33"="drive",
-                      "34"="drive",
-                      "39"="light rail",
-                      "41"="intercity rail (ACE,Amtrak,Caltrain)",
-                      "43"="walk or bike",
-                      "46"="bus",
-                      "55"="express bus",
-                      "62"="employee shuttle",
-                      "63"="paratransit",
-                      "64"="tnc",
-                      "65"="tnc",
-                      "67"="bus",
-                      "68"="cable car",
-                      "77"="walk or bike",
-                      "995"="NA",
-                      "997"="other mode"),
-    mode_3rc = recode(mode_3,
-                      "1"="walk or bike",
-                      "2"="walk or bike",
-                      "4"="walk or bike",
-                      "6"="drive",
-                      "7"="drive",
-                      "16"="drive",
-                      "28"="bus",
-                      "30"="bart",
-                      "33"="drive",
-                      "34"="drive",
-                      "39"="light rail",
-                      "41"="intercity rail (ACE,Amtrak,Caltrain)",
-                      "43"="walk or bike",
-                      "46"="bus",
-                      "55"="express bus",
-                      "62"="employee shuttle",
-                      "63"="paratransit",
-                      "64"="tnc",
-                      "65"="tnc",
-                      "67"="bus",
-                      "68"="cable car",
-                      "77"="walk or bike",
-                      "995"="NA",
-                      "997"="other mode")
-                  ) |> 
-  relocate(c(mode_1rc,mode_2rc,mode_3rc),.before = day_num) 
-
-# Output file for analysis in Tableau
-
-write.csv(final,file.path(Output,"BATS_2019_Facility_Daypart_Summary.csv"),row.names = FALSE)
-
+  filter((mode_1 %in% c(car_vector,997,-9998) | mode_2 %in% car_vector | mode_3 %in% car_vector | mode_4 %in% car_vector)) |> 
+  relocate(c(mode_1,mode_2,mode_3,mode_4),.after = trip_id)
 
