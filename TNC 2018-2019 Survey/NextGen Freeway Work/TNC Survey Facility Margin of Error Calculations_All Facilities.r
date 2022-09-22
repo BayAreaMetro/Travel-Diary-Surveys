@@ -26,10 +26,6 @@ person_location        <- file.path(file_location,"person.tsv")
 trip_location          <- file.path(file_location,"trip.tsv")
 trip_linked_location   <- file.path(file_location,"trip_linked.tsv")
 hh_location            <- file.path(file_location,"hh.tsv")
-#day_location          <- file.path(file_location,"day.tsv")
-#location_location     <- file.path(file_location,"location.tsv")
-#trip_w_other_location <- file.path(file_location,"trip_with_purpose_other.tsv")
-#vehicle_location      <- file.path(file_location,"vehicle.tsv")
 
 # Bring in TNC survey datasets
 # Commented out files that may be needed for future analyses
@@ -37,12 +33,13 @@ hh_location            <- file.path(file_location,"hh.tsv")
 person          <- read_tsv(person_location,col_names=TRUE)
 trip            <- read_tsv(trip_location,col_names=TRUE)      
 linked_trip     <- read_tsv(trip_linked_location,col_names=TRUE)
-household       <- read_tsv(hh_location,col_names=TRUE) %>% 
+household       <- read_tsv(hh_location,col_names=TRUE) %>%  
   select(hh_id,income_detailed)
-#day            <- read_tsv(day_location,col_names=TRUE)
-#location       <- read_tsv(location_location,col_names=TRUE)
-#trip_other     <- read_tsv(trip_w_other_location,col_names=TRUE)
-#vehicle        <- read_tsv(vehicle_location,col_names=TRUE)
+
+# Create vector for car modes to ensure people using freeway segment are in a car for at least one mode
+# Broadly-defined car modes, including bus (but no local bus nor rail)
+
+car_vector <- c(6:22,24:28,33:36,38,47,55,59:60,62:66,76)
 
 # Bring in facility flag file (file that indicates whether a given trip traverses a given freeway)
 # Create vector of facilities for analysis
@@ -66,9 +63,9 @@ load (HH_RDATA)
 # Adjust income to inflation-correct values for 2019
 # Remove group quarters and vacant housing
 
-bay_income <- hbayarea1519 %>%
+bay_income <- hbayarea1519  %>% 
   mutate(adjustment = ADJINC/1000000,
-         income=HINCP*adjustment) %>% 
+         income=HINCP*adjustment)  %>%  
   filter(!is.na(income))  
 
 # Calculate area median income
@@ -77,7 +74,7 @@ bay_median <- weighted.median(x=bay_income$income,w=bay_income$WGTP)
 
 # Calculate share of PUMS households by percentage AMI
 
-bay_income_med <- bay_income |> 
+bay_income_med <- bay_income  %>%  
 mutate(
   ami_recoded=case_when(
     income/bay_median< 0.5                                  ~ "Under 50 percent AMI",
@@ -85,10 +82,11 @@ mutate(
     income/bay_median>=1 & income/bay_median<2              ~ "100 to 200 percent AMI",
     income/bay_median>=2                                    ~ "Over 200 percent AMI",
     TRUE                                                    ~ "Miscoded"
-  )) |> 
-  group_by(ami_recoded) |> 
-  summarize(count=n(),total=sum(WGTP)) |> 
-  transmute(ami_recoded,PUMS_household_share=total/sum(total)) 
+  ))  %>%  
+  group_by(ami_recoded)  %>%  
+  summarize(count=n(),total=sum(WGTP))  %>%  
+  transmute(ami_recoded,PUMS_household_share=total/sum(total)) %>% 
+  ungroup()
 
 
 # Create income function that samples from appropriate PUMS bins to get a discrete income value from categorical data
@@ -96,7 +94,7 @@ mutate(
 
 set.seed(1)
 discrete_income_f <- function(income_detailed,income_imputed){
-  temp <- bay_income %>% 
+  temp <- bay_income  %>%  
     filter(
       case_when(
         income_detailed==1              ~ .$income<15000,
@@ -127,9 +125,9 @@ discrete_income_f <- function(income_detailed,income_imputed){
 # Get share of regional median income and group those values into a new ami variable
 # Select significant variables of interest
 
-person_joiner <- person %>% 
-  left_join(.,household,by="hh_id") %>% 
-  filter(is_active_participant==1) %>%                   # Only include participants
+person_joiner <- person  %>%  
+  left_join(.,household,by="hh_id")  %>%  
+  filter(is_active_participant==1)  %>%                    # Only include participants
   mutate(
     income_recoded=case_when(
       income_imputed %in% c(1,2)                         ~ "Under $50,000",
@@ -146,10 +144,10 @@ person_joiner <- person %>%
       raceeth_new_imputed %in% c(-1,5)                   ~ "Other",
       TRUE                                               ~ "Miscoded"
     )
-  ) %>% 
-  rowwise() %>% 
-  mutate(discrete_income=discrete_income_f(income_detailed,income_imputed)) %>%  # Run discrete income generator function defined above
-  ungroup() %>% 
+  ) %>%  
+  rowwise()  %>%  
+  mutate(discrete_income=discrete_income_f(income_detailed,income_imputed)) %>%   # Run discrete income generator function defined above
+  ungroup() %>%  
   mutate(
     ami_recoded=case_when(
       discrete_income/bay_median< 0.5                                  ~ "Under 50 percent AMI",
@@ -157,7 +155,7 @@ person_joiner <- person %>%
       discrete_income/bay_median>=1 & discrete_income/bay_median<2     ~ "100 to 200 percent AMI",
       discrete_income/bay_median>=2                                    ~ "Over 200 percent AMI",
       TRUE                                                             ~ "Miscoded"
-    )) %>% 
+    ))  %>%  
   select(hh_id,person_id,income_recoded,race_recoded,income_detailed,income_imputed,raceeth_new_imputed,ami_recoded,discrete_income)
 
 # Recoded trip purpose on linked trip file
@@ -178,11 +176,14 @@ recoded_trip <- trip %>%
 
 # Join trips file with facility flag file 
 # Create flag for all freeways, used later to sum trip characteristics among full freeway network
+# Filter out trips that don't have a drive mode (defined as "car_vector, above)
+# Include trips with missing mode information (assuming drive)
 
 working <- left_join(facility_flag,recoded_trip,by=c("hh_id","person_id","trip_id")) %>% 
   left_join(.,person_joiner,by=c("hh_id","person_id")) %>% 
   mutate(All_Freeways=1) %>% 
-  relocate(All_Freeways,.after = "Mar_Son_101_12To580")
+  relocate(All_Freeways,.after = "Mar_Son_101_12To580") %>% 
+  filter((mode_1 %in% c(car_vector,997,-9998) | mode_2 %in% car_vector | mode_3 %in% car_vector | mode_4 %in% car_vector))
 
 # Function to analyze data and calculate standard errors
 # Filter for facility value==1 (i.e., traverses that facility) 
@@ -270,8 +271,6 @@ if (tod=="off_peak"){
     mutate(category="ami_income") %>% 
     rename(metric=ami_recoded) %>% 
     ungroup()
-  
-  
   
 # Calculate standard error, 95 percent confidence interval, lower and upper bound values
 # CV reliability
