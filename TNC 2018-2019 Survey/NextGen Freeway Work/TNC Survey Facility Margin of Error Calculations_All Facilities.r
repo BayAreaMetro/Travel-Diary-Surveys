@@ -34,12 +34,17 @@ person          <- read_tsv(person_location,col_names=TRUE)
 trip            <- read_tsv(trip_location,col_names=TRUE)      
 linked_trip     <- read_tsv(trip_linked_location,col_names=TRUE)
 household       <- read_tsv(hh_location,col_names=TRUE) %>%  
-  select(hh_id,income_detailed)
+  select(hh_id,income_detailed,reported_home_lat,reported_home_lon)
 
 # Create vector for car modes to ensure people using freeway segment are in a car for at least one mode
 # Broadly-defined car modes, including bus (but no local bus nor rail)
 
 car_vector <- c(6:22,24:28,33:36,38,47,55,59:60,62:66,76)
+
+# Bring in freeway coordinates for placing pie charts on map
+
+freeway_coords_in <- file.path(Output,"Freeway Facility Coordinates.csv")
+freeway_coords <- read.csv(freeway_coords_in)
 
 # Bring in facility flag file (file that indicates whether a given trip traverses a given freeway)
 # Create vector of facilities for analysis
@@ -156,7 +161,7 @@ person_joiner <- person  %>%
       discrete_income/bay_median>=2                                    ~ "Over 200 percent AMI",
       TRUE                                                             ~ "Miscoded"
     ))  %>%  
-  select(hh_id,person_id,income_recoded,race_recoded,income_detailed,income_imputed,raceeth_new_imputed,ami_recoded,discrete_income)
+  select(hh_id,person_id,income_recoded,race_recoded,income_detailed,income_imputed,raceeth_new_imputed,ami_recoded,discrete_income,reported_home_lat,reported_home_lon)
 
 # Recoded trip purpose on linked trip file
 
@@ -183,7 +188,7 @@ working <- left_join(facility_flag,recoded_trip,by=c("hh_id","person_id","trip_i
   left_join(.,person_joiner,by=c("hh_id","person_id")) %>% 
   mutate(All_Freeways=1) %>% 
   relocate(All_Freeways,.after = "Mar_Son_101_12To580") %>% 
-  filter((mode_1 %in% c(car_vector,997,-9998) | mode_2 %in% car_vector | mode_3 %in% car_vector | mode_4 %in% car_vector))
+  filter((mode_1 %in% c(car_vector,997,-9998) | mode_2 %in% car_vector | mode_3 %in% car_vector | mode_4 %in% car_vector),daywt_alladult_wkday>0)
 
 # Function to analyze data and calculate standard errors
 # Filter for facility value==1 (i.e., traverses that facility) 
@@ -330,8 +335,28 @@ final <- bind_rows(full_all_day,full_peak,full_am_peak,full_pm_peak,full_off_pea
 
 final <- left_join(final,bay_income_med,by=c("metric"="ami_recoded"))
 
+# Join with location file to place pie charts on map
+
+final <- left_join(final,freeway_coords,by="roadway")
+
 # Output file for analysis in Tableau
 
 write.csv(final,file.path(Output,"BATS_2019_Facility_Daypart_Summary.csv"),row.names = FALSE)
 
+# Create a file for of just home locations by freeway users
+
+freeway_homes <- working %>% 
+  select("hh_id", "person_id", "trip_id", "Al_SF_80_PlazaTo101", "SF_101_80ToSM", 
+         "SF_280_StartToSM", "SM_101_SFToSC", "SM_280_SFToSC", "SC_101_SMTo680", 
+         "SC_101_680ToGilroy", "SC_237_101To880", "SC_280_SMTo101", "Al_SC_680_101To580", 
+         "Al_SC_880_101To238", "Al_880_238ToPlaza", "Al_580_SanJoaquinTo238", 
+         "Al_580_238To80", "Al_80_580ToPlaza", "Al_CC_80_4To580", "CC_Al_24_680To580", 
+         "CC_Al_680_4To580", "CC_4_160To680", "Sol_80_YoloToCarquinez", 
+         "North_37_101To80", "Mar_Son_101_12To580", "All_Freeways", 
+         "daywt_alladult_wkday", "reported_home_lat", "reported_home_lon") %>% 
+  pivot_longer (.,4:26,names_to = "Roadway", values_to = "dummy") %>% 
+  filter(dummy==1)%>% 
+  select(-dummy)
+
+write.csv(freeway_homes,file.path(Output,"BATS_2019_Freeway_Homes.csv"),row.names = FALSE)
 
