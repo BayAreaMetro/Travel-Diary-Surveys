@@ -42,6 +42,7 @@ household       <- read_tsv(hh_location,col_names=TRUE) %>%
 car_vector <- c(6:22,24:28,33:36,38,47,55,59:60,62:66,76)
 
 # Bring in freeway coordinates for placing pie charts on map
+# File also has long name equivalencies for facilities and Bay Area geographical designations
 
 freeway_coords_in <- file.path(Output,"Freeway Facility Coordinates.csv")
 freeway_coords <- read.csv(freeway_coords_in)
@@ -354,9 +355,10 @@ freeway_homes <- working %>%
          "CC_Al_680_4To580", "CC_4_160To680", "Sol_80_YoloToCarquinez", 
          "North_37_101To80", "Mar_Son_101_12To580", "All_Freeways", 
          "daywt_alladult_wkday", "reported_home_lat", "reported_home_lon") %>% 
-  pivot_longer (.,4:26,names_to = "Roadway", values_to = "dummy") %>% 
+  pivot_longer (.,4:26,names_to = "roadway", values_to = "dummy") %>% 
   filter(dummy==1)%>% 
-  select(-dummy)
+  select(-dummy) %>% 
+  left_join(.,freeway_coords,by="roadway")
 
 write.csv(freeway_homes,file.path(Output,"BATS_2019_Freeway_Homes.csv"),row.names = FALSE)
 
