@@ -334,19 +334,19 @@ final <- bind_rows(full_all_day,full_peak,full_am_peak,full_pm_peak,full_off_pea
 
 # Join PUMS household share of AMI to compare population shares vs. people driving on freeways
 
-final <- left_join(final,bay_income_med,by=c("metric"="ami_recoded"))
+final1 <- left_join(final,bay_income_med,by=c("metric"="ami_recoded"))
 
 # Join with location file to place pie charts on map
 
-final <- left_join(final,freeway_coords,by="roadway")
+final2 <- left_join(final1,freeway_coords,by="roadway")
 
 # Output file for analysis in Tableau
 
-write.csv(final,file.path(Output,"BATS_2019_Facility_Daypart_Summary.csv"),row.names = FALSE)
+write.csv(final2,file.path(Output,"BATS_2019_Facility_Daypart_Summary.csv"),row.names = FALSE)
 
 # Create a file for of just home locations by freeway users
 
-freeway_homes <- working %>% 
+all_locations <- working %>% 
   select("hh_id", "person_id", "trip_id", "Al_SF_80_PlazaTo101", "SF_101_80ToSM", 
          "SF_280_StartToSM", "SM_101_SFToSC", "SM_280_SFToSC", "SC_101_SMTo680", 
          "SC_101_680ToGilroy", "SC_237_101To880", "SC_280_SMTo101", "Al_SC_680_101To580", 
@@ -354,11 +354,45 @@ freeway_homes <- working %>%
          "Al_580_238To80", "Al_80_580ToPlaza", "Al_CC_80_4To580", "CC_Al_24_680To580", 
          "CC_Al_680_4To580", "CC_4_160To680", "Sol_80_YoloToCarquinez", 
          "North_37_101To80", "Mar_Son_101_12To580", "All_Freeways", 
-         "daywt_alladult_wkday", "reported_home_lat", "reported_home_lon") %>% 
+         "daywt_alladult_wkday", "reported_home_lat", "reported_home_lon","o_lat",
+         "o_lon","d_lat","d_lon") %>% 
   pivot_longer (.,4:26,names_to = "roadway", values_to = "dummy") %>% 
   filter(dummy==1)%>% 
   select(-dummy) %>% 
+  left_join(.,freeway_coords,by="roadway") 
+
+# Convert into long format for Tableau and rbind
+
+homes <- all_locations %>% 
+  select(-o_lat, -o_lon, -d_lat, -d_lon) %>% 
+  rename(latitude=reported_home_lat,longitude=reported_home_lon) %>% 
+  mutate(location="home")
+
+origins <- all_locations %>% 
+  select(-reported_home_lat, -reported_home_lon, -d_lat, -d_lon) %>% 
+  rename(latitude=o_lat,longitude=o_lon) %>% 
+  mutate(location="origin")
+
+destinations <- all_locations %>% 
+  select(-reported_home_lat, -reported_home_lon, -o_lat, -o_lon) %>% 
+  rename(latitude=d_lat,longitude=d_lon) %>% 
+  mutate(location="destination")
+
+all_locations_long <- rbind(homes, origins, destinations)
+
+write.csv(all_locations_long,file.path(Output,"BATS_2019_Freeway_Home_O_D_Locations.csv"),row.names = FALSE)
+
+# Create a file with PUMS AMI income joined as rows, not columns, output file
+
+ami_joiner <- bay_income_med %>% 
+  mutate(roadway="Bay_Area_Population", category="ami_income",time_period="Bay Area Population",count=NA_real_,
+         total=NA_real_,standard_error=NA_real_,ci_95=NA_real_,lower_bound=NA_real_,upper_bound=NA_real_,
+         range=NA_real_,cv=NA_real_,est_reliability=NA_character_) %>% 
+         rename(metric=ami_recoded, share_value=PUMS_household_share)
+
+final3 <- rbind(final,ami_joiner) %>% 
   left_join(.,freeway_coords,by="roadway")
 
-write.csv(freeway_homes,file.path(Output,"BATS_2019_Freeway_Homes.csv"),row.names = FALSE)
+write.csv(final3,file.path(Output,"BATS_2019_Facility_Daypart_Summary_AMI_in_Rows.csv"),row.names = FALSE)
+
 
