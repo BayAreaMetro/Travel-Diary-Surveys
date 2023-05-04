@@ -8,6 +8,7 @@ options(scipen = 999)
 # Bring in libraries
 
 suppressMessages(library(tidyverse))
+library(sf)
 library(spatstat)
 
 # Set output directory
@@ -16,6 +17,7 @@ USERPROFILE   <- gsub("////","/", Sys.getenv("USERPROFILE"))
 Box_TM1       <- file.path(USERPROFILE, "Box", "Modeling and Surveys", "Surveys", "Travel Diary Survey")
 Box_TM2       <- file.path(Box_TM1,"MPO Partner Household Travel Survey","TNC Work","SFCTA Map Matching")
 Output        <- file.path(Box_TM2,"NextGen Freeway Analysis")
+OSM_Path      <- "M:/Data/HomeInterview/TNC Survey/SFCTA Map Matching/NextGen Freeway Project"
 
 # Bring in TNC survey files
 # Commented out files that may be needed for future analyses
@@ -163,6 +165,27 @@ person_joiner <- person  %>%
       TRUE                                                             ~ "Miscoded"
     ))  %>%  
   select(hh_id,person_id,income_recoded,race_recoded,income_detailed,income_imputed,raceeth_new_imputed,ami_recoded,discrete_income,reported_home_lat,reported_home_lon)
+
+# Get race from PUMS for comparing to freeway facilities
+
+PERSON_RDATA = "M:/Data/Census/PUMS/PUMS 2019/pbayarea19.Rdata"
+load (PERSON_RDATA)
+
+race19 <- pbayarea19 %>% 
+mutate(racerc=case_when(
+  HISP>1               ~"Hispanic",
+  HISP==1 & RAC1P==1   ~"White",
+  HISP==1 & RAC1P==2   ~"Black",
+  HISP==1 & RAC1P==3   ~"Other",
+  HISP==1 & RAC1P==4   ~"Other",
+  HISP==1 & RAC1P==5   ~"Other",
+  HISP==1 & RAC1P==6   ~"Asian/Pacific Islander",
+  HISP==1 & RAC1P==7   ~"Asian/Pacific Islander",
+  HISP==1 & RAC1P>=8   ~"Other",
+  TRUE                 ~"Uncoded")) %>% 
+  group_by(racerc) %>% 
+  summarize(total=sum(PWGTP)) %>% 
+  mutate(race_share=total/sum(total))
 
 # Recoded trip purpose on linked trip file
 
@@ -382,17 +405,161 @@ all_locations_long <- rbind(homes, origins, destinations)
 
 write.csv(all_locations_long,file.path(Output,"BATS_2019_Freeway_Home_O_D_Locations.csv"),row.names = FALSE)
 
-# Create a file with PUMS AMI income joined as rows, not columns, output file
+# Create a file with PUMS AMI income and race joined as rows, not columns, output file
 
 ami_joiner <- bay_income_med %>% 
   mutate(roadway="Bay_Area_Population", category="ami_income",time_period="Bay Area Population",count=NA_real_,
          total=NA_real_,standard_error=NA_real_,ci_95=NA_real_,lower_bound=NA_real_,upper_bound=NA_real_,
          range=NA_real_,cv=NA_real_,est_reliability=NA_character_) %>% 
-         rename(metric=ami_recoded, share_value=PUMS_household_share)
+         rename(metric=ami_recoded, share_value=PUMS_household_share) 
+
+race_joiner <- race19 %>% 
+  mutate(roadway="Bay_Area_Population", category="ethnicity",time_period="Bay Area Population",count=NA_real_,
+         total=NA_real_,standard_error=NA_real_,ci_95=NA_real_,lower_bound=NA_real_,upper_bound=NA_real_,
+         range=NA_real_,cv=NA_real_,est_reliability=NA_character_) %>% 
+  rename(metric=racerc, share_value=race_share) 
 
 final3 <- rbind(final,ami_joiner) %>% 
   left_join(.,freeway_coords,by="roadway")
 
+final4 <- rbind(final,race_joiner) %>% 
+  left_join(.,freeway_coords,by="roadway")
+
 write.csv(final3,file.path(Output,"BATS_2019_Facility_Daypart_Summary_AMI_in_Rows.csv"),row.names = FALSE)
+write.csv(final4,file.path(Output,"BATS_2019_Facility_Daypart_Summary_Race_in_Rows.csv"),row.names = FALSE)
+
+# Try to export highway shapefile to support color coding of segments
+
+# Append facility name associated with links
+
+Al_SF_80_PlazaTo101 <- read.csv(file.path(segment_in,"Al_SF_80_PlazaTo101.csv")) %>% 
+  mutate(facility_links="Al_SF_80_PlazaTo101")
+
+SF_101_80ToSM <- read.csv(file.path(segment_in,"SF_101_80ToSM.csv")) %>% 
+  mutate(facility_links="SF_101_80ToSM")
+
+SF_280_StartToSM <- read.csv(file.path(segment_in,"SF_280_StartToSM.csv")) %>% 
+  mutate(facility_links="SF_280_StartToSM")
+
+SM_101_SFToSC <- read.csv(file.path(segment_in,"SM_101_SFToSC.csv")) %>% 
+  mutate(facility_links="SM_101_SFToSC")
+
+SM_280_SFToSC <- read.csv(file.path(segment_in,"SM_280_SFToSC.csv")) %>% 
+  mutate(facility_links="SM_280_SFToSC")
+
+SC_101_SMTo680 <- read.csv(file.path(segment_in,"SC_101_SMTo680.csv")) %>% 
+  mutate(facility_links="SC_101_SMTo680")
+
+SC_101_680ToGilroy <- read.csv(file.path(segment_in,"SC_101_680ToGilroy.csv")) %>% 
+  mutate(facility_links="SC_101_680ToGilroy")
+
+SC_237_101To880 <- read.csv(file.path(segment_in,"SC_237_101To880.csv")) %>% 
+  mutate(facility_links="SC_237_101To880")
+
+SC_280_SMTo101 <- read.csv(file.path(segment_in,"SC_280_SMTo101.csv")) %>% 
+  mutate(facility_links="SC_280_SMTo101")
+
+Al_SC_680_101To580 <- read.csv(file.path(segment_in,"Al_SC_680_101To580.csv")) %>% 
+  mutate(facility_links="Al_SC_680_101To580")
+
+Al_SC_880_101To238 <- read.csv(file.path(segment_in,"Al_SC_880_101To238.csv")) %>% 
+  mutate(facility_links="Al_SC_880_101To238")
+
+Al_880_238ToPlaza <- read.csv(file.path(segment_in,"Al_880_238ToPlaza.csv")) %>% 
+  mutate(facility_links="Al_880_238ToPlaza")
+
+Al_580_SanJoaquinTo238 <- read.csv(file.path(segment_in,"Al_580_SanJoaquinTo238.csv")) %>% 
+  mutate(facility_links="Al_580_SanJoaquinTo238")
+
+Al_580_238To80 <- read.csv(file.path(segment_in,"Al_580_238To80.csv")) %>% 
+  mutate(facility_links="Al_580_238To80")
+
+Al_80_580ToPlaza <- read.csv(file.path(segment_in,"Al_80_580ToPlaza.csv")) %>% 
+  mutate(facility_links="Al_80_580ToPlaza")
+
+Al_CC_80_4To580 <- read.csv(file.path(segment_in,"Al_CC_80_4To580.csv")) %>% 
+  mutate(facility_links="Al_CC_80_4To580")
+
+CC_Al_24_680To580 <- read.csv(file.path(segment_in,"CC_Al_24_680To580.csv")) %>% 
+  mutate(facility_links="CC_Al_24_680To580")
+
+CC_Al_680_4To580 <- read.csv(file.path(segment_in,"CC_Al_680_4To580.csv")) %>% 
+  mutate(facility_links="CC_Al_680_4To580")
+
+CC_4_160To680 <- read.csv(file.path(segment_in,"CC_4_160To680.csv")) %>% 
+  mutate(facility_links="CC_4_160To680")
+
+Sol_80_YoloToCarquinez <- read.csv(file.path(segment_in,"Sol_80_YoloToCarquinez.csv")) %>% 
+  mutate(facility_links="Sol_80_YoloToCarquinez")
+
+North_37_101To80 <- read.csv(file.path(segment_in,"North_37_101To80.csv")) %>% 
+  mutate(facility_links="North_37_101To80")
+
+Mar_Son_101_12To580 <- read.csv(file.path(segment_in,"Mar_Son_101_12To580.csv")) %>% 
+  mutate(facility_links="Mar_Son_101_12To580")
+
+# Bind all segments together into a single file to merge with shapefile
+
+all_segments <- bind_rows(
+  Al_SF_80_PlazaTo101,
+  SF_101_80ToSM,
+  SF_280_StartToSM,
+  SM_101_SFToSC,
+  SM_280_SFToSC,
+  SC_101_SMTo680,
+  SC_101_680ToGilroy,
+  SC_237_101To880,
+  SC_280_SMTo101,
+  Al_SC_680_101To580,
+  Al_SC_880_101To238,
+  Al_880_238ToPlaza,
+  Al_580_SanJoaquinTo238,
+  Al_580_238To80,
+  Al_80_580ToPlaza,
+  Al_CC_80_4To580,
+  CC_Al_24_680To580,
+  CC_Al_680_4To580,
+  CC_4_160To680,
+  Sol_80_YoloToCarquinez,
+  North_37_101To80,
+  Mar_Son_101_12To580) %>% 
+  select("GID", "facility_links")
+
+# Remove individual data frames to clean up workspace
+
+rm(Al_SF_80_PlazaTo101,
+   SF_101_80ToSM,
+   SF_280_StartToSM,
+   SM_101_SFToSC,
+   SM_280_SFToSC,
+   SC_101_SMTo680,
+   SC_101_680ToGilroy,
+   SC_237_101To880,
+   SC_280_SMTo101,
+   Al_SC_680_101To580,
+   Al_SC_880_101To238,
+   Al_880_238ToPlaza,
+   Al_580_SanJoaquinTo238,
+   Al_580_238To80,
+   Al_80_580ToPlaza,
+   Al_CC_80_4To580,
+   CC_Al_24_680To580,
+   CC_Al_680_4To580,
+   CC_4_160To680,
+   Sol_80_YoloToCarquinez,
+   North_37_101To80,
+   Mar_Son_101_12To580)
+
+# Bring in shapefile, join with link information and equivalency for long names, then export
+
+OSM_Shapefile <- st_read(file.path(OSM_Path,"osm.shp")) %>% 
+  left_join(.,all_segments,by="GID") %>% 
+  filter(!(is.na(facility_links))) %>% 
+  left_join(.,final2, by=c("facility_links"="roadway")) 
+
+st_write(OSM_Shapefile,file.path(OSM_Path, "osm_enhanced.shp"))
+
+
+
 
 
