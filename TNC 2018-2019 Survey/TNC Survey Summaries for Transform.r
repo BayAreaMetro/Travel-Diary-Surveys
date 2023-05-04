@@ -16,8 +16,8 @@ trip_location <- file.path(file_location,"trip_linked.tsv")
 skim_location <- "Z:/Projects/2015_TM152_IPA_17/skims/skims_csv/HWYSKMAM.csv"
 
 USERPROFILE   <- gsub("////","/", Sys.getenv("USERPROFILE"))
-BOX_TM        <- file.path(USERPROFILE, "Box", "Modeling and Surveys", "Surveys")
-Output        <- file.path(BOX_TM,"Travel Diary Survey","Requests","Transform")
+BOX_TM        <- file.path(USERPROFILE, "Box", "Modeling and Surveys", "Share Data")
+Output        <- file.path(BOX_TM,"bespoke","Travel Diary Survey","Transform")
 
 
 # Bring in data and skim matrix
