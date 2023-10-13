@@ -16,14 +16,14 @@ library(spatstat)
 
 USERPROFILE   <- gsub("////","/", Sys.getenv("USERPROFILE"))
 Box_TM1       <- file.path(USERPROFILE, "Box", "Modeling and Surveys", "Surveys", "Travel Diary Survey")
-Box_TM2       <- file.path(Box_TM1,"MPO Partner Household Travel Survey","TNC Work","SFCTA Map Matching")
+Box_TM2       <- file.path(Box_TM1,"MPO Partner Household Travel Survey","Bay Area Travel Study 2018-2019","SFCTA Map Matching")
 Output        <- file.path(Box_TM2,"Facility Summaries")
 OSM_Path      <- "M:/Data/HomeInterview/TNC Survey/SFCTA Map Matching"
 
 # Bring in TNC survey files
 # Commented out files that may be needed for future analyses
 
-temp                   <- "M:/Data/HomeInterview/TNC Survey/Data/Task 8 Data Refinement Version"
+temp                   <- "M:/Data/HomeInterview/Bay Area Travel Study 2018-2019/Data/Final Version with Imputations"
 file_location          <- file.path(temp,"Final Updated Dataset as of 10-18-2021","RSG_HTS_Oct2021_bayarea")
 person_location        <- file.path(file_location,"person.tsv")
 trip_location          <- file.path(file_location,"trip.tsv")
