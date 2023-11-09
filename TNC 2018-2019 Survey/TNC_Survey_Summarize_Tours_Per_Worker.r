@@ -83,10 +83,13 @@ joined <- left_join(SFCTA_day,day,by=c("hhno"="hh_id","pno"="person_num","day"="
 
 work_cat <- joined %>% 
   group_by(work_category) %>% 
-  summarize(weighted_average_home_based_tours=weighted.mean(hbtours,pdexpfac))
+  summarize(home_based_tours=weighted.mean(hbtours,pdexpfac),
+            work_based_tours=weighted.mean(wbtours,pdexpfac))
 
 total_pop <- joined %>% 
-  summarize(work_category="5_total_population",weighted_average_home_based_tours=weighted.mean(hbtours,pdexpfac))
+  summarize(work_category="5_total population",home_based_tours=weighted.mean(hbtours,pdexpfac), 
+            work_based_tours=weighted.mean(wbtours,pdexpfac))
 
-final <- rbind(work_cat,total_pop)
+final <- rbind(work_cat,total_pop) %>% 
+  mutate(total_tours=home_based_tours+work_based_tours)
 
