@@ -10,14 +10,6 @@ options(scipen = 999)
 
 suppressMessages(library(tidyverse))
 
-# Set output directory
-
-USERPROFILE   <- gsub("////","/", Sys.getenv("USERPROFILE"))
-Box_TM1       <- file.path(USERPROFILE, "Box", "Modeling and Surveys", "Surveys", "Travel Diary Survey")
-Box_TM2       <- file.path(Box_TM1,"MPO Partner Household Travel Survey","Bay Area Travel Study 2018-2019","SFCTA Map Matching")
-Output        <- file.path(Box_TM2,"Facility Summaries")
-OSM_Path      <- "M:/Data/HomeInterview/TNC Survey/SFCTA Map Matching"
-
 # TNC survey files locations
 
 temp1                  <- "M:/Data/HomeInterview/Bay Area Travel Study 2018-2019"
