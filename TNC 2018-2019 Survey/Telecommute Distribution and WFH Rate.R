@@ -52,20 +52,20 @@ person_joiner <- person %>% filter(is_active_participant==1) %>%
 joined <- left_join(day,work_trips,by=c("hh_id","person_num","day_num")) %>% 
   left_join(.,person_joiner,by=c("hh_id","person_num")) %>%
   mutate(
-  telecommute=case_when(
-    telework_time==0                                ~ "0_0 minutes",
-    telework_time>0 & telework_time<60              ~ "1_1 to 59 minutes",
-    telework_time>=60 & telework_time<120           ~ "2_60 to 119 minutes",
-    telework_time>=120 & telework_time<180          ~ "3_120 to 179 minutes",
-    telework_time>=180 & telework_time<240          ~ "4_180 to 239 minutes",
-    telework_time>=240 & telework_time<300          ~ "5_240 to 299 minutes",
-    telework_time>=300 & telework_time<360          ~ "6_300 to 359 minutes",
-    telework_time>=360 & telework_time<420          ~ "7_360 to 419 minutes",
-    telework_time>=420 & telework_time<480          ~ "8_420 to 479 minutes",
-    telework_time>=480                              ~ "9_480+ minutes",
-    TRUE                                            ~ "10_No value given")) %>% 
+    telecommute=case_when(
+      telework_time==0                                ~ "0_0 minutes",
+      telework_time>0 & telework_time<60              ~ "1_1 to 59 minutes",
+      telework_time>=60 & telework_time<120           ~ "2_60 to 119 minutes",
+      telework_time>=120 & telework_time<180          ~ "3_120 to 179 minutes",
+      telework_time>=180 & telework_time<240          ~ "4_180 to 239 minutes",
+      telework_time>=240 & telework_time<300          ~ "5_240 to 299 minutes",
+      telework_time>=300 & telework_time<360          ~ "6_300 to 359 minutes",
+      telework_time>=360 & telework_time<420          ~ "7_360 to 419 minutes",
+      telework_time>=420 & telework_time<480          ~ "8_420 to 479 minutes",
+      telework_time>=480                              ~ "9_480+ minutes",
+      TRUE                                            ~ "10_No value given")) %>% 
   mutate(num_work_trips=if_else(is.na(num_work_trips),0,num_work_trips)) %>%        # Assigns zero work trips to people who made no trips at all
-  filter(worker==1)
+  filter(worker==1)                                                                 # Filter for workers only (worker==1 or employment %in% c(1,2,3))
 
 zero_work_trips <- joined %>% 
   filter(num_work_trips==0, telework_time>0) %>%    
@@ -80,11 +80,39 @@ ggplot(zero_work_trips, aes(x = telecommute,y=share)) +
   labs(title = "Telecommute time for zero work trips, worker==1, telecommute time>0",
        x = "Telecommute Bins",
        y = "Share (Percentage)")
- 
+
 # Share work at home
 # If telework time is missing, change to zero
 
 work_location <- joined %>% 
+  mutate(telework_time=if_else(is.na(telework_time),0,telework_time)) %>% 
+  mutate(
+    worked_in_office       =if_else(num_work_trips>0,daywt_alladult_wkday,0),
+    worked_from_home_LT240 =if_else(num_work_trips==0 & (telework_time>=1 & telework_time<240),daywt_alladult_wkday,0),
+    worked_from_home_240p  =if_else(num_work_trips==0 & telework_time>=240,daywt_alladult_wkday,0),
+    not_worked             =if_else(num_work_trips==0 & telework_time==0,daywt_alladult_wkday,0),
+    total_worked           =worked_in_office+worked_from_home_LT240+worked_from_home_240p,
+    total_workers          =total_worked+not_worked
+  ) 
+
+final <- work_location %>% 
+  summarize(
+    worked_in_office=sum(worked_in_office),
+    worked_from_home_LT240=sum(worked_from_home_LT240),
+    worked_from_home_240p=sum(worked_from_home_240p),
+    not_worked=sum(not_worked),
+    total_worked=sum(total_worked),
+    total_workers=sum(total_workers)
+  ) %>% 
+  mutate(
+    share_worked_in_office       =worked_in_office/total_worked,
+    share_worked_from_home_LT240 =worked_from_home_LT240/total_worked,
+    share_worked_from_home_240p  =worked_from_home_240p/total_worked)
+
+# Look only at full-time workers
+
+work_location2 <- joined %>% 
+  filter(employment==1) %>% 
   mutate(telework_time=if_else(is.na(telework_time),0,telework_time)) %>% 
   mutate(
     worked_in_office  =if_else(num_work_trips>0,daywt_alladult_wkday,0),
@@ -94,7 +122,7 @@ work_location <- joined %>%
     total_workers     =total_worked+not_worked
   ) 
 
-final <- work_location %>% 
+final2 <- work_location2 %>% 
   summarize(
     worked_in_office=sum(worked_in_office),
     worked_from_home=sum(worked_from_home),
@@ -106,9 +134,55 @@ final <- work_location %>%
     share_worked_in_office=worked_in_office/total_worked,
     share_worked_from_home=worked_from_home/total_worked)
 
-  
+# Non-imputed version
+
+work_trips3 <- linked_trip %>%
+  mutate(work_trip_flag=0,
+         work_trip_flag=if_else(d_purpose_category %in% c(2,3),1,work_trip_flag)) %>% 
+  group_by(hh_id,person_num,day_num) %>% 
+  summarize(num_work_trips=sum(work_trip_flag))
 
 
+joined3 <- left_join(day,work_trips3,by=c("hh_id","person_num","day_num")) %>% 
+  left_join(.,person_joiner,by=c("hh_id","person_num")) %>%
+  mutate(
+    telecommute=case_when(
+      telework_time==0                                ~ "0_0 minutes",
+      telework_time>0 & telework_time<60              ~ "1_1 to 59 minutes",
+      telework_time>=60 & telework_time<120           ~ "2_60 to 119 minutes",
+      telework_time>=120 & telework_time<180          ~ "3_120 to 179 minutes",
+      telework_time>=180 & telework_time<240          ~ "4_180 to 239 minutes",
+      telework_time>=240 & telework_time<300          ~ "5_240 to 299 minutes",
+      telework_time>=300 & telework_time<360          ~ "6_300 to 359 minutes",
+      telework_time>=360 & telework_time<420          ~ "7_360 to 419 minutes",
+      telework_time>=420 & telework_time<480          ~ "8_420 to 479 minutes",
+      telework_time>=480                              ~ "9_480+ minutes",
+      TRUE                                            ~ "10_No value given")) %>% 
+  mutate(num_work_trips=if_else(is.na(num_work_trips),0,num_work_trips)) %>%        # Assigns zero work trips to people who made no trips at all
+  filter(worker==1)
 
+work_location3 <- joined3 %>% 
+  filter(employment %in% c(1,3)) %>% 
+  mutate(telework_time=if_else(is.na(telework_time),0,telework_time)) %>% 
+  mutate(
+    worked_in_office  =if_else(num_work_trips>0,daywt_alladult_wkday,0),
+    worked_from_home  =if_else(num_work_trips==0 & telework_time>=1,daywt_alladult_wkday,0),
+    not_worked        =if_else(num_work_trips==0 & telework_time==0,daywt_alladult_wkday,0),
+    total_worked      =worked_in_office+worked_from_home,
+    total_workers     =total_worked+not_worked
+  ) 
 
+final3 <- work_location3 %>% 
+  summarize(
+    worked_in_office=sum(worked_in_office),
+    worked_from_home=sum(worked_from_home),
+    not_worked=sum(not_worked),
+    total_worked=sum(total_worked),
+    total_workers=sum(total_workers)
+  ) %>% 
+  mutate(
+    share_worked_in_office=worked_in_office/total_worked,
+    share_worked_from_home=worked_from_home/total_worked)
+
+View(final3)
 
