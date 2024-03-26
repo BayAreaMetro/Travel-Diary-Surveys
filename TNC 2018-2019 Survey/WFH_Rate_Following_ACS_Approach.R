@@ -6,7 +6,7 @@
 # Import Libraries
 
 suppressMessages(library(tidyverse))
-library(formattable)
+#library(formattable)
 
 # Set up working directory
 
@@ -113,9 +113,10 @@ final <- joined %>%
          total=total_worked+Did_not_work) %>% 
   left_join(.,pweight,by=c("hh_id","person_num")) %>% 
   mutate(
-    worked_at_home4p  =if_else(total_worked==0,0,if_else(Home_4p_hours/total_worked>=0.5,wt_alladult_7day,0)),
-    worked_at_home_any=if_else(total_worked==0,0,if_else((Home_4p_hours+Home_LT_4_hours)/total_worked>=0.5,wt_alladult_7day,0)),
     commuted          =if_else(total_worked==0,0,if_else(Worked_in_office/total_worked>=0.5,wt_alladult_7day,0)),
+    worked_at_home4p  =if_else(total_worked==0,0,if_else(
+      Home_4p_hours/total_worked>0.5,wt_alladult_7day,0)),
+    worked_at_home_any=if_else(total_worked==0,0,if_else((Home_4p_hours+Home_LT_4_hours)/total_worked>0.5,wt_alladult_7day,0)),
     did_not_work      =if_else(total_worked==0,wt_alladult_7day,0),
     total_activity    =worked_at_home_any+commuted)
 
@@ -128,51 +129,3 @@ final_summed <- final %>%
               mutate(share_worked_at_home4p    =worked_at_home4p/total_activity,
                      share_worked_at_home_any  =worked_at_home_any/total_activity,
                      share_commuted            =commuted/total_activity)
-
-  
-
-  
-zero_work_trips <- joined %>% 
-  filter(num_work_trips==0, telework_time>0) %>%    
-  group_by(telecommute) %>% 
-  summarize(total=sum(daywt_alladult_wkday)) %>% 
-  ungroup() %>% 
-  mutate(share=100*round(total/sum(total),3))
-
-ggplot(zero_work_trips, aes(x = telecommute,y=share)) +
-  geom_col(fill = "blue", color = "black", alpha = 0.7) +
-  geom_text(aes(label = formattable::digits(share,digits=1), vjust = -0.5)) +
-  labs(title = "Telecommute time for zero work trips, worker==1, telecommute time>0",
-       x = "Telecommute Bins",
-       y = "Share (Percentage)")
-
-# Share work at home
-# If telework time is missing, change to zero
-
-work_location <- joined %>% 
-  mutate(telework_time=if_else(is.na(telework_time),0,telework_time)) %>% 
-  mutate(
-    worked_in_office       =if_else(num_work_trips>0,daywt_alladult_wkday,0),
-    worked_from_home_LT240 =if_else(num_work_trips==0 & (telework_time>=1 & telework_time<240),daywt_alladult_wkday,0),
-    worked_from_home_240p  =if_else(num_work_trips==0 & telework_time>=240,daywt_alladult_wkday,0),
-    not_worked             =if_else(num_work_trips==0 & telework_time==0,daywt_alladult_wkday,0),
-    total_worked           =worked_in_office+worked_from_home_LT240+worked_from_home_240p,
-    total_workers          =total_worked+not_worked
-  ) 
-
-final <- work_location %>% 
-  summarize(
-    worked_in_office=sum(worked_in_office),
-    worked_from_home_LT240=sum(worked_from_home_LT240),
-    worked_from_home_240p=sum(worked_from_home_240p),
-    not_worked=sum(not_worked),
-    total_worked=sum(total_worked),
-    total_workers=sum(total_workers)
-  ) %>% 
-  mutate(
-    share_worked_in_office       =worked_in_office/total_worked,
-    share_worked_from_home_LT240 =worked_from_home_LT240/total_worked,
-    share_worked_from_home_240p  =worked_from_home_240p/total_worked)
-
-View(final)
-
