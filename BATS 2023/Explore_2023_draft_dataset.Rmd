@@ -1,0 +1,289 @@
+---
+title: "MTC Draft 2023 Travel Diary Survey Review"
+output:
+  html_document:
+    theme: cosmo
+    toc: true
+---
+
+```{r setup, include=FALSE}
+# Load necessary packages
+library(tidyverse)
+library(tidycensus)
+
+# Load the data
+folder  <- "M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Full Unweighted 2023 Dataset"
+day     <- read.csv(file.path(folder,"day.csv"))
+hh      <- read.csv(file.path(folder,"hh.csv"))
+person  <- read.csv(file.path(folder,"person.csv"))
+trip    <- read.csv(file.path(folder,"trip.csv"))
+vehicle <- read.csv(file.path(folder,"person.csv"))
+
+```
+
+# Surveys by home county
+
+```{r home_county, echo=FALSE}
+
+household <- hh %>% 
+  mutate(home_county = recode(home_county,
+    "6001" = "Alameda",
+    "6013" = "Contra Costa",
+    "6041" = "Marin",
+    "6055" = "Napa",
+    "6075" = "San Francisco",
+    "6081" = "San Mateo",
+    "6085" = "Santa Clara",
+    "6095" = "Solano",
+    "6097" = "Sonoma"))
+
+table(household$home_county)
+
+household_joiner <- household %>% 
+  select(hh_id,home_county)
+
+```
+
+# Trip characteristics
+
+## Auto trip occupancy - all trips
+
+```{r all_trips_occupancy, echo=FALSE}
+auto_trips <- trip %>%
+  left_join(.,household_joiner,by="hh_id") %>% 
+  mutate(num_travelers=recode(num_travelers,
+                              "1"="1_Person",
+                              "2"="2_Persons",
+                              "3"="3_Persons",
+                              "4"="4_Persons",
+                              "5"="5p_Persons",
+                              "995"="Missing")) %>% 
+  filter(mode_type==8) 
+
+all_auto_trips <- auto_trips %>% 
+  group_by(home_county,num_travelers) %>% 
+  summarize(occupancy=n()) %>% 
+  mutate(share=round(100*occupancy/sum(occupancy),0)) %>% 
+  select(-occupancy) %>% 
+  pivot_wider(., names_from = num_travelers,values_from = share,values_fill = 0) %>% 
+  select(-Missing)
+
+bay_all_auto_trips <- auto_trips %>% 
+  group_by(num_travelers) %>% 
+  summarize(occupancy=n()) %>% 
+  mutate(share=round(100*occupancy/sum(occupancy),0)) %>% 
+  select(-occupancy) %>% 
+  pivot_wider(., names_from = num_travelers,values_from = share,values_fill = 0) %>% 
+  select(-Missing) %>% 
+  mutate(home_county="Bay Area") %>% 
+  relocate(home_county,.before = "1_Person")
+
+all_auto_trips <- rbind(all_auto_trips,bay_all_auto_trips)
+
+all_auto_trips
+```
+
+## Auto trip occupancy - work trips
+
+```{r work_trips_occupancy, echo=FALSE}
+
+work_auto_trips <- auto_trips %>% 
+  filter(d_purpose_category %in% c(2,3)) %>% 
+  group_by(home_county,num_travelers) %>% 
+  summarize(occupancy=n()) %>% 
+  mutate(share=round(100*occupancy/sum(occupancy),0)) %>% 
+  select(-occupancy) %>% 
+  pivot_wider(., names_from = num_travelers,values_from = share,values_fill = 0) %>% 
+  select(-Missing)
+
+bay_work_auto_trips <- auto_trips %>% 
+  filter(d_purpose_category %in% c(2,3)) %>% 
+  group_by(num_travelers) %>% 
+  summarize(occupancy=n()) %>% 
+  mutate(share=round(100*occupancy/sum(occupancy),0)) %>% 
+  select(-occupancy) %>% 
+  pivot_wider(., names_from = num_travelers,values_from = share,values_fill = 0) %>% 
+  select(-Missing) %>% 
+  mutate(home_county="Bay Area") %>% 
+  relocate(home_county,.before = "1_Person")
+
+work_auto_trips <- rbind(work_auto_trips,bay_work_auto_trips)
+
+work_auto_trips
+```
+
+## Compare race with ACS 2022
+
+```{r compare_race, echo=FALSE}
+
+race_variables <- c("Total"    = "C03002_001",
+                    "White"    = "C03002_003",
+                    "Black"    = "C03002_004",
+                    "Other"    = "C03002_005",
+                    "Asian"    = "C03002_006",
+                    "Other"    = "C03002_007",
+                    "Other"    = "C03002_008",
+                    "Other"    = "C03002_009",
+                    "Hispanic" = "C03002_012")
+
+race <- get_acs(
+  geography = "county",
+  county = c("Alameda","Contra Costa","Marin","Napa","San Francisco","San Mateo","Santa Clara","Solano","Sonoma"),
+  state = "california",
+  variables = race_variables,
+  year = 2022,
+  survey = "acs1",
+) %>% 
+  group_by(NAME,variable) %>% 
+  summarize(estimate=sum(estimate)) %>% 
+  pivot_wider(.,names_from = variable,values_from = estimate) %>% 
+  select(County=NAME,White,Black,Asian,Other,Hispanic,Total) %>% 
+   mutate(County = gsub(" County, California", "", County))
+
+race_bay <- get_acs(
+  geography = "county",
+  county = c("Alameda","Contra Costa","Marin","Napa","San Francisco","San Mateo","Santa Clara","Solano","Sonoma"),
+  state = "california",
+  variables = race_variables,
+  year = 2022,
+  survey = "acs1",
+) %>% 
+  group_by(variable) %>% 
+  summarize(estimate=sum(estimate)) %>% 
+  pivot_wider(.,names_from = variable,values_from = estimate) %>% 
+  mutate(County="Bay Area") %>% 
+  select(County,White,Black,Asian,Other,Hispanic, Total) 
+  
+race_all <- rbind(race,race_bay) %>% 
+  mutate(
+    ACS_White_Share    = round(100*White/Total,0),
+    ACS_Black_Share    = round(100*Black/Total,0),
+    ACS_Asian_Share    = round(100*Asian/Total,0),
+    ACS_Other_Share    = round(100*Other/Total,0),
+    ACS_Hispanic_Share = round(100*Hispanic/Total,0)) %>% 
+  select(County,ACS_White_Share,ACS_Black_Share,ACS_Asian_Share,ACS_Other_Share,ACS_Hispanic_Share) %>% 
+  mutate(ACS_Missing_Share=0) %>% 
+  rename(Home_County=County)
+
+# Now do survey
+
+survey_race <- person %>% 
+  filter(age>3) %>% 
+  left_join(.,household_joiner,by="hh_id") %>% 
+  mutate(race_recode=case_when(
+    ethnicity_1==1 & race_5==1                                                         ~ "White",
+    ethnicity_1==1 & race_1==1                                                         ~ "Black",
+    ethnicity_1==1 & race_3==1                                                         ~ "Asian",
+    ethnicity_1==1                                                                     ~ "Other",
+    ethnicity_2==1 | ethnicity_3==1 | ethnicity_4==1 | ethnicity_997==1                ~ "Hispanic",
+    ethnicity_999==1 | ethnicity_other==1                                              ~ "Other",
+    ethnicity_1==995 & ethnicity_2==995 & ethnicity_3==995 & ethnicity_4==995 &
+      ethnicity_997==995 & ethnicity_999==995 & race_1==995 & race_2==995 &
+      race_3==995 & race_4==995 & race_5==995 & race_997==995 & race_999==995          ~ "Missing",
+    TRUE                                                                               ~ "Miscoded")) 
+
+survey_race_county <- survey_race %>% 
+  group_by(home_county,race_recode) %>% 
+  summarize(total=n()) %>% 
+  pivot_wider(names_from = race_recode,values_from = total) %>% 
+  select(home_county,White,Black,Asian,Other,Hispanic,Missing)
+
+survey_race_bay <- survey_race %>% 
+  mutate(home_county="Bay Area") %>% 
+  group_by(home_county,race_recode) %>% 
+  summarize(total=n()) %>% 
+  pivot_wider(names_from = race_recode,values_from = total) %>% 
+  select(home_county,White,Black,Asian,Other,Hispanic,Missing)
+
+survey_race_all <- rbind(survey_race_county,survey_race_bay) %>% 
+  mutate(Total=White+Black+Asian+Other+Hispanic+Missing,
+         Survey_White_Share    = round(100*White/Total,0),
+         Survey_Black_Share    = round(100*Black/Total,0),
+         Survey_Asian_Share    = round(100*Asian/Total,0),
+         Survey_Other_Share    = round(100*Other/Total,0),
+         Survey_Hispanic_Share = round(100*Hispanic/Total,0),
+         Survey_Missing_Share  = round(100*Missing/Total,0)) %>% 
+  rename(Home_County=home_county)
+
+combined_race <- left_join(race_all,survey_race_all,by="Home_County") %>% 
+  select(Home_County,Survey_White_Share,ACS_White_Share,Survey_Black_Share,ACS_Black_Share,
+         Survey_Asian_Share,ACS_Asian_Share,Survey_Other_Share,ACS_Other_Share,Survey_Missing_Share,
+         ACS_Missing_Share)
+
+```
+### White
+
+```{r white, echo=FALSE}
+
+combined_race_white <- combined_race %>% 
+  select(Home_County,Survey_White_Share,ACS_White_Share)
+
+combined_race_white
+```
+### Black
+
+```{r black, echo=FALSE}
+
+combined_race_white <- combined_race %>% 
+  select(Home_County,Survey_Black_Share,ACS_Black_Share)
+
+combined_race_black
+```
+### Asian
+
+```{r asian, echo=FALSE}
+
+combined_race_asian <- combined_race %>% 
+  select(Home_County,Survey_Asian_Share,ACS_Asian_Share)
+
+combined_race_asian
+```
+### Other
+
+```{r other, echo=FALSE}
+
+combined_race_other <- combined_race %>% 
+  select(Home_County,Survey_Other_Share,ACS_Other_Share)
+
+combined_race_other
+```
+### Hispanic
+
+```{r hispanic, echo=FALSE}
+
+combined_race_hispanic <- combined_race %>% 
+  select(Home_County,Survey_Hispanic_Share,ACS_Hispanic_Share)
+
+combined_race_hispanic
+```
+### Missing
+
+```{r missing_race, echo=FALSE}
+
+combined_race_missing <- combined_race %>% 
+  select(Home_County,Survey_Missing_Share,ACS_Missing_Share)
+
+combined_race_missing
+```
+## Compare income with ACS 2022
+
+```{r compare_income, echo=FALSE}
+
+income_variables <- c("Total"              = B19001_001,
+                      "Under 25k"          = B19001_002,
+                      "Under 25k"          = B19001_003,
+                      "Under 25k"          = B19001_004,
+                      "Under 25k"          = B19001_005,
+                      "25k to 50k"         = B19001_006,
+                      "25k to 50k"         = B19001_007,
+                      "25k to 50k"         = B19001_008,
+                      "25k to 50k"         = B19001_009,
+                      "25k to 50k"         = B19001_010,
+                      "50k to 75k"         = B19001_011,
+                      "50k to 75k"         = B19001_012,
+                      "75k to 100k"        = B19001_013,
+                      "100k to 200k"       = B19001_014,
+                      "100k to 200k"       = B19001_015,
+                      "100k to 200k"       = B19001_016,
+                      "Over 200k"          = B19001_017)
+ 
