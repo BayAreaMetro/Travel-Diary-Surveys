@@ -113,7 +113,7 @@ work_auto_trips
 ```
 
 # Demographics
-## Compare race with ACS 2022
+## Compare race with ACS 2022 (Table C03002)
 
 ```{r compare_race, echo=FALSE}
 
@@ -269,7 +269,7 @@ combined_race_missing <- combined_race %>%
 
 combined_race_missing
 ```
-## Compare income with ACS 2022
+## Compare income with ACS 2022 (Table B19001)
 
 ```{r compare_income, echo=FALSE}
 
@@ -472,25 +472,97 @@ method_comparison
 
 ```
 
-## Compare zero-trip days by data collection mode
+## Zero-trip days by data collection mode
 
 ```{r zero_trips, echo=FALSE}
 
-participation_joiner <- household %>% 
-  mutate(participation_mode = case_when(
-    participation_group %in% c(1,4,7)                ~ "browserMove",
-    participation_group %in% c(2,5,8)                ~ "Call_Center",
-    participation_group %in% c(3,6,9)                ~ "rMove",
-    TRUE                                             ~ "Miscoded"
-  )) %>% 
-  select(hh_id,home_county,participation_mode,participation_group)
+zero_trip_days <- day %>% 
+  left_join(.,participation_joiner,by="hh_id") %>% 
+  filter(num_trips==0) %>% 
+  group_by(home_county,participation_mode) %>% 
+  summarize(total=n()) %>% 
+  pivot_wider(names_from = participation_mode,values_from = total) %>%
+  rename(Call_Center0=Call_Center,browserMove0=browserMove,rMove0=rMove) %>% 
+  mutate(Total0=Call_Center0+browserMove0+rMove0)
 
-method_comparison <- participation_joiner %>% 
+zero_trip_days_bay <- day %>% 
+  left_join(.,participation_joiner,by="hh_id") %>% 
+  filter(num_trips==0) %>% 
+  group_by(participation_mode) %>% 
+  summarize(total=n()) %>% 
+  pivot_wider(names_from = participation_mode,values_from = total) %>%
+  rename(Call_Center0=Call_Center,browserMove0=browserMove,rMove0=rMove) %>% 
+  mutate(home_county="Bay Area",Total0=Call_Center0+browserMove0+rMove0)
+
+zero_trip_days_all <- rbind (zero_trip_days,zero_trip_days_bay)
+
+num_days_mode <- day %>% 
+  left_join(.,participation_joiner,by="hh_id") %>% 
   group_by(home_county,participation_mode) %>% 
   summarize(total=n()) %>% 
   pivot_wider(names_from = participation_mode,values_from = total) %>% 
   mutate(Total=Call_Center+browserMove+rMove)
 
-method_comparison
+num_days_mode_bay <- day %>% 
+  left_join(.,participation_joiner,by="hh_id") %>% 
+  group_by(participation_mode) %>% 
+  summarize(total=n()) %>% 
+  pivot_wider(names_from = participation_mode,values_from = total) %>% 
+  mutate(home_county="Bay Area",Total=Call_Center+browserMove+rMove)
 
+num_days_mode_all <- rbind(num_days_mode,num_days_mode_bay)
+
+share_zero <- zero_trip_days_all %>% 
+  left_join(.,num_days_mode_all,by="home_county") %>% 
+  mutate(Call_Center_Share0=round(100*Call_Center0/Call_Center,0),
+         browserMove_Share0=round(100*browserMove0/browserMove,0),
+         rMove_Share0=round(100*rMove0/rMove,0),
+         Total_Share0=round(100*Total0/Total,0)) %>% 
+  rename(Home_County=home_county) %>% 
+  select(Home_County,Call_Center_Share0,browserMove_Share0,rMove_Share0,Total_Share0)
+
+share_zero
+
+```
+
+## Age of householder (Person 1) by collection mode
+
+```{r participation_age, echo=FALSE}
+
+person_joiner <- person %>% 
+  select(hh_id,person_num,age) %>% 
+  filter(person_num==1)
+
+age_group <- participation_joiner %>% 
+  left_join(.,person_joiner,by="hh_id") %>% 
+  mutate(age_recode=case_when(
+    age==1                           ~"Under 5",
+    age==2                           ~"Ages 5 to 15",
+    age==3                           ~"Ages 16 to 17",
+    age==4                           ~"Ages 18 to 24",
+    age==5                           ~"Ages 25 to 34",
+    age==6                           ~"Ages 35 to 44",
+    age==7                           ~"Ages 45 to 54",
+    age==8                           ~"Ages 55 to 64",
+    age==9                           ~"Ages 65 to 74",
+    age==10                          ~"Ages 75 to 84",
+    age==11                          ~"Ages 85 and up")) %>% 
+  group_by(age_recode,participation_mode) %>%
+  summarize(Total=n()) %>% 
+  pivot_wider(names_from = participation_mode,values_from = Total) %>% 
+  mutate(Total=Call_Center+browserMove+rMove)
+
+age_group
+
+```
+## Share collection mode by age 
+```{r participation_age_share, echo=FALSE}
+age_group_share <- age_group %>% 
+  mutate(
+         Call_Center_Share=round(100*Call_Center/Total,0),
+         browserMove_Share=round(100*browserMove/Total,0),
+         rMove_Share=round(100*rMove/Total,0)) %>% 
+  select (age_recode,Call_Center_Share,browserMove_Share,rMove_Share)
+
+age_group_share
 ```
