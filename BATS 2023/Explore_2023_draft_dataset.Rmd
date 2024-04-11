@@ -468,7 +468,16 @@ method_comparison <- participation_joiner %>%
   pivot_wider(names_from = participation_mode,values_from = total) %>% 
   mutate(Total=Call_Center+browserMove+rMove)
 
-method_comparison
+method_comparison_bay <- participation_joiner %>% 
+  group_by(participation_mode) %>% 
+  summarize(total=n()) %>% 
+  pivot_wider(names_from = participation_mode,values_from = total) %>% 
+  mutate(home_county="Bay Area",Total=Call_Center+browserMove+rMove)
+
+method_comparison_all <- rbind(method_comparison,method_comparison_bay) %>% 
+  rename(Home_County=home_county)
+
+method_comparison_all
 
 ```
 
