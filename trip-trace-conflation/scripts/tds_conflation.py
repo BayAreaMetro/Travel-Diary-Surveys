@@ -178,7 +178,7 @@ def process_trace(trace_dict, matcher):
     return trace_dict
 
 
-def batch_process_traces_parallel(traces, matcher):
+def batch_process_traces_parallel(traces, matcher, processes=1):
     """Batch process traces using an instance of the LCSSMatcher class in parallel using multiprocessing.
 
     Args:
@@ -202,14 +202,17 @@ def batch_process_traces_parallel(traces, matcher):
         ...
         ]
     """
-
-    matched_traces = []
-    # process traces in parallel
-    with ProcessPoolExecutor(max_workers=7) as executor:
-        futures = [executor.submit(process_trace, trace_dict, matcher) for trace_dict in traces]
-        for future in as_completed(futures):
-            matched_traces.append(future.result())
-        # matched_traces = list(executor.map(process_trace, traces))
+    
+    if processes == 1:
+        matched_traces = [process_trace(trace_dict, matcher) for trace_dict in traces]
+    else:
+        matched_traces = []
+        # process traces in parallel
+        with ProcessPoolExecutor(max_workers=processes) as executor:
+            futures = [executor.submit(process_trace, trace_dict, matcher) for trace_dict in traces]
+            for future in as_completed(futures):
+                matched_traces.append(future.result())
+            # matched_traces = list(executor.map(process_trace, traces))
     return matched_traces
 
 
