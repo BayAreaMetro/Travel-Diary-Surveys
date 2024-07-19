@@ -1,20 +1,29 @@
+USAGE = """
+  Associate travel diary survey smartphone trip traces with Bay Area roadway facilities to enable matching
+  of survey demographics/trip characteristics of users with bridges, express lanes, etc. The script should
+  work with hundreds of thousands, possibly millions of x,y smartphone pings.
+  
+  See Readme.md for more detail.
+"""
 import os
+import argparse
+import pathlib
 import sys
 import warnings
-import getpass
 import shutil
 from datetime import datetime
 import osmnx as ox
 import networkx as nx
 import pandas as pd
 import geopandas as gpd
-from config import *
+import config
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
-user = getpass.getuser().lower()
-
-MAPPYMATCH_PATH = f"/Users/{user}/Documents/GitHub/mappymatch"
-sys.path.insert(0, MAPPYMATCH_PATH)
+# MAPPYMATCH_PATH = f"/Users/{user}/Documents/GitHub/mappymatch"
+# sys.path.insert(0, MAPPYMATCH_PATH)
+# Note: I don't recommend this; instead, pip install with the editable option
+# (https://pip.pypa.io/en/latest/cli/pip_install/#cmdoption-e)
+# `mappymatch_local_dir> pip install -e .``
 
 from mappymatch import package_root
 from mappymatch.constructs.trace import Trace
@@ -328,9 +337,9 @@ def main(
     """Main function to process trip data and write matched traces to a geopackage.
 
     Args:
-        location_path (str): Path to the location csv file.
-        trip_path (str): Path to the trip csv file.
-        gpkg_path (str): Path to the output geopackage file.
+        location_path (pathlib.Path): Path to the location csv file.
+        trip_path (pathlib.Path): Path to the trip csv file.
+        gpkg_path (pathlib.Path): Path to the output geopackage file.
         geofence_buffer (int, optional): Buffer distance around trip traces. Defaults to 1000 meters.
         network_type (Enumerator, optional): Enumerator for Network Types supported by osmnx. Defaults to NetworkType.DRIVE.
     Returns:
@@ -385,10 +394,18 @@ def main(
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description=USAGE, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument(
+        "--test", help="Run in test mode: output locally instead of to box", action="store_true"
+    )
+    args = parser.parse_args()
+
     main(
-        location_path=location_path,
-        trip_path=trip_path,
-        gpkg_path=gpkg_path,
-        local_network_path=local_network_path,
-        region_boundary_path=region_boundary_path,
+        location_path=config.location_path,
+        trip_path=config.trip_path,
+        gpkg_path=pathlib.Path.cwd() if args.test else config.gpkg_path,
+        local_network_path=config.local_network_path,
+        region_boundary_path=config.region_boundary_path,
     )
