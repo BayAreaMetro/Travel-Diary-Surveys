@@ -26,6 +26,8 @@ file_dir = os.path.join(
 # Define input file paths
 location_path = os.path.join(file_dir, location_tbl)
 trip_path = os.path.join(file_dir, trip_tbl)
+region_boundary_path = os.path.join(box_dir, "DataViz Projects", "Spatial Analysis and Mapping", "TDS Conflation", "Data", "bay_area_regional_boundary.geojson")
+local_network_path = os.path.join(box_dir, "DataViz Projects", "Spatial Analysis and Mapping", "TDS Conflation", "Data", "bay_area_network.json")
 
 # Define output file paths
 out_file_path = os.path.join(
