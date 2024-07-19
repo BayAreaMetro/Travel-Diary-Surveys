@@ -83,10 +83,11 @@ For this project, the following parameters will be used:
 
 ### How to run this code
 
-1. Install the required package dependencies using the [requirements.txt](requirements/requirements.txt) file.
+1. Install the required package dependencies using the [environment.yml](environment.yml) file.
+   1. `conda env create -f environment.yml`
 2. Clone the [mappymatch github repository](https://github.com/BayAreaMetro/mappymatch), which has been forked and modified from the original repository.
-3. Update the MAPPYMATCH_PATH within [tds_conflation.py](scripts/tds_conflation.py#L13) to point to the location of the cloned repository.
-4. Run the [tds_conflation.py](scripts/tds_conflation.py) script by executing `python tds_conflation.py` in the terminal.
+   1. Install the mappymatch package by running `pip install -e /path/to/mappymatch`.
+3. Run the [tds_conflation.py](scripts/tds_conflation.py) script by executing `python tds_conflation.py` in the terminal.
    1. If file paths change or need to be updated, update in [config.py](scripts/config.py).
 
 ## Expected Outcomes
