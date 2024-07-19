@@ -1,3 +1,4 @@
+import os
 import sys
 import warnings
 import getpass
@@ -7,7 +8,8 @@ import osmnx as ox
 import networkx as nx
 import pandas as pd
 import geopandas as gpd
-from config import location_path, trip_path, gpkg_path
+from config import *
+from concurrent.futures import ProcessPoolExecutor, as_completed
 
 user = getpass.getuser().lower()
 
@@ -20,6 +22,30 @@ from mappymatch.constructs.geofence import Geofence
 from mappymatch.matchers.lcss.lcss import LCSSMatcher
 from mappymatch.maps.nx.nx_map import NxMap, NetworkType
 from shapely.geometry import LineString
+
+
+## Define function to create a NxMap object from a GeoJSON file
+def nx_map_from_geojson(geojson_path, local_network_path, network_type=NetworkType.DRIVE):
+    """Creates a NxMap object from a GeoJSON file.
+
+    Args:
+        geojson_path (str): Path to the GeoJSON file. Must be in EPSG:4326.
+        network_type (Enumerator, optional): Enumerator for Network Types supported by osmnx. Defaults to NetworkType.DRIVE.
+
+    Returns:
+        A NxMap instance
+    """
+    if not os.path.exists(local_network_path):
+        print("Local network file not found. Creating a new network file from geojson...")
+        geofence = Geofence.from_geojson(geojson_path)
+        nx_map = NxMap.from_geofence(geofence, network_type)
+        nx_map.to_file(local_network_path)
+    else:
+        print("Local network file found. Loading network file...")
+        nx_map = NxMap.from_file(local_network_path)
+
+    matcher = LCSSMatcher(nx_map)
+    return matcher
 
 
 def create_batch_traces(df, trip_id_column, xy=True):
@@ -73,16 +99,14 @@ def create_batch_traces(df, trip_id_column, xy=True):
     return batch_traces
 
 
-def process_trace(trace_dict, geofence_buffer, network_type):
-    """Process a single trace using the LCSS matcher.
+def process_trace(trace_dict, matcher):
+    """Process a single trace using a instance of the LCSSMatcher class.
 
-    The function creates a geofence around each trace and creates a networkx graph from the geofence.
     Returns a matched trace dictionary.
 
     Args:
         trace_dict (dict): dictionary with trip_id and trace.
-        geofence_buffer (int, optional): Buffer in meters. Defaults to 100.
-        network_type (Enumerator, optional): Enumerator for Network Types supported by osmnx. Defaults to NetworkType.DRIVE.
+        matcher (LCSSMatcher): instance of the LCSSMatcher class.
 
     Returns:
         dict: dictionary with trip_id, trace, matched_result, matched_gdf, and matched_path_gdf.
@@ -99,18 +123,11 @@ def process_trace(trace_dict, geofence_buffer, network_type):
         }
 
     """
-
     try:
-        # create a geofence around the trace
-        geofence = Geofence.from_trace(trace_dict["trace"], padding=geofence_buffer)
-        # create a networkx map from the geofence
-        nx_map = NxMap.from_geofence(geofence, network_type=network_type)
-        # match the trace to the map
-        matcher = LCSSMatcher(nx_map)
+        # match the trace
         match_result = matcher.match_trace(trace_dict["trace"])
         # add full match result to the trace dictionary
         trace_dict["matched_result"] = match_result
-        # matched_traces.append(trace_dict)
     except Exception as e:
         warnings.warn(
             f"The trace with trip_id {trace_dict['trip_id']} encountered an exception: {e}. Adding trip to the unmatched list."
@@ -144,7 +161,8 @@ def process_trace(trace_dict, geofence_buffer, network_type):
         attrs = ["ref", "name", "maxspeed", "highway", "bridge", "tunnel"]
         for attr in attrs:
             # get attributes from the raw graph
-            attr_dict = nx.get_edge_attributes(nx_map.g, attr)
+            # attr_dict = nx.get_edge_attributes(nx_map.g, attr)
+            attr_dict = nx.get_edge_attributes(matcher.road_map.g, attr)
             # add attributes to the matched gdf
             matched_gdf[attr] = matched_gdf["road_id"].map(attr_dict)
             # add attributes to the matched path gdf
@@ -157,13 +175,12 @@ def process_trace(trace_dict, geofence_buffer, network_type):
     return trace_dict
 
 
-def batch_process_traces_parallel(traces, geofence_buffer=1000, network_type=NetworkType.DRIVE):
-    """Batch process traces using the LCSS matcher in parallel using multiprocessing.
+def batch_process_traces_parallel(traces, matcher):
+    """Batch process traces using an instance of the LCSSMatcher class in parallel using multiprocessing.
 
     Args:
         traces (List): list of dictionaries with trip_id and trace.
-        geofence_buffer (int, optional): Buffer in meters. Defaults to 1000 meters.
-        network_type (Enumerator, optional): Enumerator for Network Types supported by osmnx. Defaults to NetworkType.DRIVE.
+        matcher (LCSSMatcher): instance of the LCSSMatcher class.
 
     Returns:
         List: List of dictionaries with trip_id, trace, matched_result, matched_gdf, and matched_path_gdf.
@@ -182,16 +199,14 @@ def batch_process_traces_parallel(traces, geofence_buffer=1000, network_type=Net
         ...
         ]
     """
-    import concurrent.futures
 
     matched_traces = []
-    with concurrent.futures.ProcessPoolExecutor() as executor:
-        # Prepare future tasks
-        futures = [
-            executor.submit(process_trace, trace, geofence_buffer, network_type) for trace in traces
-        ]
-        for future in concurrent.futures.as_completed(futures):
+    # process traces in parallel
+    with ProcessPoolExecutor(max_workers=7) as executor:
+        futures = [executor.submit(process_trace, trace_dict, matcher) for trace_dict in traces]
+        for future in as_completed(futures):
             matched_traces.append(future.result())
+        # matched_traces = list(executor.map(process_trace, traces))
     return matched_traces
 
 
@@ -301,11 +316,13 @@ def filter_trips(trip_locations):
     ]
     return car_trips
 
+
 def main(
     location_path,
     trip_path,
     gpkg_path,
-    geofence_buffer=1000,
+    region_boundary_path,
+    local_network_path,
     network_type=NetworkType.DRIVE,
 ):
     """Main function to process trip data and write matched traces to a geopackage.
@@ -331,20 +348,26 @@ def main(
     unique_ids = car_trips["trip_id"].unique()
     print(f"Number of unique trip ids: {len(unique_ids)}")
 
+    now = datetime.now()
+    # create a networkx map from the geofence
+    print("Creating networkx map from geojson...")
+    matcher = nx_map_from_geojson(region_boundary_path, local_network_path, network_type)
+    later = datetime.now()
+    print(f"Creating networkx map took: {later - now}")
+
     # create a batch of traces
     print("Creating batch traces...")
 
     # test with a subset of trip ids
-    unique_ids = unique_ids[:1000]
+    unique_ids = unique_ids[:20]
     car_trips = car_trips[car_trips["trip_id"].isin(unique_ids)]
     batch_traces = create_batch_traces(car_trips, "trip_id")
 
     now = datetime.now()
     # process traces in parallel
     print("Processing traces in parallel...")
-    matched_traces = batch_process_traces_parallel(
-        traces=batch_traces, geofence_buffer=geofence_buffer, network_type=network_type
-    )
+    # matched_traces = batch_process_traces_parallel(batch_traces, matcher)
+    matched_traces = batch_process_traces_parallel(batch_traces, matcher)
     later = datetime.now()
     print(f"Multiprocessing took: {later - now}")
 
@@ -352,13 +375,20 @@ def main(
     print("Writing matched gdfs to geopackage...")
     write_matched_gdfs(matched_traces, gpkg_path)
 
-    # delete the cache directory
-    cache_dir = "../cache"
-    print(f"Deleting cache directory at {cache_dir}...")
-    shutil.rmtree(cache_dir)
-    print("Cache directory deleted.")
+    # # delete the cache directory
+    # cache_dir = "cache"
+    # print(f"Deleting cache directory at {cache_dir}...")
+    # shutil.rmtree(cache_dir)
+    # print("Cache directory deleted.")
 
     print("Processing complete.")
 
+
 if __name__ == "__main__":
-    main(location_path=location_path, trip_path=trip_path, gpkg_path=gpkg_path)
+    main(
+        location_path=location_path,
+        trip_path=trip_path,
+        gpkg_path=gpkg_path,
+        local_network_path=local_network_path,
+        region_boundary_path=region_boundary_path,
+    )
