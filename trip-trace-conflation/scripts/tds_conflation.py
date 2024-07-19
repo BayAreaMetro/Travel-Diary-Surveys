@@ -19,12 +19,6 @@ import geopandas as gpd
 import config
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
-# MAPPYMATCH_PATH = f"/Users/{user}/Documents/GitHub/mappymatch"
-# sys.path.insert(0, MAPPYMATCH_PATH)
-# Note: I don't recommend this; instead, pip install with the editable option
-# (https://pip.pypa.io/en/latest/cli/pip_install/#cmdoption-e)
-# `mappymatch_local_dir> pip install -e .``
-
 from mappymatch import package_root
 from mappymatch.constructs.trace import Trace
 from mappymatch.constructs.geofence import Geofence
