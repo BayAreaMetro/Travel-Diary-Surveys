@@ -5,12 +5,14 @@ USAGE = """
   
   See Readme.md for more detail.
 """
-import os
 import argparse
+import logging
+from logging.handlers import QueueHandler, QueueListener
+import multiprocessing
+import os
 import pathlib
-import sys
-import warnings
 import shutil
+import sys
 from datetime import datetime
 import osmnx as ox
 import networkx as nx
@@ -38,14 +40,15 @@ def nx_map_from_geojson(geojson_path, local_network_path, network_type=NetworkTy
     Returns:
         A NxMap instance
     """
-    if not os.path.exists(local_network_path):
-        print("Local network file not found. Creating a new network file from geojson...")
-        geofence = Geofence.from_geojson(geojson_path)
+    logging.debug(f"{local_network_path=}")
+    if not local_network_path.exists():
+        logging.info("Local network file not found. Creating a new network file from geojson...")
+        geofence = Geofence.from_geojson(str(geojson_path))
         nx_map = NxMap.from_geofence(geofence, network_type)
-        nx_map.to_file(local_network_path)
+        nx_map.to_file(str(local_network_path))
     else:
-        print("Local network file found. Loading network file...")
-        nx_map = NxMap.from_file(local_network_path)
+        logging.info("Local network file found. Loading network file...")
+        nx_map = NxMap.from_file(str(local_network_path))
 
     matcher = LCSSMatcher(nx_map)
     return matcher
@@ -101,8 +104,18 @@ def create_batch_traces(df, trip_id_column, xy=True):
         batch_traces.append(trace_dict)
     return batch_traces
 
+def init_worker(log_queue: multiprocessing.Queue, log_level: int) -> None:
+    """Initialize a worker process."""
+    logger = logging.getLogger()
+    logger.handlers.clear()
+    logger.setLevel(logging.DEBUG)
 
-def process_trace(trace_dict, matcher=None, geofence_buffer=1000, network_type=NetworkType.DRIVE):
+    handler = QueueHandler(log_queue)
+    logger.addHandler(handler)
+
+    logging.info(f"init_worker() called for {os.getpid()=}")
+
+def process_trace(trace_dict, matcher, geofence_buffer=1000, network_type=NetworkType.DRIVE):
     """Process a single trace using a instance of the LCSSMatcher class.
 
     Returns a matched trace dictionary.
@@ -129,6 +142,7 @@ def process_trace(trace_dict, matcher=None, geofence_buffer=1000, network_type=N
     try:
         # Create a matcher object if matcher is None, else use the provided matcher
         if matcher is None:
+            logging.debug(f"Creating geofence from trace for {trace_dict['trip_id']}")
             # create a geofence around the trace
             geofence = Geofence.from_trace(trace_dict["trace"], padding=geofence_buffer)
             # create a networkx map from the geofence
@@ -136,18 +150,23 @@ def process_trace(trace_dict, matcher=None, geofence_buffer=1000, network_type=N
             # match the trace to the map
             matcher = LCSSMatcher(nx_map)
             # match the trace
+            logging.debug(f"Running match_trace for {trace_dict['trip_id']}")
             match_result = matcher.match_trace(trace_dict["trace"])
             # add full match result to the trace dictionary
             trace_dict["matched_result"] = match_result
         else:
             # match the trace
+            logging.debug(f"Running match_trace for {trace_dict['trip_id']}")
             match_result = matcher.match_trace(trace_dict["trace"])
     except Exception as e:
-        warnings.warn(
+        logging.warn(
             f"The trace with trip_id {trace_dict['trip_id']} encountered an exception: {e}. Adding trip to the unmatched list."
         )
         trace_dict["unmatched_trips"] = trace_dict["trip_id"]
         return trace_dict
+    
+    logging.debug(f"Received result for trip_id {trace_dict['trip_id']} match len={len(match_result.matches)}")
+
     # check if any road ids within a list of matches are null
     road_id_check = True
     for match in match_result.matches:
@@ -155,7 +174,7 @@ def process_trace(trace_dict, matcher=None, geofence_buffer=1000, network_type=N
             road_id_check = False
             break
     if road_id_check == False:
-        warnings.warn(
+        logging.warn(
             f"The trace with trip_id {trace_dict['trip_id']} has null road_ids meaning there was no match to the network. Adding to the unmatched list."
         )
         trace_dict["unmatched_trips"] = trace_dict["trip_id"]
@@ -189,7 +208,8 @@ def process_trace(trace_dict, matcher=None, geofence_buffer=1000, network_type=N
 
 
 def batch_process_traces_parallel(
-    traces, processes=1, matcher=None, geofence_buffer=1000, network_type=NetworkType.DRIVE
+    log_queue, log_listener, traces, processes, 
+    matcher=None, geofence_buffer=1000, network_type=NetworkType.DRIVE,
 ):
     """Batch process traces using an instance of the LCSSMatcher class in parallel using multiprocessing.
 
@@ -215,6 +235,7 @@ def batch_process_traces_parallel(
         ]
     """
 
+    # -- Run the application -- #
     if processes == 1:
         matched_traces = [
             process_trace(trace_dict, matcher, geofence_buffer, network_type)
@@ -222,15 +243,24 @@ def batch_process_traces_parallel(
         ]
     else:
         matched_traces = []
+        futures = []
         # process traces in parallel
-        with ProcessPoolExecutor(max_workers=processes) as executor:
-            futures = [
-                executor.submit(process_trace, trace_dict, matcher, geofence_buffer, network_type)
-                for trace_dict in traces
-            ]
+        executor = ProcessPoolExecutor(
+            max_workers=processes,
+            initializer=init_worker, 
+            initargs=(log_queue, logging.DEBUG))
+        with executor:
+            for trace_dict in traces:
+                future = executor.submit(
+                    process_trace, 
+                    trace_dict, matcher, geofence_buffer, network_type)
+                logging.debug(f"complaeted executor.submit; {future=}")
+                futures.append(future)
+
+            logging.debug(f"submitting complete; {len(futures)=}")
             for future in as_completed(futures):
+                logging.debug(f"future {future=} completed")
                 matched_traces.append(future.result())
-            # matched_traces = list(executor.map(process_trace, traces))
     return matched_traces
 
 
@@ -249,16 +279,23 @@ def concatenate_matched_gdfs(matched_traces, match_type="matched_gdf"):
     for trace_dict in matched_traces:
         # check if the match type is in the trace dictionary
         if match_type not in list(trace_dict.keys()):
-            # print(f"Match type {match_type} not found in trace dictionary. Skipping.")
+            # logging.debug(f"Match type {match_type} not found in trace dictionary. Skipping.")
             continue
         else:
-            # print(f"Match type {match_type} found in trace dictionary.")
+            # logging.debug(f"Match type {match_type} found in trace dictionary.")
             matched_gdfs.append(trace_dict[match_type])
     matched_gdf = pd.concat(matched_gdfs)
+    logging.debug(f"concatenate_matched_gdfs() for {match_type}: matched_gdf:\n{matched_gdf}")
+    logging.debug(f"matched_gdf.dtypes:\n{matched_gdf.dtypes}")
 
     # if values in the matched_gdf are lists, convert to strings
     for col in matched_gdf.columns:
-        if matched_gdf[col].apply(lambda x: isinstance(x, list)).any():
+        if not matched_gdf.dtypes[col] == object: continue
+        logging.debug(f"Checking column {col} for for list type")
+
+        is_list = matched_gdf[col].apply(lambda x: isinstance(x, list))
+        if is_list.any():
+            logging.debug(f"list elements:\n{matched_gdf.loc[is_list, :]}")
             matched_gdf[col] = matched_gdf[col].apply(
                 lambda x: "; ".join(x) if isinstance(x, list) else x
             )
@@ -283,9 +320,20 @@ def write_matched_gdfs(match_result, file_path):
 
     # write the trace_gdf, trace_line_gdf, matched_gdf, and matched_path_gdf to a geopackage
     trace_gdf.to_file(file_path, layer="trace_gdf", driver="GPKG")
+    logging.info(f"Wrote {len(trace_gdf):,} rows to {file_path} layer trace_gdf "
+                 f"with columns {trace_gdf.columns.to_list()}")
+
     trace_line_gdf.to_file(file_path, layer="trace_line_gdf", driver="GPKG")
+    logging.info(f"Wrote {len(trace_line_gdf):,} rows to {file_path} layer trace_line_gdf "
+                 f"with columns {trace_line_gdf.columns.to_list()}")
+    
     matched_gdf.to_file(file_path, layer="matched_gdf", driver="GPKG")
+    logging.info(f"Wrote {len(matched_gdf):,} rows to {file_path} layer matched_gdf "
+                 f"with columns {matched_gdf.columns.to_list()}")
+    
     matched_path_gdf.to_file(file_path, layer="matched_path_gdf", driver="GPKG")
+    logging.info(f"Wrote {len(matched_path_gdf):,} rows to {file_path} layer matched_path_gdf "
+                 f"with columns {matched_path_gdf.columns.to_list()}")
 
 
 def read_and_merge_data(location_path, trip_path):
@@ -342,6 +390,7 @@ def filter_trips(trip_locations):
 
 
 def main(
+    script_args,
     location_path,
     trip_path,
     gpkg_path,
@@ -352,6 +401,7 @@ def main(
     """Main function to process trip data and write matched traces to a geopackage.
 
     Args:
+        script_args: argparse.parse_args() return
         location_path (pathlib.Path): Path to the location csv file.
         trip_path (pathlib.Path): Path to the trip csv file.
         gpkg_path (pathlib.Path): Path to the output geopackage file.
@@ -361,67 +411,123 @@ def main(
         None
     """
 
+    # since we're logging to file, we can be verbose
+    pd.options.display.width = 500
+    pd.options.display.max_columns = 100
+    
+    # ================= Create logger =================
+    log_file_full_path = (pathlib.Path.cwd() if script_args.test else config.gpkg_path) /           "trip-trace-conflation.log"
+    print(f"Writing to log file {log_file_full_path}")
+
+    logger = logging.getLogger()
+    logger.handlers.clear()
+    logger.setLevel(logging.DEBUG)
+    # console handler
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.INFO)
+    ch.setFormatter(logging.Formatter('%(asctime)s - %(process)d - %(levelname)s - %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p'))
+    logger.addHandler(ch)
+    # file handler
+    fh = logging.FileHandler(log_file_full_path, mode='w')
+    fh.setLevel(logging.DEBUG)
+    fh.setFormatter(logging.Formatter('%(asctime)s - %(process)d - %(levelname)s - %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p'))
+    logger.addHandler(fh)
+
+    # Set up the log listener.
+    # The log_listener will loop forever (in its own thread), handling log
+    # messages as they arrive on the log_queue. See the top-level docstring for
+    # more detail on this.
+    # Note that we do not need to actually get a Logger object to run this!
+    log_queue = multiprocessing.Manager().Queue(-1) 
+    log_listener = QueueListener(log_queue, fh)
+
+    # Start a background thread that listens for and handles log messages.
+    log_listener.start()
+
+    logging.info(f"{args=}")
+
     # read and merge location and trip data
-    print("Reading and merging data...")
+    logging.info("Reading and merging data...")
     trip_locations = read_and_merge_data(location_path, trip_path)
 
     # filter trips
-    print("Filtering trips...")
+    logging.info("Filtering trips...")
     # get unique trip ids
     car_trips = filter_trips(trip_locations)
     unique_ids = car_trips["trip_id"].unique()
-    print(f"Number of unique trip ids: {len(unique_ids)}")
+    logging.info(f"Number of unique trip ids: {len(unique_ids):,}")
 
-    # now = datetime.now()
-    # # create a networkx map from the geofence
-    # print("Creating networkx map from geojson...")
-    # matcher = nx_map_from_geojson(region_boundary_path, local_network_path, network_type)
-    # later = datetime.now()
-    # print(f"Creating networkx map took: {later - now}")
+    matcher = None
+    if script_args.use_regional_matcher:
+        now = datetime.now()
+        logging.info("use_regional_matcher: Creating networkx map from geojson...")
+        logging.info(f"{region_boundary_path=}")
+        logging.info(f"{local_network_path=}")
+        logging.info(f"{network_type=}")
+        matcher = nx_map_from_geojson(region_boundary_path, local_network_path, network_type)
+        later = datetime.now()
+        logging.info(f"use_regional_matcher: Creating networkx map took: {later - now}")
 
     # create a batch of traces
-    print("Creating batch traces...")
+    logging.info("Creating batch traces...")
 
-    # test with a subset of trip ids
-    unique_ids = unique_ids[:20]
+    if script_args.num_trip_ids:
+        # test with a subset of trip ids
+        unique_ids = unique_ids[:script_args.num_trip_ids]
+
     car_trips = car_trips[car_trips["trip_id"].isin(unique_ids)]
     batch_traces = create_batch_traces(car_trips, "trip_id")
 
     now = datetime.now()
     # process traces in parallel
-    print("Processing traces in parallel...")
-    matched_traces = batch_process_traces_parallel(batch_traces, processes=8)
-    # matched_traces = batch_process_traces_parallel(batch_traces, matcher)
+    logging.info("Processing traces in parallel...")
+    matched_traces = batch_process_traces_parallel(
+        log_queue,
+        log_listener,
+        batch_traces, 
+        processes=script_args.processes, 
+        matcher=matcher)
     later = datetime.now()
-    print(f"Multiprocessing took: {later - now}")
+    logging.info(f"Multiprocessing took: {later - now}")
+
+    log_listener.stop()
 
     # write the matched gdfs to a geopackage
-    print("Writing matched gdfs to geopackage...")
+    logging.info("Writing matched gdfs to geopackage...")
     write_matched_gdfs(matched_traces, gpkg_path)
 
     # # delete the cache directory
     # cache_dir = "cache"
-    # print(f"Deleting cache directory at {cache_dir}...")
+    # logging.info(f"Deleting cache directory at {cache_dir}...")
     # shutil.rmtree(cache_dir)
-    # print("Cache directory deleted.")
+    # logging.info("Cache directory deleted.")
 
-    print("Processing complete.")
+    logging.info("Processing complete.")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description=USAGE, formatter_class=argparse.RawDescriptionHelpFormatter
     )
-    # parser.add_argument(
-    #     "--test", help="Run in test mode: output locally instead of to box", action="store_true"
-    # )
+    parser.add_argument(
+        "--test", help="Run in test mode: output locally instead of to box", action="store_true"
+    )
+    parser.add_argument(
+        "--num_trip_ids", help="Run with a subset of trip ids", type=int
+    )
+    parser.add_argument(
+        "--processes", help="Number of processes to use", type=int, default=8
+    )
+    parser.add_argument(
+        "--use_regional_matcher", help="Use a single matcher instance for the region", action="store_true"
+    )
     args = parser.parse_args()
 
     main(
+        script_args=args,
         location_path=config.location_path,
         trip_path=config.trip_path,
-        # gpkg_path=pathlib.Path.cwd() if args.test else config.gpkg_path,
-        gpkg_path=config.gpkg_path,
+        gpkg_path=pathlib.Path.cwd() / "tds_conflation_results.gpkg" if args.test else config.gpkg_path,
         local_network_path=config.local_network_path,
         region_boundary_path=config.region_boundary_path,
     )
