@@ -1,6 +1,7 @@
 
 .DS_Store
-trip-trace-conflation/scripts/__pycache__/config.cpython-311.pyc
-trip-trace-conflation/scripts/__pycache__/tds_conflation.cpython-311.pyc
 __pycache__
 cache
+*.pyc
+*.log
+trip-trace-conflation/scripts/*.gpkg
