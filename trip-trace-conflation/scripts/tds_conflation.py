@@ -102,7 +102,7 @@ def create_batch_traces(df, trip_id_column, xy=True):
     return batch_traces
 
 
-def process_trace(trace_dict, matcher):
+def process_trace(trace_dict, matcher=None, geofence_buffer=1000, network_type=NetworkType.DRIVE):
     """Process a single trace using a instance of the LCSSMatcher class.
 
     Returns a matched trace dictionary.
@@ -127,10 +127,21 @@ def process_trace(trace_dict, matcher):
 
     """
     try:
-        # match the trace
-        match_result = matcher.match_trace(trace_dict["trace"])
-        # add full match result to the trace dictionary
-        trace_dict["matched_result"] = match_result
+        # Create a matcher object if matcher is None, else use the provided matcher
+        if matcher is None:
+            # create a geofence around the trace
+            geofence = Geofence.from_trace(trace_dict["trace"], padding=geofence_buffer)
+            # create a networkx map from the geofence
+            nx_map = NxMap.from_geofence(geofence, network_type=network_type)
+            # match the trace to the map
+            matcher = LCSSMatcher(nx_map)
+            # match the trace
+            match_result = matcher.match_trace(trace_dict["trace"])
+            # add full match result to the trace dictionary
+            trace_dict["matched_result"] = match_result
+        else:
+            # match the trace
+            match_result = matcher.match_trace(trace_dict["trace"])
     except Exception as e:
         warnings.warn(
             f"The trace with trip_id {trace_dict['trip_id']} encountered an exception: {e}. Adding trip to the unmatched list."
@@ -150,7 +161,6 @@ def process_trace(trace_dict, matcher):
         trace_dict["unmatched_trips"] = trace_dict["trip_id"]
     else:
         # create a geodataframe from the matches and add the trip_id; add the match result and matched df to the trace dictionary
-        # print(trace_dict["trip_id"]) # debugging
         matched_df = match_result.matches_to_dataframe()
         matched_df["trip_id"] = trace_dict["trip_id"]
         matched_df["road_id"] = matched_df["road_id"]
@@ -178,7 +188,9 @@ def process_trace(trace_dict, matcher):
     return trace_dict
 
 
-def batch_process_traces_parallel(traces, matcher, processes=1):
+def batch_process_traces_parallel(
+    traces, processes=1, matcher=None, geofence_buffer=1000, network_type=NetworkType.DRIVE
+):
     """Batch process traces using an instance of the LCSSMatcher class in parallel using multiprocessing.
 
     Args:
@@ -202,14 +214,20 @@ def batch_process_traces_parallel(traces, matcher, processes=1):
         ...
         ]
     """
-    
+
     if processes == 1:
-        matched_traces = [process_trace(trace_dict, matcher) for trace_dict in traces]
+        matched_traces = [
+            process_trace(trace_dict, matcher, geofence_buffer, network_type)
+            for trace_dict in traces
+        ]
     else:
         matched_traces = []
         # process traces in parallel
         with ProcessPoolExecutor(max_workers=processes) as executor:
-            futures = [executor.submit(process_trace, trace_dict, matcher) for trace_dict in traces]
+            futures = [
+                executor.submit(process_trace, trace_dict, matcher, geofence_buffer, network_type)
+                for trace_dict in traces
+            ]
             for future in as_completed(futures):
                 matched_traces.append(future.result())
             # matched_traces = list(executor.map(process_trace, traces))
@@ -354,12 +372,12 @@ def main(
     unique_ids = car_trips["trip_id"].unique()
     print(f"Number of unique trip ids: {len(unique_ids)}")
 
-    now = datetime.now()
-    # create a networkx map from the geofence
-    print("Creating networkx map from geojson...")
-    matcher = nx_map_from_geojson(region_boundary_path, local_network_path, network_type)
-    later = datetime.now()
-    print(f"Creating networkx map took: {later - now}")
+    # now = datetime.now()
+    # # create a networkx map from the geofence
+    # print("Creating networkx map from geojson...")
+    # matcher = nx_map_from_geojson(region_boundary_path, local_network_path, network_type)
+    # later = datetime.now()
+    # print(f"Creating networkx map took: {later - now}")
 
     # create a batch of traces
     print("Creating batch traces...")
@@ -372,8 +390,8 @@ def main(
     now = datetime.now()
     # process traces in parallel
     print("Processing traces in parallel...")
+    matched_traces = batch_process_traces_parallel(batch_traces, processes=8)
     # matched_traces = batch_process_traces_parallel(batch_traces, matcher)
-    matched_traces = batch_process_traces_parallel(batch_traces, matcher)
     later = datetime.now()
     print(f"Multiprocessing took: {later - now}")
 
@@ -394,15 +412,16 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description=USAGE, formatter_class=argparse.RawDescriptionHelpFormatter
     )
-    parser.add_argument(
-        "--test", help="Run in test mode: output locally instead of to box", action="store_true"
-    )
+    # parser.add_argument(
+    #     "--test", help="Run in test mode: output locally instead of to box", action="store_true"
+    # )
     args = parser.parse_args()
 
     main(
         location_path=config.location_path,
         trip_path=config.trip_path,
-        gpkg_path=pathlib.Path.cwd() if args.test else config.gpkg_path,
+        # gpkg_path=pathlib.Path.cwd() if args.test else config.gpkg_path,
+        gpkg_path=config.gpkg_path,
         local_network_path=config.local_network_path,
         region_boundary_path=config.region_boundary_path,
     )
