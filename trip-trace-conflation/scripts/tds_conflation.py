@@ -28,6 +28,10 @@ from mappymatch.matchers.lcss.lcss import LCSSMatcher
 from mappymatch.maps.nx.nx_map import NxMap, NetworkType
 from shapely.geometry import LineString
 
+# if --use_regional_matcher is specified, then a single regional matcher is created
+# per process.  For single process, this is done in main(); for multiprocess, this is done in init_worker()
+# This is the instance of that matcher.
+process_regional_matcher = None
 
 ## Define function to create a NxMap object from a GeoJSON file
 def nx_map_from_geojson(geojson_path, local_network_path, network_type=NetworkType.DRIVE):
@@ -104,8 +108,20 @@ def create_batch_traces(df, trip_id_column, xy=True):
         batch_traces.append(trace_dict)
     return batch_traces
 
-def init_worker(log_queue: multiprocessing.Queue, log_level: int) -> None:
-    """Initialize a worker process."""
+def init_worker(log_queue: multiprocessing.Queue, 
+                use_regional_matcher: bool,
+                region_boundary_path: pathlib.Path,
+                local_network_path: pathlib.Path,
+                network_type) -> None:
+    """Initialize a worker process.
+    
+    This initializes the log handling to handoff log messages to the given log_queue.
+
+    It also creates a process-specific regional matcher, if use_regional_matcher==True
+    This is because these can't bre shared between processes because they can't be pickled, so
+    each subprocess needs to make its own.
+    """
+    global process_regional_matcher
     logger = logging.getLogger()
     logger.handlers.clear()
     logger.setLevel(logging.DEBUG)
@@ -114,8 +130,20 @@ def init_worker(log_queue: multiprocessing.Queue, log_level: int) -> None:
     logger.addHandler(handler)
 
     logging.info(f"init_worker() called for {os.getpid()=}")
+    if use_regional_matcher:
+        logging.info(f"{process_regional_matcher=}")
 
-def process_trace(trace_dict, matcher, geofence_buffer=1000, network_type=NetworkType.DRIVE):
+        now = datetime.now()
+        logging.info("use_regional_matcher: Creating networkx map from geojson...")
+        logging.info(f"{region_boundary_path=}")
+        logging.info(f"{local_network_path=}")
+        logging.info(f"{network_type=}")
+        process_regional_matcher = nx_map_from_geojson(region_boundary_path, local_network_path, network_type)
+        later = datetime.now()
+        logging.info(f"use_regional_matcher: Creating networkx map took: {later - now}")
+
+
+def process_trace(trace_dict, use_regional_matcher, geofence_buffer=1000, network_type=NetworkType.DRIVE):
     """Process a single trace using a instance of the LCSSMatcher class.
 
     Returns a matched trace dictionary.
@@ -141,9 +169,11 @@ def process_trace(trace_dict, matcher, geofence_buffer=1000, network_type=Networ
         }
 
     """
+    global process_regional_matcher
+    logging.debug(f"process_trace() with {process_regional_matcher=}")
     try:
         # Create a matcher object if matcher is None, else use the provided matcher
-        if matcher is None:
+        if not use_regional_matcher:
             # logging.debug(f"Creating geofence from trace for {trace_dict['trip_id']}")
             # create a geofence around the trace
             geofence = Geofence.from_trace(trace_dict["trace"], padding=geofence_buffer)
@@ -159,7 +189,7 @@ def process_trace(trace_dict, matcher, geofence_buffer=1000, network_type=Networ
         else:
             # match the trace
             # logging.debug(f"Running match_trace for {trace_dict['trip_id']}")
-            match_result = matcher.match_trace(trace_dict["trace"])
+            match_result = process_regional_matcher.match_trace(trace_dict["trace"])
     except Exception as e:
         logging.warn(
             f"The trace with trip_id {trace_dict['trip_id']} encountered an exception: {e}. Adding trip to the unmatched list."
@@ -196,7 +226,9 @@ def process_trace(trace_dict, matcher, geofence_buffer=1000, network_type=Networ
         for attr in attrs:
             # get attributes from the raw graph
             # attr_dict = nx.get_edge_attributes(nx_map.g, attr)
-            attr_dict = nx.get_edge_attributes(matcher.road_map.g, attr)
+            attr_dict = nx.get_edge_attributes(
+                process_regional_matcher.road_map.g if use_regional_matcher else matcher.road_map.g,
+                attr)
             # add attributes to the matched gdf
             matched_gdf[attr] = matched_gdf["road_id"].map(attr_dict)
             # add attributes to the matched path gdf
@@ -210,8 +242,12 @@ def process_trace(trace_dict, matcher, geofence_buffer=1000, network_type=Networ
 
 
 def batch_process_traces_parallel(
-    log_queue, log_listener, traces, processes, 
-    matcher=None, geofence_buffer=1000, network_type=NetworkType.DRIVE,
+    log_queue, traces, processes, 
+    use_regional_matcher,
+    region_boundary_path,
+    local_network_path,
+    network_type=NetworkType.DRIVE,
+    geofence_buffer=1000
 ):
     """Batch process traces using an instance of the LCSSMatcher class in parallel using multiprocessing.
 
@@ -252,12 +288,12 @@ def batch_process_traces_parallel(
         executor = ProcessPoolExecutor(
             max_workers=processes,
             initializer=init_worker, 
-            initargs=(log_queue, logging.DEBUG))
+            initargs=(log_queue, use_regional_matcher, region_boundary_path, local_network_path, network_type))
         with executor:
             for trace_dict in traces:
                 future = executor.submit(
                     process_trace, 
-                    trace_dict, matcher, geofence_buffer, network_type)
+                    trace_dict, use_regional_matcher ,geofence_buffer, network_type)
                 # logging.debug(f"completed executor.submit; {future=}")
                 futures.append(future)
 
@@ -288,10 +324,10 @@ def concatenate_matched_gdfs(matched_traces, match_type="matched_gdf"):
     for trace_dict in matched_traces:
         # check if the match type is in the trace dictionary
         if match_type not in list(trace_dict.keys()):
-            logging.debug(f"Match type {match_type} not found in trace dictionary. Skipping.")
+            # logging.debug(f"Match type {match_type} not found in trace dictionary. Skipping.")
             continue
         else:
-            logging.debug(f"Match type {match_type} found in trace dictionary.")
+            # logging.debug(f"Match type {match_type} found in trace dictionary.")
             matched_gdfs.append(trace_dict[match_type])
     
     logging.info(f"concatenate_matched_gdfs() for {match_type=} "
@@ -430,6 +466,7 @@ def main(
     Returns:
         None
     """
+    global process_regional_matcher
 
     # since we're logging to file, we can be verbose
     pd.options.display.width = 500
@@ -477,14 +514,14 @@ def main(
     unique_ids = car_trips["trip_id"].unique()
     logging.info(f"Number of unique trip ids: {len(unique_ids):,}")
 
-    matcher = None
-    if script_args.use_regional_matcher:
+    # for processes > 1, this is initialized in init_worker
+    if (script_args.processes == 1) and (script_args.use_regional_matcher):
         now = datetime.now()
         logging.info("use_regional_matcher: Creating networkx map from geojson...")
         logging.info(f"{region_boundary_path=}")
         logging.info(f"{local_network_path=}")
         logging.info(f"{network_type=}")
-        matcher = nx_map_from_geojson(region_boundary_path, local_network_path, network_type)
+        process_regional_matcher = nx_map_from_geojson(region_boundary_path, local_network_path, network_type)
         later = datetime.now()
         logging.info(f"use_regional_matcher: Creating networkx map took: {later - now}")
 
@@ -503,10 +540,12 @@ def main(
     logging.info("Processing traces in parallel...")
     matched_traces = batch_process_traces_parallel(
         log_queue,
-        log_listener,
         batch_traces, 
         processes=script_args.processes, 
-        matcher=matcher)
+        use_regional_matcher=script_args.use_regional_matcher,
+        region_boundary_path=region_boundary_path,
+        local_network_path=local_network_path,
+        network_type=network_type)
     later = datetime.now()
     logging.info(f"Multiprocessing took: {later - now}")
 
