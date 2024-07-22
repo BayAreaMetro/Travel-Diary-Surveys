@@ -44,7 +44,6 @@ def nx_map_from_geojson(geojson_path, local_network_path, network_type=NetworkTy
     Returns:
         A NxMap instance
     """
-    logging.debug(f"{local_network_path=}")
     if not local_network_path.exists():
         logging.info("Local network file not found. Creating a new network file from geojson...")
         geofence = Geofence.from_geojson(str(geojson_path))
@@ -274,7 +273,7 @@ def batch_process_traces_parallel(
     # -- Run the application -- #
     if processes == 1:
         matched_traces = [
-            process_trace(trace_dict, matcher, geofence_buffer, network_type)
+            process_trace(trace_dict, use_regional_matcher, geofence_buffer, network_type)
             for trace_dict in traces
         ]
     else:
