@@ -284,11 +284,18 @@ def concatenate_matched_gdfs(matched_traces, match_type="matched_gdf"):
     for trace_dict in matched_traces:
         # check if the match type is in the trace dictionary
         if match_type not in list(trace_dict.keys()):
-            # logging.debug(f"Match type {match_type} not found in trace dictionary. Skipping.")
+            logging.debug(f"Match type {match_type} not found in trace dictionary. Skipping.")
             continue
         else:
-            # logging.debug(f"Match type {match_type} found in trace dictionary.")
+            logging.debug(f"Match type {match_type} found in trace dictionary.")
             matched_gdfs.append(trace_dict[match_type])
+    
+    logging.info(f"concatenate_matched_gdfs() for {match_type=} "
+                 f"with {len(matched_gdfs)=} matched_gdfs")
+    # not sure why this would happen -- return empty geodataframe
+    if len(matched_gdfs) == 0:
+        return gpd.GeoDataFrame()
+    
     matched_gdf = pd.concat(matched_gdfs)
     logging.debug(f"concatenate_matched_gdfs() for {match_type}: matched_gdf:\n{matched_gdf}")
     logging.debug(f"matched_gdf.dtypes:\n{matched_gdf.dtypes}")
@@ -319,26 +326,30 @@ def write_matched_gdfs(match_result, file_path):
     matched_gdf = concatenate_matched_gdfs(match_result, match_type="matched_gdf")
     matched_path_gdf = concatenate_matched_gdfs(match_result, match_type="matched_path_gdf")
 
-    # convert matched_gdf and matched_path_gdf "road_id" column from RoadId data type to string
-    matched_gdf["road_id"] = matched_gdf["road_id"].astype(str)
-    matched_path_gdf["road_id"] = matched_path_gdf["road_id"].astype(str)
-
     # write the trace_gdf, trace_line_gdf, matched_gdf, and matched_path_gdf to a geopackage
-    trace_gdf.to_file(file_path, layer="trace_gdf", driver="GPKG")
-    logging.info(f"Wrote {len(trace_gdf):,} rows to {file_path} layer trace_gdf "
-                 f"with columns {trace_gdf.columns.to_list()}")
+    if len(trace_gdf) > 0:
+        trace_gdf.to_file(file_path, layer="trace_gdf", driver="GPKG")
+        logging.info(f"Wrote {len(trace_gdf):,} rows to {file_path} layer trace_gdf "
+                     f"with columns {trace_gdf.columns.to_list()}")
 
-    trace_line_gdf.to_file(file_path, layer="trace_line_gdf", driver="GPKG")
-    logging.info(f"Wrote {len(trace_line_gdf):,} rows to {file_path} layer trace_line_gdf "
-                 f"with columns {trace_line_gdf.columns.to_list()}")
+    if len(trace_line_gdf) > 0:
+        trace_line_gdf.to_file(file_path, layer="trace_line_gdf", driver="GPKG")
+        logging.info(f"Wrote {len(trace_line_gdf):,} rows to {file_path} layer trace_line_gdf "
+                     f"with columns {trace_line_gdf.columns.to_list()}")
     
-    matched_gdf.to_file(file_path, layer="matched_gdf", driver="GPKG")
-    logging.info(f"Wrote {len(matched_gdf):,} rows to {file_path} layer matched_gdf "
-                 f"with columns {matched_gdf.columns.to_list()}")
+    if len(matched_gdf) > 0:
+        # convert matched_gdf and matched_path_gdf "road_id" column from RoadId data type to string
+        matched_gdf["road_id"] = matched_gdf["road_id"].astype(str)
+        matched_path_gdf["road_id"] = matched_path_gdf["road_id"].astype(str)
+
+        matched_gdf.to_file(file_path, layer="matched_gdf", driver="GPKG")
+        logging.info(f"Wrote {len(matched_gdf):,} rows to {file_path} layer matched_gdf "
+                     f"with columns {matched_gdf.columns.to_list()}")
     
-    matched_path_gdf.to_file(file_path, layer="matched_path_gdf", driver="GPKG")
-    logging.info(f"Wrote {len(matched_path_gdf):,} rows to {file_path} layer matched_path_gdf "
-                 f"with columns {matched_path_gdf.columns.to_list()}")
+    if len(matched_path_gdf) > 0:
+        matched_path_gdf.to_file(file_path, layer="matched_path_gdf", driver="GPKG")
+        logging.info(f"Wrote {len(matched_path_gdf):,} rows to {file_path} layer matched_path_gdf "
+                     f"with columns {matched_path_gdf.columns.to_list()}")
 
 
 def read_and_merge_data(location_path, trip_path):
