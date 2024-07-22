@@ -142,7 +142,7 @@ def process_trace(trace_dict, matcher, geofence_buffer=1000, network_type=Networ
     try:
         # Create a matcher object if matcher is None, else use the provided matcher
         if matcher is None:
-            logging.debug(f"Creating geofence from trace for {trace_dict['trip_id']}")
+            # logging.debug(f"Creating geofence from trace for {trace_dict['trip_id']}")
             # create a geofence around the trace
             geofence = Geofence.from_trace(trace_dict["trace"], padding=geofence_buffer)
             # create a networkx map from the geofence
@@ -150,13 +150,13 @@ def process_trace(trace_dict, matcher, geofence_buffer=1000, network_type=Networ
             # match the trace to the map
             matcher = LCSSMatcher(nx_map)
             # match the trace
-            logging.debug(f"Running match_trace for {trace_dict['trip_id']}")
+            # logging.debug(f"Running match_trace for {trace_dict['trip_id']}")
             match_result = matcher.match_trace(trace_dict["trace"])
             # add full match result to the trace dictionary
             trace_dict["matched_result"] = match_result
         else:
             # match the trace
-            logging.debug(f"Running match_trace for {trace_dict['trip_id']}")
+            # logging.debug(f"Running match_trace for {trace_dict['trip_id']}")
             match_result = matcher.match_trace(trace_dict["trace"])
     except Exception as e:
         logging.warn(
@@ -254,13 +254,18 @@ def batch_process_traces_parallel(
                 future = executor.submit(
                     process_trace, 
                     trace_dict, matcher, geofence_buffer, network_type)
-                logging.debug(f"completed executor.submit; {future=}")
+                # logging.debug(f"completed executor.submit; {future=}")
                 futures.append(future)
 
-            logging.debug(f"submitting complete; {len(futures)=}")
+                if len(futures) % 1000 == 0:
+                    logging.debug(f"Submitted {len(futures)} traces")
+            logging.info(f"Completed submitting {len(futures):,} traces")
+
             for future in as_completed(futures):
-                logging.debug(f"future {future=} completed")
+                if len(matched_traces) % 1000 == 0:
+                    logging.debug(f"Retrieved {len(matched_traces):,} traces")
                 matched_traces.append(future.result())
+            logging.info(f"Completed acquiring {len(matched_traces):,} traces")
     return matched_traces
 
 
