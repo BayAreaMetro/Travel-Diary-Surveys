@@ -150,6 +150,8 @@ def process_trace(trace_dict, use_regional_matcher, geofence_buffer=1000, networ
     Args:
         trace_dict (dict): dictionary with trip_id and trace.
         matcher (LCSSMatcher): instance of the LCSSMatcher class.
+        geofence_buffer (int, optional): Buffer distance around trip traces. Defaults to 1000 meters.
+        network_type (Enumerator, optional): Enumerator for Network Types supported by osmnx. Defaults to NetworkType.DRIVE.
 
     Returns:
         dict: dictionary with trip_id, trace, matched_result, matched_gdf, and matched_path_gdf.
@@ -251,6 +253,8 @@ def batch_process_traces_parallel(
     Args:
         traces (List): list of dictionaries with trip_id and trace.
         matcher (LCSSMatcher): instance of the LCSSMatcher class.
+        geofence_buffer (int, optional): Buffer distance around trip traces. Defaults to 1000 meters.
+        network_type (Enumerator, optional): Enumerator for Network Types supported by osmnx. Defaults to NetworkType.DRIVE.
 
     Returns:
         List: List of dictionaries with trip_id, trace, matched_result, matched_gdf, and matched_path_gdf.
