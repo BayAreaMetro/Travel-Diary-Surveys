@@ -254,7 +254,7 @@ def batch_process_traces_parallel(
                 future = executor.submit(
                     process_trace, 
                     trace_dict, matcher, geofence_buffer, network_type)
-                logging.debug(f"complaeted executor.submit; {future=}")
+                logging.debug(f"completed executor.submit; {future=}")
                 futures.append(future)
 
             logging.debug(f"submitting complete; {len(futures)=}")
