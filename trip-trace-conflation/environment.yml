@@ -7,13 +7,12 @@ dependencies:
   - python=3.10
   - folium
   - geopandas
+  - ipykernel
   - matplotlib
   - numpy
   - osmnx
   - pandas
   - pip
-  - pip:
-    - .
   - pyproj 
   - requests 
   - rtree
