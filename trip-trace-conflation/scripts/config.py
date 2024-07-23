@@ -11,6 +11,8 @@ trip_tbl = "trip.csv"
 # Define Box System Root Directory
 if user=="lzorn":
     box_dir = pathlib.Path("E:\\Box")
+elif user=="mtcpb":
+    box_dir = pathlib.Path("\\\\tsclient\\E\\Box")
 else:
     box_dir = pathlib.Path(f"/Users/{user}/Library/CloudStorage/Box-Box")
 
