@@ -170,7 +170,7 @@ def init_worker(
 def process_trace(
     trace_dict: dict,
     use_regional_nx_map: bool,
-    geofence_buffer=1000,
+    geofence_buffer,
     network_type=NetworkType.DRIVE,
 ):
     """Process a single trace using a instance of the LCSSMatcher class.
@@ -180,7 +180,7 @@ def process_trace(
     Args:
         trace_dict (dict): dictionary with trip_id and trace.
         matcher (LCSSMatcher): instance of the LCSSMatcher class.
-        geofence_buffer (int, optional): Buffer distance around trip traces. Defaults to 1000 meters.
+        geofence_buffer (int): Buffer distance around trip traces. Defaults to 1000 meters.
         network_type (Enumerator, optional): Enumerator for Network Types supported by osmnx. Defaults to NetworkType.DRIVE.
 
     Returns:
@@ -230,14 +230,14 @@ def process_trace(
         # logging.debug(f"Running match_trace for {trace_dict['trip_id']}")
         match_result = matcher.match_trace(trace_dict["trace"])
     except Exception as e:
-        logging.exception(
+        logging.warning(
             f"The trace with trip_id {trace_dict['trip_id']} encountered an exception: {e}. Adding trip to the unmatched list."
         )
         trace_dict["unmatched_trips"] = trace_dict["trip_id"]
         return trace_dict
 
     num_trips_matched += 1
-    MATCH_REPORT_FREQUENCY = 50
+    MATCH_REPORT_FREQUENCY = 100
     if num_trips_matched % MATCH_REPORT_FREQUENCY == 0:
         logging.info(f"Received results for {num_trips_matched} trips")
 
@@ -288,16 +288,16 @@ def batch_process_traces_parallel(
     use_regional_nx_map,
     region_boundary_path,
     local_network_path,
-    network_type=NetworkType.DRIVE,
-    geofence_buffer=1000,
+    network_type,
+    geofence_buffer,
 ):
     """Batch process traces using an instance of the LCSSMatcher class in parallel using multiprocessing.
 
     Args:
         traces (List): list of dictionaries with trip_id and trace.
         matcher (LCSSMatcher): instance of the LCSSMatcher class.
-        geofence_buffer (int, optional): Buffer distance around trip traces. Defaults to 1000 meters.
         network_type (Enumerator, optional): Enumerator for Network Types supported by osmnx. Defaults to NetworkType.DRIVE.
+        geofence_buffer (int): Buffer distance around trip traces. Defaults to 1000 meters.
 
     Returns:
         List: List of dictionaries with trip_id, trace, matched_result, matched_gdf, and matched_path_gdf.
@@ -564,9 +564,13 @@ def main(script_args):
         gpkg_file_path = output_dir / "tds_conflation_results.gpkg"
 
     # ================= Create logger =================
-    log_file_full_path = (
-        pathlib.Path.cwd() if script_args.test else config.gpkg_path
-    ) / "trip-trace-conflation.log"
+    # put arguments into log name to make it easier to inspect differences
+    log_file_full_path = (pathlib.Path.cwd() if script_args.test else config.gpkg_path) / (
+        "trip-trace-conflation"
+        + f"_n{script_args.num_trip_ids if script_args.num_trip_ids else 'all'}"
+        + f"_p{script_args.processes}"
+        + f"_b{script_args.geofence_buffer}.log"
+    )
     print(f"Writing to log file {log_file_full_path}")
 
     logger = logging.getLogger()
@@ -651,6 +655,7 @@ def main(script_args):
         region_boundary_path=config.region_boundary_path,
         local_network_path=config.local_network_path,
         network_type=NETWORK_TYPE,
+        geofence_buffer=script_args.geofence_buffer,
     )
     later = datetime.now()
     logging.info(f"Multiprocessing took: {later - now}")
@@ -681,9 +686,15 @@ if __name__ == "__main__":
     parser.add_argument("--processes", help="Number of processes to use", type=int, default=8)
     parser.add_argument(
         "--use_regional_nx_map",
-        help="Use a single matcher instance for the region",
+        help="Use a single NxMap instance for the region",
         action="store_true",
+        # default to True because otherwise OsMNx will pull down data for every trace and get throttled
+        default=True,
+    )
+    parser.add_argument(
+        "--geofence_buffer", help="Buffer around trace to use", type=int, default=1000
     )
     args = parser.parse_args()
+    print(args)
 
     main(script_args=args)
