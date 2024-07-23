@@ -65,15 +65,6 @@ def nx_map_from_geojson(geojson_path, local_network_path, network_type=NetworkTy
         nx_map = NxMap.from_file(str(local_network_path))
         logging.info("Completed reading")
 
-        # if crs==EPSG:3857, then convert to EPSG:4326
-        # This is because the mappymatch Geofence objects only support EPSG:4326
-        # And we want to be able to truncate this map to a smaller map buffered around the trace when
-        # we do the matcher work.
-        # if nx_map.crs != LATLON_CRS:
-        #    graph_LATLON = ox.project_graph(nx_map.g, LATLON_CRS)
-        #    nx_map = NxMap(graph_LATLON)
-        #    logging.info(f"Converted nx_map to {str(nx_map.crs)}")
-
     return nx_map
 
 
@@ -695,6 +686,5 @@ if __name__ == "__main__":
         "--geofence_buffer", help="Buffer around trace to use", type=int, default=1000
     )
     args = parser.parse_args()
-    print(args)
 
     main(script_args=args)
