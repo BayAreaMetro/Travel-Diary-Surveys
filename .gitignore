@@ -4,4 +4,5 @@ __pycache__
 cache
 *.pyc
 *.log
-trip-trace-conflation/scripts/*.gpkg
+trip-trace-conflation/scripts/output
+trip-trace-conflation/ArcGISProject
