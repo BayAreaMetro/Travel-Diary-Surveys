@@ -6,3 +6,5 @@ cache
 *.log
 trip-trace-conflation/scripts/output
 trip-trace-conflation/ArcGISProject
+trip-trace-conflation/scripts/find_osmid.ipynb
+trip-trace-conflation/scripts/test.ipynb
