@@ -255,7 +255,7 @@ def process_trace(
         matched_path_df["road_id"] = matched_path_df["road_id"]
         matched_path_gdf = gpd.GeoDataFrame(matched_path_df, geometry="geom", crs="EPSG:3857")
         # add network attributes to the matched gdf and matched path gdf
-        attrs = ["ref", "name", "maxspeed", "highway", "bridge", "tunnel"]
+        attrs = ["osmid", "ref", "name", "maxspeed", "highway", "bridge", "tunnel"]
         for attr in attrs:
             # get attributes from the raw graph
             # attr_dict = nx.get_edge_attributes(nx_map.g, attr)
@@ -390,8 +390,9 @@ def concatenate_matched_gdfs(matched_traces, match_type="matched_gdf"):
         is_list = matched_gdf[col].apply(lambda x: isinstance(x, list))
         if is_list.any():
             logging.debug(f"list elements:\n{matched_gdf.loc[is_list, :]}")
+            # Convert to string if the column is a list or int
             matched_gdf[col] = matched_gdf[col].apply(
-                lambda x: "; ".join(x) if isinstance(x, list) else x
+                lambda x: str(x) if isinstance(x, list) else str(x) if isinstance(x, int) else x
             )
     return matched_gdf
 
