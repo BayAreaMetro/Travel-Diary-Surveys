@@ -107,7 +107,11 @@ def create_batch_traces(df, trip_id_column, xy=True):
         # create a trace_gdf from the trace
         trace_gdf = batch_trace._frame
         trace_gdf["trip_id"] = i
+        # keep mode_type and collect_time columns
+        trace_gdf["collect_time"] = filter_df["collect_time"]
+        trace_gdf["mode_type"] = filter_df["mode_type"]
 
+        # logging.debug(f"for trip_id={i}, gdf=\n{gdf}\nand trace_gdf=\n{trace_gdf}")
         # create a dictionary with the trip_id, trace, trace_gdf, and trace_line_gdf and append to the batch_traces list
         trace_dict = {
             "trip_id": i,
@@ -368,6 +372,8 @@ def concatenate_matched_gdfs(matched_traces, match_type="matched_gdf"):
             continue
         else:
             # logging.debug(f"Match type {match_type} found in trace dictionary.")
+            # assume links are in order; add sequence number
+            trace_dict[match_type]["rownum"] = range(len(trace_dict[match_type]))
             matched_gdfs.append(trace_dict[match_type])
 
     logging.info(
@@ -417,6 +423,7 @@ def write_matched_gdfs(match_result, gpkg_file_path, shapefile_dir=None):
         "origin_junction_id": "origjuncid",
         "destination_junction_id": "destjuncid",
         "travel_time": "traveltime",
+        "collect_time": "collecttim"
     }
 
     # write the trace_gdf, trace_line_gdf, matched_gdf, and matched_path_gdf to a geopackage
@@ -488,7 +495,11 @@ def read_and_merge_data(location_path, trip_path):
     Returns:
         DataFrame: Merged DataFrame with location and trip data.
     """
-    location_df = pd.read_csv(location_path)
+    logging.info(f"read_and_merge_data(): Reading location data from {location_path}")
+    location_df = pd.read_csv(
+        location_path, date_format={"collect_time": "%Y-%m-%dT%H:%M:%SZ"}  # 2023-11-02T00:24:58Z
+    )
+    logging.info(f"read_and_merge_data(): Reading trip data from {trip_path}")
     trip_df = pd.read_csv(trip_path)
     trip_locations = pd.merge(
         location_df,
@@ -603,7 +614,6 @@ def main(script_args):
     logging.info(f"{args=}")
 
     # read and merge location and trip data
-    logging.info("Reading and merging data...")
     trip_locations = read_and_merge_data(config.location_path, config.trip_path)
 
     # filter trips
@@ -612,6 +622,13 @@ def main(script_args):
     car_trips = filter_trips(trip_locations)
     unique_ids = car_trips["trip_id"].unique()
     logging.info(f"Number of unique trip ids: {len(unique_ids):,}")
+    logging.debug(f"car_trips.head()\n{car_trips.head()}")
+    #          trip_id          collect_time  accuracy  bearing  speed       lat        lon  o_in_region  d_in_region  mode_type  mode_1  mode_2  mode_3  mode_4
+    # 0  2333407402022  2023-11-02T00:23:43Z      13.0    120.0    4.0  37.85270 -122.21255            1            1          2       2     995     995     995
+    # 1  2333407402022  2023-11-02T00:23:50Z       8.0    175.0    4.0  37.85227 -122.21236            1            1          2       2     995     995     995
+    # 2  2333407402022  2023-11-02T00:24:04Z      12.0    185.0    4.0  37.85163 -122.21239            1            1          2       2     995     995     995
+    # 3  2333407402022  2023-11-02T00:24:23Z       8.0    129.0    4.0  37.85092 -122.21197            1            1          2       2     995     995     995
+    # 4  2333407402022  2023-11-02T00:24:49Z      11.0     73.0    4.0  37.85138 -122.21071            1            1          2       2     995     995     995
 
     # for processes > 1, this is initialized in init_worker
     if (script_args.processes == 1) and (script_args.use_regional_nx_map):
@@ -619,9 +636,8 @@ def main(script_args):
         logging.info("use_regional_nx_map: Creating networkx map from geojson...")
         logging.info(f"{config.region_boundary_path=}")
         logging.info(f"{config.local_network_path=}")
-        logging.info(f"{config.network_type=}")
         process_regional_nx_map = nx_map_from_geojson(
-            config.region_boundary_path, local_network_path, network_type
+            config.region_boundary_path, config.local_network_path, NETWORK_TYPE
         )
         later = datetime.now()
         logging.info(f"use_regional_nx_map: Creating networkx map took: {later - now}")
