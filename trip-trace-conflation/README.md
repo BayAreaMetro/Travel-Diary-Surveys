@@ -97,14 +97,17 @@ Provide your expectations (if any) for the results of this work. Your expectatio
 ## Results
 
 TDS Conflation test results: 
-- [Box Link](https://mtcdrive.box.com/s/9vbcd3l6w2kcwo20b1t15j8qic668jkj)
-- File path: `/Users/{user}/Library/CloudStorage/Box-Box/DataViz Projects/Spatial Analysis and Mapping/TDS Conflation/Data/tds_conflation_results.gpkg`
+- File path: `M:\Data\HomeInterview\Bay Area Travel Study 2023\Data\Full Unweighted 2023 Dataset\OSM_match_v1_first1000trips`
+- Tableau online view (internal-only): [trip-trace-viewer - Full Unweighted 2023 Dataset first 1000 trips](https://10ay.online.tableau.com/#/site/metropolitantransportationcommission/workbooks/1834359?:origin=card_share_link)
 
 Geopackage layers:
 - trace_gdf: raw original traces
 - trace_line_gdf: line created from gps traces
 - matched_gdf: matched links in the network
 - matched_path_gdf: full matched path through the network
+
+Full Results: `M:\Data\HomeInterview\Bay Area Travel Study 2023\Data\Full Unweighted 2023 Dataset\OSM_match_v1`
+Full Base network: `M:\Data\HomeInterview\Bay Area Travel Study 2023\Data\Full Unweighted 2023 Dataset\OSM_regional_network`
 
 ## Tags
 
