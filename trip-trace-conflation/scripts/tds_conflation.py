@@ -252,11 +252,15 @@ def process_trace(
         matched_df = match_result.matches_to_dataframe()
         matched_df["trip_id"] = trace_dict["trip_id"]
         matched_df["road_id"] = matched_df["road_id"]
+        # convert road_id to tuple to avoid issues with mapping 
+        matched_df["road_id"] = matched_df["road_id"].apply(lambda x: tuple(x.to_json().values()))
         matched_gdf = gpd.GeoDataFrame(matched_df, geometry="geom", crs="EPSG:3857")
         # create a geodataframe from the matched path and add the trip_id; add the match result and matched df to the trace dictionary
         matched_path_df = match_result.path_to_dataframe()
         matched_path_df["trip_id"] = trace_dict["trip_id"]
         matched_path_df["road_id"] = matched_path_df["road_id"]
+        # convert road_id to tuple to avoid issues with mapping
+        matched_path_df["road_id"] = matched_path_df["road_id"].apply(lambda x: tuple(x.to_json().values()))
         matched_path_gdf = gpd.GeoDataFrame(matched_path_df, geometry="geom", crs="EPSG:3857")
         # add network attributes to the matched gdf and matched path gdf
         attrs = ["osmid", "ref", "name", "maxspeed", "highway", "bridge", "tunnel"]
