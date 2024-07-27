@@ -5,7 +5,7 @@ import geopandas as gpd
 import osmnx as ox
 
 # Define paths to the regional boundary and output file paths
-out_gpkg = config.out_file_path / "bay_area_road_map.gpkg"
+out_gpkg = config.out_file_path / "bay_area_network.gpkg"
 
 
 def download_bay_area_roadmap(
