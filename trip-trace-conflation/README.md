@@ -106,8 +106,8 @@ Geopackage layers:
 - matched_gdf: matched links in the network
 - matched_path_gdf: full matched path through the network
 
-Full Results: `M:\Data\HomeInterview\Bay Area Travel Study 2023\Data\Full Unweighted 2023 Dataset\OSM_match_v1`
-Full Base network: `M:\Data\HomeInterview\Bay Area Travel Study 2023\Data\Full Unweighted 2023 Dataset\OSM_regional_network`
+Full Results: `M:\Data\HomeInterview\Bay Area Travel Study 2023\Data\Full Unweighted 2023 Dataset\OSM_match_v2`
+Full Base network: `M:\Data\HomeInterview\Bay Area Travel Study 2023\Data\Survey Conflation\OSM_regional_network_convex_hull`
 
 ## Tags
 
