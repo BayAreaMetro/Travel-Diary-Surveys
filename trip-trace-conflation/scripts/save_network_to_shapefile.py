@@ -9,10 +9,7 @@ from mappymatch.maps.nx.nx_map import NxMap
 
 if __name__ == "__main__":
 
-    regional_network_file = pathlib.Path(
-        "E:\\Box\\DataViz Projects\\Spatial Analysis and Mapping\\TDS Conflation\\Data\\bay_area_network.json"
-    )
-    regional_map = NxMap.from_file(str(regional_network_file))
+    regional_map = NxMap.from_file(str(config.local_network_path))
 
     # https://docs.momepy.org/en/stable/user_guide/graph/convert.html
     edges_gdf = momepy.nx_to_gdf(regional_map.g, points=False)

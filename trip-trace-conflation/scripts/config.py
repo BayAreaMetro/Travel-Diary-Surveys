@@ -1,8 +1,4 @@
-import getpass
 import pathlib
-
-# Define user
-user = getpass.getuser()
 
 # Define file name
 location_tbl = "location.csv"
