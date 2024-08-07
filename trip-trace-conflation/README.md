@@ -103,7 +103,7 @@ The `tds_conflation.py` script processes GPS trip traces and matches them to the
 - `--test`: Run in test mode. When this flag is set, the output will be saved locally instead of being uploaded to Box. 
 - `--num_trip_ids`: Specifically the number of unique trip IDs to process. This is useful for testing with a smaller dataset. (Type: `int`)
 - `processes`: Number of processes to use for parallel processing. The default value is 8. (Type: `int`)
-- `--use_regional_nx_map`: Use a single NxMap instance for the entire region. This helps avoid throttling issues with OsMNx. (Type: `bool`, default: `True`)
+- `--download_local_OSM_map`: Download a local OSM map for each trace. Note that this may be throttled if you're processing a large number of trips. If not passed, the script uses a single NxMap instance for the region. (Type: `bool`, default: `False`)
 - `--geofence_buffer`: Buffer size around the trace to use, in meters. The default value is 1000 meters. (Type: `int`)
 
 #### Example Usage

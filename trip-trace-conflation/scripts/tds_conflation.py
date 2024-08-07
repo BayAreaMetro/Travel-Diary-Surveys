@@ -31,7 +31,7 @@ from mappymatch.matchers.lcss.lcss import LCSSMatcher
 from mappymatch.utils.crs import LATLON_CRS, XY_CRS
 from shapely.geometry import LineString
 
-# if --use_regional_nx_map is specified, then a single regional matcher is created
+# if --download_local_OSM_map is NOT specified, then a single regional matcher is created
 # per process.  For single process, this is done in main(); for multiprocess, this is done in init_worker()
 # This is the instance of that matcher.
 process_regional_nx_map = None
@@ -125,7 +125,7 @@ def create_batch_traces(df, trip_id_column, xy=True):
 
 def init_worker(
     log_queue: multiprocessing.Queue,
-    use_regional_nx_map: bool,
+    download_local_OSM_map: bool,
     region_boundary_path: pathlib.Path,
     local_network_path: pathlib.Path,
     network_type,
@@ -134,7 +134,7 @@ def init_worker(
 
     This initializes the log handling to handoff log messages to the given log_queue.
 
-    It also creates a process-specific regional matcher, if use_regional_nx_map==True
+    It also creates a process-specific regional matcher, if download_local_OSM_map != True
     This is because these can't bre shared between processes because they can't be pickled, so
     each subprocess needs to make its own.
     """
@@ -147,7 +147,7 @@ def init_worker(
     logger.addHandler(handler)
 
     logging.info(f"init_worker() called for {os.getpid()=}")
-    if use_regional_nx_map:
+    if download_local_OSM_map == False:
         # Commenting out for now but this makes the debug log noisy and adds another osmnx log
         # ox.settings.log_file = True
         # ox.settings.log_level = logging.DEBUG
@@ -164,7 +164,7 @@ def init_worker(
 
 def process_trace(
     trace_dict: dict,
-    use_regional_nx_map: bool,
+    download_local_OSM_map: bool,
     geofence_buffer,
     network_type=NetworkType.DRIVE,
 ):
@@ -203,7 +203,7 @@ def process_trace(
         # note: Geofence crs is set to EPSG:4326 because NxMap.from_geofence() requires it
 
         # Create a matcher object if matcher is None, else use the provided matcher
-        if not use_regional_nx_map:
+        if download_local_OSM_map:
             # create a networkx map from the geofence
             nx_map = NxMap.from_geofence(geofence, network_type=network_type)
         else:
@@ -252,7 +252,7 @@ def process_trace(
         matched_df = match_result.matches_to_dataframe()
         matched_df["trip_id"] = trace_dict["trip_id"]
         matched_df["road_id"] = matched_df["road_id"]
-        # convert road_id to tuple to avoid issues with mapping 
+        # convert road_id to tuple to avoid issues with mapping
         matched_df["road_id"] = matched_df["road_id"].apply(lambda x: tuple(x.to_json().values()))
         matched_gdf = gpd.GeoDataFrame(matched_df, geometry="geom", crs="EPSG:3857")
         # create a geodataframe from the matched path and add the trip_id; add the match result and matched df to the trace dictionary
@@ -260,7 +260,9 @@ def process_trace(
         matched_path_df["trip_id"] = trace_dict["trip_id"]
         matched_path_df["road_id"] = matched_path_df["road_id"]
         # convert road_id to tuple to avoid issues with mapping
-        matched_path_df["road_id"] = matched_path_df["road_id"].apply(lambda x: tuple(x.to_json().values()))
+        matched_path_df["road_id"] = matched_path_df["road_id"].apply(
+            lambda x: tuple(x.to_json().values())
+        )
         matched_path_gdf = gpd.GeoDataFrame(matched_path_df, geometry="geom", crs="EPSG:3857")
         # add network attributes to the matched gdf and matched path gdf
         attrs = ["osmid", "ref", "name", "maxspeed", "highway", "bridge", "tunnel"]
@@ -284,7 +286,7 @@ def batch_process_traces_parallel(
     log_queue,
     traces,
     processes,
-    use_regional_nx_map,
+    download_local_OSM_map,
     region_boundary_path,
     local_network_path,
     network_type,
@@ -319,7 +321,7 @@ def batch_process_traces_parallel(
     # -- Run the application -- #
     if processes == 1:
         matched_traces = [
-            process_trace(trace_dict, use_regional_nx_map, geofence_buffer, network_type)
+            process_trace(trace_dict, download_local_OSM_map, geofence_buffer, network_type)
             for trace_dict in traces
         ]
     else:
@@ -331,7 +333,7 @@ def batch_process_traces_parallel(
             initializer=init_worker,
             initargs=(
                 log_queue,
-                use_regional_nx_map,
+                download_local_OSM_map,
                 region_boundary_path,
                 local_network_path,
                 network_type,
@@ -340,7 +342,7 @@ def batch_process_traces_parallel(
         with executor:
             for trace_dict in traces:
                 future = executor.submit(
-                    process_trace, trace_dict, use_regional_nx_map, geofence_buffer, network_type
+                    process_trace, trace_dict, download_local_OSM_map, geofence_buffer, network_type
                 )
                 # logging.debug(f"completed executor.submit; {future=}")
                 futures.append(future)
@@ -427,7 +429,7 @@ def write_matched_gdfs(match_result, gpkg_file_path, shapefile_dir=None):
         "origin_junction_id": "origjuncid",
         "destination_junction_id": "destjuncid",
         "travel_time": "traveltime",
-        "collect_time": "collecttim"
+        "collect_time": "collecttim",
     }
 
     # write the trace_gdf, trace_line_gdf, matched_gdf, and matched_path_gdf to a geopackage
@@ -635,7 +637,7 @@ def main(script_args):
     # 4  2333407402022  2023-11-02T00:24:49Z      11.0     73.0    4.0  37.85138 -122.21071            1            1          2       2     995     995     995
 
     # for processes > 1, this is initialized in init_worker
-    if (script_args.processes == 1) and (script_args.use_regional_nx_map):
+    if (script_args.processes == 1) and (script_args.download_local_OSM_map == False):
         now = datetime.now()
         logging.info("use_regional_nx_map: Creating networkx map from geojson...")
         logging.info(f"{config.region_boundary_path=}")
@@ -663,7 +665,7 @@ def main(script_args):
         log_queue,
         batch_traces,
         processes=script_args.processes,
-        use_regional_nx_map=script_args.use_regional_nx_map,
+        download_local_OSM_map=script_args.download_local_OSM_map,
         region_boundary_path=config.region_boundary_path,
         local_network_path=config.local_network_path,
         network_type=NETWORK_TYPE,
@@ -696,12 +698,11 @@ if __name__ == "__main__":
     )
     parser.add_argument("--num_trip_ids", help="Run with a subset of trip ids", type=int)
     parser.add_argument("--processes", help="Number of processes to use", type=int, default=8)
+    # note that this will get throttled so only use for small numbers of traces
     parser.add_argument(
-        "--use_regional_nx_map",
-        help="Use a single NxMap instance for the region",
+        "--download_local_OSM_map",
+        help="Download a local OSM map for each trace. Otherwise, uses a single NxMap instance for the region",
         action="store_true",
-        # default to True because otherwise OsMNx will pull down data for every trace and get throttled
-        default=True,
     )
     parser.add_argument(
         "--geofence_buffer", help="Buffer around trace to use", type=int, default=1000
