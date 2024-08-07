@@ -135,7 +135,7 @@ The `tds_conflation.py` script processes GPS trip traces and matches them to the
 5. Run using the network from the API:
 
    ```python
-   python tds_conflation.py --use_regional_nx_map False
+   python tds_conflation.py --download_local_OSM_map
    ```
 
 6. Combine multiple arguments:
