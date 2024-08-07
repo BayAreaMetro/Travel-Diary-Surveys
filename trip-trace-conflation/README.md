@@ -16,7 +16,7 @@
     - [Description](#description)
     - [Arguments](#arguments)
     - [Example Usage](#example-usage)
-  - [Running the Script](#running-the-script)
+    - [Running the Script](#running-the-script)
 - [Expected Outcomes](#expected-outcomes)
 - [Results](#results)
 - [Tags](#tags)
@@ -144,7 +144,7 @@ The `tds_conflation.py` script processes GPS trip traces and matches them to the
    python tds_conflation.py --test --num_trip_ids 50 --processes 4 --geofence_buffer 1000
    ```
 
-### Running the Script
+#### Running the Script
 
 To run the script, use the following command in the terminal:
 
