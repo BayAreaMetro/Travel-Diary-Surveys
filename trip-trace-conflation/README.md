@@ -81,14 +81,78 @@ For this project, the following parameters will be used:
 
 ## Methodology
 
-### How to run this code
+### Install Required Packages
 
 1. Install the required package dependencies using the [environment.yml](environment.yml) file.
    1. `conda env create -f environment.yml`
 2. Clone the [mappymatch github repository](https://github.com/BayAreaMetro/mappymatch), which has been forked and modified from the original repository.
    1. Install the mappymatch package by running `pip install -e /path/to/mappymatch`.
-3. Run the [tds_conflation.py](scripts/tds_conflation.py) script by executing `python tds_conflation.py` in the terminal.
-   1. If file paths change or need to be updated, update in [config.py](scripts/config.py).
+
+### Usage Guide
+
+#### Description*
+The `tds_conflation.py` script processes GPS trip traces and matches them to the OpenStreetMap network. The script is designed to run efficiently on large datasets and can be run in parallel. The script can be run using a locally-stored OSM map for the Bay Area or each trip can be conflated to an OSM network with calls to the Overpass API via `mappymatch` functions. 
+
+#### Arguments
+
+- `--test`: Run in test mode. When this flag is set, the output will be saved locally instead of being uploaded to Box. 
+- `--num_trip_ids`: Specifically the number of unique trip IDs to process. This is useful for testing with a smaller dataset. (Type: `int`)
+- `processes`: Number of processes to use for parallel processing. The default value is 8. (Type: `int`)
+- `--use_regional_nx_map`: Use a single NxMap instance for the entire region. This helps avoid throttling issues with OsMNx. (Type: `bool`, default: `True`)
+- `--geofence_buffer`: Buffer size around the trace to use, in meters. The default value is 1000 meters. (Type: `int`)
+
+#### Example Usage
+
+1. Run in test mode with default settings:
+
+   ```python
+   python tds_conflation.py --test
+   ```
+
+2. Run with a subset of 100 trip IDs:
+
+   ```python
+   python tds_conflation.py --num_trip_ids 100
+   ```
+
+3. Run with 4 processes:
+
+   ```python
+   python tds_conflation.py --processes 4
+   ```
+
+4. Run with a geofence buffer of 500 meters:
+
+   ```python
+   python tds_conflation.py --geofence_buffer 500
+   ```
+
+5. Run using the network from the API:
+
+   ```python
+   python tds_conflation.py --use_regional_nx_map False
+   ```
+
+6. Combine multiple arguments:
+
+   ```python
+   python tds_conflation.py --test --num_trip_ids 50 --processes 4 --geofence_buffer 1000
+   ```
+
+### Running the Script
+
+To run the script, use the following command in the terminal:
+
+```python
+python tds_conflation.py [arguments]
+```
+
+Replace `[arguments]` with the desired arguments as shown in the examples above. 
+
+**Notes**:
+
+- The `--use_regional_nx_map` argument defaults to `True` to prevent OsMNx from pulling down data for every trace and getting throttled.
+- Ensure that all required dependencies are installed and properly configured before running the script.
 
 ## Expected Outcomes
 
