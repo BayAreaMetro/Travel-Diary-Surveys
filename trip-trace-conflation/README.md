@@ -11,7 +11,12 @@
   - [locations schema](#locations-schema)
 - [Analysis Parameters](#analysis-parameters)
 - [Methodology](#methodology)
-  - [How to run this code](#how-to-run-this-code)
+  - [Install Required Packages](#install-required-packages)
+  - [Usage Guide](#usage-guide)
+    - [Description](#description)
+    - [Arguments](#arguments)
+    - [Example Usage](#example-usage)
+  - [Running the Script](#running-the-script)
 - [Expected Outcomes](#expected-outcomes)
 - [Results](#results)
 - [Tags](#tags)
@@ -90,7 +95,7 @@ For this project, the following parameters will be used:
 
 ### Usage Guide
 
-#### Description*
+#### Description
 The `tds_conflation.py` script processes GPS trip traces and matches them to the OpenStreetMap network. The script is designed to run efficiently on large datasets and can be run in parallel. The script can be run using a locally-stored OSM map for the Bay Area or each trip can be conflated to an OSM network with calls to the Overpass API via `mappymatch` functions. 
 
 #### Arguments
