@@ -574,7 +574,7 @@ def main(script_args):
 
     # ================= Create logger =================
     # put arguments into log name to make it easier to inspect differences
-    log_file_full_path = (pathlib.Path.cwd() if script_args.test else config.gpkg_path) / (
+    log_file_full_path = (pathlib.Path.cwd() if script_args.test else config.out_file_path) / (
         "trip-trace-conflation"
         + f"_n{script_args.num_trip_ids if script_args.num_trip_ids else 'all'}"
         + f"_p{script_args.processes}"
