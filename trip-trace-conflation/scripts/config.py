@@ -8,8 +8,10 @@ trip_tbl = "trip.csv"
 M_survey_data_dir = pathlib.Path("M:\\Data\\HomeInterview\\Bay Area Travel Study 2023\\Data")
 
 # Define input file paths
-location_path = M_survey_data_dir / "Full Unweighted 2023 Dataset" / location_tbl
-trip_path = M_survey_data_dir / "Full Unweighted 2023 Dataset" / trip_tbl
+location_path = (
+    M_survey_data_dir / "Full Weighted 2023 Dataset" / "WeightedDataset_08092024" / location_tbl
+)
+trip_path = M_survey_data_dir / "Full Weighted 2023 Dataset" / "WeightedDataset_08092024" / trip_tbl
 
 region_boundary_path = (
     M_survey_data_dir
@@ -25,5 +27,7 @@ local_network_path = (
 )
 
 # Define output file paths
-out_file_path = M_survey_data_dir / "Full Unweighted 2023 Dataset" / "OSM_match_v2"
+out_file_path = (
+    M_survey_data_dir / "Full Weighted 2023 Dataset" / "WeightedDataset_08092024" / "OSM_match_v1"
+)
 gpkg_path = out_file_path / "tds_conflation_results.gpkg"
