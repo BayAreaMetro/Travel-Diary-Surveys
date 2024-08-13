@@ -540,10 +540,10 @@ def filter_trips(trip_locations):
     Returns:
         DataFrame: Filtered DataFrame with trips that meet the criteria.
     """
+    # car trips AND (trip starts OR ends in region)
     car_trips = trip_locations[
         ((trip_locations["mode_type"].isin([5, 6, 8, 9, 11])))
-        & (trip_locations["o_in_region"] == 1)
-        | (trip_locations["d_in_region"] == 1)
+        & ((trip_locations["o_in_region"] == 1) | (trip_locations["d_in_region"] == 1))
     ]
     return car_trips
 
