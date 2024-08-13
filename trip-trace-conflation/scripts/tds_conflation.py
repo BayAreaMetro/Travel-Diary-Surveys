@@ -464,7 +464,8 @@ def write_matched_gdfs(match_result, gpkg_file_path, shapefile_dir=None):
             f"with columns {matched_gdf.columns.to_list()}"
         )
         # also write shapefile if requested
-        if shapefile_dir:
+        # add (imprecise) size cutoff because shapefiles > 2GB aren't supported
+        if shapefile_dir and (len(matched_gdf) < 1000000):
             # shorten column names if needed
             for col in SHORT_COL_NAMES.keys():
                 if col in matched_gdf.columns.to_list():
@@ -480,7 +481,8 @@ def write_matched_gdfs(match_result, gpkg_file_path, shapefile_dir=None):
             f"with columns {matched_path_gdf.columns.to_list()}"
         )
         # also write shapefile if requested
-        if shapefile_dir:
+        # add (imprecise) size cutoff because shapefiles > 2GB aren't supported
+        if shapefile_dir and (len(matched_path_gdf) < 1000000):
             # shorten column names if needed
             for col in SHORT_COL_NAMES.keys():
                 if col in matched_path_gdf.columns.to_list():
