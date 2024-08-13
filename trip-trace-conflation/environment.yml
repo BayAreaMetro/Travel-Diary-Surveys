@@ -1,0 +1,19 @@
+# Add dependencies in alphabetical order.
+name: tds_conflation
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - folium
+  - geopandas
+  - ipykernel
+  - matplotlib
+  - numpy
+  - osmnx
+  - pandas
+  - pip
+  - pyproj 
+  - requests 
+  - rtree
+  - shapely
