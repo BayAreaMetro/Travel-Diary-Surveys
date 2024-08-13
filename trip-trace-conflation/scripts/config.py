@@ -28,6 +28,6 @@ local_network_path = (
 
 # Define output file paths
 out_file_path = (
-    M_survey_data_dir / "Full Weighted 2023 Dataset" / "WeightedDataset_08092024" / "OSM_match_v1"
+    M_survey_data_dir / "Full Weighted 2023 Dataset" / "WeightedDataset_08092024" / "OSM_match_v2"
 )
 gpkg_path = out_file_path / "tds_conflation_results.gpkg"
