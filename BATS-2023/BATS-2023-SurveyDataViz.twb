@@ -38,7 +38,7 @@
             <connection class='textscan' directory='M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Full Weighted 2023 Dataset/WeightedDataset_08092024' filename='location.csv' password='' server='' workgroup-auth-mode='as-is' />
           </named-connection>
           <named-connection caption='trip_id_matched_path_summary' name='textscan.1kxwytr147ldtz18irjo902ccigb'>
-            <connection class='textscan' directory='M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Full Weighted 2023 Dataset/WeightedDataset_08092024/OSM_match_v1' filename='trip_id_matched_path_summary.csv' password='' server='' workgroup-auth-mode='as-is' />
+            <connection class='textscan' directory='M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Full Weighted 2023 Dataset/WeightedDataset_08092024/OSM_match_v2' filename='trip_id_matched_path_summary.csv' password='' server='' workgroup-auth-mode='as-is' />
           </named-connection>
         </named-connections>
         <_.fcp.ObjectModelEncapsulateLegacy.false...relation connection='textscan.086lllt0rlawbv10qkwut036e9rk' name='day.csv' table='[day#csv]' type='table'>
