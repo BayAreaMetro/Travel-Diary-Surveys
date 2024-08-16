@@ -55,13 +55,16 @@ sum_links <- joined %>%
 # This step is to create a flag (0,1) for whether a given trip used a particular facility
 # sr37_80_to_101=1 if any component segments of 37 are utilized
 # i680_80_to_580=1 if i680_80_to_580_portion=1 (which is full extent minus bm_bridge) and/or bm_bridge=1
+# bata_bridges=1 if any of the seven BATA bridges=1 (not including gg_bridge)
 # The below list includes records with a zero rmove_only weight as they may be useful for other applications (maybe?);
 # Any analysis applying weights will zero out records accordingly
 
 final <- sum_links %>% 
   mutate_at(vars(-trip_id),~if_else(.>=1,1,as.double(.))) %>% 
   mutate(sr37_80_to_101=if_else((sr37_80_to_mare==1 | sr37_mare_to_121==1 | sr37_121_to_101==1),1,0),
-         i680_80_to_580=if_else((i680_80_to_580_portion==1 | bm_bridge==1),1,0)) %>% 
+         i680_80_to_580=if_else((i680_80_to_580_portion==1 | bm_bridge==1),1,0),
+         bata_bridges=if_else(if_any(c(bay_bridge,sm_bridge,dum_bridge,rsr_bridge,
+                                       carq_bridge,bm_bridge,ant_bridge), ~ .x==1),1,0))%>% 
   select(trip_id,
          bay_bridge,
          sm_bridge,
@@ -71,6 +74,7 @@ final <- sum_links %>%
          bm_bridge,
          ant_bridge,
          gg_bridge,
+         bata_bridges,
          sr37_80_to_mare,
          sr37_mare_to_121,
          sr37_121_to_101,
@@ -92,14 +96,16 @@ write.csv(final,file.path(BOX_dir,"Data","2023","Survey Conflation","BATS 2023 F
 
 # Summarize number of trips by facility, unweighted and weighted, for trips with >0 weight, output CSV
 
-trips_by_facility <- final %>%
+trips_with_weights <- final %>%
   left_join(.,trip,by="trip_id") %>% 
-  filter(trip_weight_rmove_only>0) %>% 
+  filter(trip_weight_rmove_only>0) 
+
+trips_by_facility_sum <- trips_with_weights %>%  
   pivot_longer(.,c(-trip_id,-trip_weight_rmove_only),names_to = "Facility",values_to = "Unweighted") %>% 
   mutate(Weighted=Unweighted*trip_weight_rmove_only) %>% 
   select(-trip_weight_rmove_only) %>% 
   group_by(Facility) %>% 
   summarize(Total_Unweighted_Trips=sum(Unweighted),Total_Weighted_Trips=sum(Weighted))
 
-write.csv(trips_by_facility,file.path(BOX_dir,"Data","2023","Survey Conflation","BATS 2023 Survey Trips Per Facility.csv"),row.names = FALSE)
+write.csv(trips_by_facility_sum,file.path(BOX_dir,"Data","2023","Survey Conflation","BATS 2023 Survey Trips Per Facility.csv"),row.names = FALSE)
 
