@@ -95,6 +95,7 @@ final <- sum_links %>%
 write.csv(final,file.path(BOX_dir,"Data","2023","Survey Conflation","BATS 2023 Facility Use Booleans.csv"),row.names = FALSE)
 
 # Summarize number of trips by facility, unweighted and weighted, for trips with >0 weight, output CSV
+# Remove i680_80_to_580_portion because it's a temporary variable
 
 trips_with_weights <- final %>%
   left_join(.,trip,by="trip_id") %>% 
@@ -105,7 +106,8 @@ trips_by_facility_sum <- trips_with_weights %>%
   mutate(Weighted=Unweighted*trip_weight_rmove_only) %>% 
   select(-trip_weight_rmove_only) %>% 
   group_by(Facility) %>% 
-  summarize(Total_Unweighted_Trips=sum(Unweighted),Total_Weighted_Trips=sum(Weighted))
+  summarize(Total_Unweighted_Trips=sum(Unweighted),Total_Weighted_Trips=sum(Weighted)) %>% 
+  filter(Facility != "i680_80_to_580_portion")
 
 write.csv(trips_by_facility_sum,file.path(BOX_dir,"Data","2023","Survey Conflation","BATS 2023 Survey Trips Per Facility.csv"),row.names = FALSE)
 
