@@ -14,69 +14,83 @@ library(spatstat)
 
 # Set output directory
 
-USERPROFILE   <- gsub("////","/", Sys.getenv("USERPROFILE"))
-BOX_dir           <- file.path(USERPROFILE, "Box", "Modeling and Surveys","Surveys","Travel Diary Survey","Biennial Travel Diary Survey")
-segments_in       <- file.path(BOX_dir,"Data","2023","Survey Conflation","osmid_facility_equivalence_lookup.csv")
+USERPROFILE    <- gsub("////","/", Sys.getenv("USERPROFILE"))
+BOX_dir1       <- file.path(USERPROFILE, "Box", "Modeling and Surveys","Surveys","Travel Diary Survey")
+Box_dir2       <- file.path(BOX_dir1,"Biennial Travel Diary Survey","Data","2023")
+conflation_loc <- file.path(Box_dir2,"Survey Conflation")
+data_loc       <- file.path(Box_dir2,"Full Weighted 2023 Dataset","WeightedDataset_08092024")
 
+# Bring in BATS 2023 survey files, filter for only non-zero rmove person, trip, and household weights
+# Select only the variables needed for this script
 
-Box_TM1       <- file.path(USERPROFILE, "Box", "Modeling and Surveys", "Surveys", "Travel Diary Survey")
-Box_TM2       <- file.path(Box_TM1,"MPO Partner Household Travel Survey","Bay Area Travel Study 2018-2019","SFCTA Map Matching")
-Output        <- file.path(Box_TM2,"Facility Summaries")
-OSM_Path      <- "M:/Data/HomeInterview/TNC Survey/SFCTA Map Matching"
-
-# Bring in TNC survey files
-# Commented out files that may be needed for future analyses
-
-temp                   <- "M:/Data/HomeInterview/Bay Area Travel Study 2018-2019/Data/Final Version with Imputations"
-file_location          <- file.path(temp,"Final Updated Dataset as of 10-18-2021","RSG_HTS_Oct2021_bayarea")
-person_location        <- file.path(file_location,"person.tsv")
-trip_location          <- file.path(file_location,"trip.tsv")
-trip_linked_location   <- file.path(file_location,"trip_linked.tsv")
-hh_location            <- file.path(file_location,"hh.tsv")
-
-# Bring in TNC survey datasets
-# Commented out files that may be needed for future analyses
-
-person          <- read_tsv(person_location,col_names=TRUE)
-trip            <- read_tsv(trip_location,col_names=TRUE)      
-linked_trip     <- read_tsv(trip_linked_location,col_names=TRUE)
-household       <- read_tsv(hh_location,col_names=TRUE) %>%  
-  select(hh_id,income_detailed,reported_home_lat,reported_home_lon)
-
-# Create vector for car modes to ensure people using freeway segment are in a car for at least one mode
-# Broadly-defined car modes, including bus (but no local bus nor rail)
-
-car_vector <- c(6:22,24:28,33:36,38,47,55,59:60,62:66,76)
+person         <- read.csv(file=file.path(data_loc,"person.csv")) %>% 
+  filter(person_weight_rmove_only>0) %>% 
+  select(hh_id,person_id,grep("race|ethnicity",names(.)))
+trip           <- read.csv(file=file.path(data_loc,"trip.csv")) %>% 
+  filter(trip_weight_rmove_only>0)
+household      <- read.csv(file=file.path(data_loc,"hh.csv"))%>% 
+  filter(hh_weight_rmove_only>0) %>% 
+  select(hh_id,num_people,income_detailed,income_imputed_rmove_only) %>% 
+  mutate(income_detailed_val=case_when(
+    income_detailed==1                   ~ "Less than $15,000",
+    income_detailed==2                   ~ "$15,000-$24,999",
+    income_detailed==3                   ~ "$25,000-$34,999",
+    income_detailed==4                   ~ "$35,000-$49,999",
+    income_detailed==5                   ~ "$50,000-$74,999",
+    income_detailed==6                   ~ "$75,000-$99,999",
+    income_detailed==7                   ~ "$100,000-$149,999",
+    income_detailed==8                   ~ "$150,000-$199,999",
+    income_detailed==9                   ~ "$200,000-$249,999",
+    income_detailed==10                  ~ "$250,000 or more",
+    income_detailed==999                 ~ "Prefer not to answer"
+  ))
+  
 
 # Bring in freeway coordinates for placing pie charts on map
 # File also has long name equivalencies for facilities and Bay Area geographical designations
 
-freeway_coords_in <- file.path(Output,"Freeway Facility Coordinates.csv")
-freeway_coords <- read.csv(freeway_coords_in)
+#freeway_coords_in <- file.path(Output,"Freeway Facility Coordinates.csv")
+#freeway_coords <- read.csv(freeway_coords_in)
 
-# Bring in facility flag file (file that indicates whether a given trip traverses a given freeway)
+# Bring in facility flag file (file that indicates whether a given trip traverses a given freeway/bridge)
 # Create vector of facilities for analysis
 
-facility_flag <- read.csv(file = file.path(Output,"TNC Survey Trips Per Facility.csv"))
+facility_flag <- read.csv(file = file.path(conflation_loc,"BATS 2023 Facility Use Booleans.csv"))
 
-full_facilities_list <- c("Al_SF_80_PlazaTo101", "SF_101_80ToSM", 
-                "SF_280_StartToSM", "SM_101_SFToSC", "SM_280_SFToSC", "SC_101_SMTo680", 
-                "SC_101_680ToGilroy", "SC_237_101To880", "SC_280_SMTo101", "Al_SC_680_101To580", 
-                "Al_SC_880_101To238", "Al_880_238ToPlaza", "Al_580_SanJoaquinTo238", 
-                "Al_580_238To80", "Al_80_580ToPlaza", "Al_CC_80_4To580", "CC_Al_24_680To580", 
-                "CC_Al_680_4To580", "CC_4_160To680", "Sol_80_YoloToCarquinez", 
-                "North_37_101To80", "Mar_Son_101_12To580","All_Freeways")
+full_facilities_list <- c("bay_bridge",
+                          "sm_bridge",
+                          "dum_bridge",
+                          "rsr_bridge",
+                          "carq_bridge",
+                          "bm_bridge",
+                          "ant_bridge",
+                          "gg_bridge",
+                          "bata_bridges",
+                          "sr37_80_to_mare",
+                          "sr37_mare_to_121",
+                          "sr37_121_to_101",
+                          "sr37_80_to_101",
+                          "i880_baybridge_to_237",
+                          "i680_80_to_580",
+                          "i680_580_to_101",
+                          "sr4_80_to_160",
+                          "i580_hayward_to_sanjoaquin",
+                          "i580_hayward_to_baybridge",
+                          "i80_13_to_580",
+                          "i80_580_to_Carquinez",
+                          "i80_680_to_12")
+                          
 
 # Function for imputing discrete value from PUMS distribution
-# Start by bringing in 2015-2019 PUMS data
+# Start by bringing in 2022 PUMS data
 
-HH_RDATA = "M:/Data/Census/PUMS/PUMS 2015-19/hbayarea1519.Rdata"
+HH_RDATA = "M:/Data/Census/PUMS/PUMS 2022/hbayarea22.Rdata"
 load (HH_RDATA)
 
 # Adjust income to inflation-correct values for 2019
 # Remove group quarters and vacant housing
 
-bay_income <- hbayarea1519  %>% 
+bay_income <- hbayarea22  %>% 
   mutate(adjustment = ADJINC/1000000,
          income=HINCP*adjustment)  %>%  
   filter(!is.na(income))  
@@ -104,44 +118,71 @@ mutate(
 
 # Create income function that samples from appropriate PUMS bins to get a discrete income value from categorical data
 # Start with more detailed income (which has missing data) then use imputed records to catch missing records
+# The "TRUE" value below is for records with neither an income_detailed nor an income_imputed_rmove_only record
+# This chooses a record from the full PUMS dataset to match. In the existing TDS dataset, no such records exist, but
+# the line is inlcuded so the function runs in every case
 
 set.seed(1)
-discrete_income_f <- function(income_detailed,income_imputed){
+discrete_income_f <- function(income_detailed,income_imputed_rmove_only){
   temp <- bay_income  %>%  
     filter(
       case_when(
-        income_detailed==1              ~ .$income<15000,
-        income_detailed==2              ~ .$income>=15000 & .$income<25000,
-        income_detailed==3              ~ .$income>=25000 & .$income<35000,
-        income_detailed==4              ~ .$income>=35000 & .$income<50000,
-        income_detailed==5              ~ .$income>=50000 & .$income<75000,
-        income_detailed==6              ~ .$income>=75000 & .$income<100000,
-        income_detailed==7              ~ .$income>=100000 & .$income<150000,
-        income_detailed==8              ~ .$income>=150000 & .$income<200000,
-        income_detailed==9              ~ .$income>=200000 & .$income<250000,
-        income_detailed==10             ~ .$income>=250000,
-        income_imputed==1               ~ .$income<25000,
-        income_imputed==2               ~ .$income>=25000 & .$income<50000,
-        income_imputed==3               ~ .$income>=50000 & .$income<75000,
-        income_imputed==4               ~ .$income>=75000 & .$income<100000,
-        income_imputed==5               ~ .$income>=100000 & .$income<150000,
-        income_imputed==6               ~ .$income>=150000 & .$income<200000,
-        income_imputed==7               ~ .$income>=200000 & .$income<250000,
-        income_imputed==8               ~ .$income>=250000))
+        income_detailed==1                              ~ .$income<15000,
+        income_detailed==2                              ~ .$income>=15000 & .$income<25000,
+        income_detailed==3                              ~ .$income>=25000 & .$income<35000,
+        income_detailed==4                              ~ .$income>=35000 & .$income<50000,
+        income_detailed==5                              ~ .$income>=50000 & .$income<75000,
+        income_detailed==6                              ~ .$income>=75000 & .$income<100000,
+        income_detailed==7                              ~ .$income>=100000 & .$income<150000,
+        income_detailed==8                              ~ .$income>=150000 & .$income<200000,
+        income_detailed==9                              ~ .$income>=200000 & .$income<250000,
+        income_detailed==10                             ~ .$income>=250000,
+        income_imputed_rmove_only=="Under $25,000"      ~ .$income<25000,
+        income_imputed_rmove_only=="$25,000-$49,999"    ~ .$income>=25000 & .$income<50000,
+        income_imputed_rmove_only=="$50,000-$74,999"    ~ .$income>=50000 & .$income<75000,
+        income_imputed_rmove_only=="$75,000-$99,999"    ~ .$income>=75000 & .$income<100000,
+        income_imputed_rmove_only=="$100,000-$199,999"  ~ .$income>=100000 & .$income<200000,
+        income_imputed_rmove_only=="$200,000 or more"   ~ .$income>=200000,
+        TRUE                                            ~ .$income<250000)) 
   value <- sample(temp$income,replace = T,size = 1,prob = temp$WGTP)
   return(value)
 }
 
-# Recode linked trip file using imputed HH income and race/ethnicity from person file
-# Join with household file to append detailed_income variable
+
+# 
+# Recode trip file using race/ethnicity from person file
+# Join with household file to append detailed_income and imputed income variables
 # Run discrete income function defined above to get a discrete income variable for each categorical income
 # Get share of regional median income and group those values into a new ami variable
 # Select significant variables of interest
 
+related_persons <- person %>%
+  filter(relationship != "6") %>%          # Remove unrelated persons
+  group_by(hh_id) %>%                      # Group by hh_id
+  summarize(num_persons_related = n())  
+
 person_joiner <- person  %>%  
-  left_join(.,household,by="hh_id")  %>%  
-  filter(is_active_participant==1)  %>%                    # Only include participants
-  mutate(
+  left_join(.,related_persons, by="hh_id") %>% 
+  left_join(.,household,by="hh_id") %>% 
+  mutate(race_recoded=case_when(
+    ethnicity_imputed_rmove_only=="hispanic"           ~ "Hispanic",
+    race_imputed_rmove_only=="afam"                    ~ "Black",
+    race_imputed_rmove_only=="asian_pacific"           ~ "Asian/Pacific Islander",
+    race_imputed_rmove_only=="white"                   ~ "White",
+    race_imputed_rmove_only=="other"                   ~ "Other",
+    TRUE                                               ~ "Miscoded"
+  )) %>% 
+  rowwise()  %>%  
+  mutate(discrete_income=discrete_income_f(income_detailed,income_imputed_rmove_only)) %>%   # Run discrete income generator function defined above
+  ungroup() 
+
+
+%>%  
+  mutate()
+    
+
+    
+    ]
     income_recoded=case_when(
       income_imputed %in% c(1,2)                         ~ "Under $50,000",
       income_imputed %in% c(3,4)                         ~ "$50,000-$99,999",
@@ -157,10 +198,9 @@ person_joiner <- person  %>%
       raceeth_new_imputed %in% c(-1,5)                   ~ "Other",
       TRUE                                               ~ "Miscoded"
     )
-  ) %>%  
-  rowwise()  %>%  
-  mutate(discrete_income=discrete_income_f(income_detailed,income_imputed)) %>%   # Run discrete income generator function defined above
-  ungroup() %>%  
+  ) 
+
+%>%  
   mutate(
     ami_recoded=case_when(
       discrete_income/bay_median< 0.5                                  ~ "Under 50 percent AMI",
@@ -169,7 +209,7 @@ person_joiner <- person  %>%
       discrete_income/bay_median>=2                                    ~ "Over 200 percent AMI",
       TRUE                                                             ~ "Miscoded"
     ))  %>%  
-  select(hh_id,person_id,income_recoded,race_recoded,income_detailed,income_imputed,raceeth_new_imputed,ami_recoded,discrete_income,reported_home_lat,reported_home_lon)
+  select(hh_id,person_id,income_recoded,race_recoded,income_detailed,income_imputed_rmove_only,raceeth_new_imputed,ami_recoded,discrete_income,reported_home_lat,reported_home_lon)
 
 # Get race from PUMS for comparing to freeway facilities
 
