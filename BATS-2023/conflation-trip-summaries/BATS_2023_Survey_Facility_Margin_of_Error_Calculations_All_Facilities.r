@@ -20,17 +20,15 @@ Box_dir2       <- file.path(BOX_dir1,"Biennial Travel Diary Survey","Data","2023
 conflation_loc <- file.path(Box_dir2,"Survey Conflation")
 data_loc       <- file.path(Box_dir2,"Full Weighted 2023 Dataset","WeightedDataset_08092024")
 
-# Bring in BATS 2023 survey files, filter for only non-zero rmove person, trip, and household weights
+# Bring in BATS 2023 survey files
 # Select only the variables needed for this script
 
 person         <- read.csv(file=file.path(data_loc,"person.csv")) %>% 
-  filter(person_weight_rmove_only>0) %>% 
-  select(hh_id,person_id,grep("race|ethnicity",names(.)))
-trip           <- read.csv(file=file.path(data_loc,"trip.csv")) %>% 
-  filter(trip_weight_rmove_only>0)
+  select(hh_id,person_id,relationship,grep("race|ethnicity|weight",names(.)))
+trip           <- read.csv(file=file.path(data_loc,"trip.csv")) %>%     #Drop hh_id for easier joining later on trip_id
+  select(-hh_id)
 household      <- read.csv(file=file.path(data_loc,"hh.csv"))%>% 
-  filter(hh_weight_rmove_only>0) %>% 
-  select(hh_id,num_people,income_detailed,income_imputed_rmove_only) %>% 
+  select(hh_id,num_people,income_detailed,income_imputed_rmove_only,grep("weight",names(.))) %>% 
   mutate(income_detailed_val=case_when(
     income_detailed==1                   ~ "Less than $15,000",
     income_detailed==2                   ~ "$15,000-$24,999",
@@ -93,7 +91,8 @@ load (HH_RDATA)
 bay_income <- hbayarea22  %>% 
   mutate(adjustment = ADJINC/1000000,
          income=HINCP*adjustment)  %>%  
-  filter(!is.na(income))  
+  filter(!is.na(income)) %>% 
+  select(PUMA,SERIALNO,income,HINCP,ADJINC,adjustment,WGTP)
 
 # Calculate area median income
 
@@ -164,6 +163,9 @@ related_persons <- person %>%
 person_joiner <- person  %>%  
   left_join(.,related_persons, by="hh_id") %>% 
   left_join(.,household,by="hh_id") %>% 
+  rowwise()  %>%  
+  mutate(discrete_income=discrete_income_f(income_detailed,income_imputed_rmove_only)) %>%   # Run discrete income generator function defined above
+  ungroup() %>% 
   mutate(race_recoded=case_when(
     ethnicity_imputed_rmove_only=="hispanic"           ~ "Hispanic",
     race_imputed_rmove_only=="afam"                    ~ "Black",
@@ -171,52 +173,32 @@ person_joiner <- person  %>%
     race_imputed_rmove_only=="white"                   ~ "White",
     race_imputed_rmove_only=="other"                   ~ "Other",
     TRUE                                               ~ "Miscoded"
-  )) %>% 
-  rowwise()  %>%  
-  mutate(discrete_income=discrete_income_f(income_detailed,income_imputed_rmove_only)) %>%   # Run discrete income generator function defined above
-  ungroup() 
-
-
-%>%  
-  mutate()
-    
-
-    
-    ]
-    income_recoded=case_when(
-      income_imputed %in% c(1,2)                         ~ "Under $50,000",
-      income_imputed %in% c(3,4)                         ~ "$50,000-$99,999",
-      income_imputed %in% c(5,6)                         ~ "$100,000-$199,999",
-      income_imputed %in% c(7,8)                         ~ "Over $200,000",
-      TRUE                                               ~ "Miscoded"
-    ),
-    race_recoded=case_when(
-      raceeth_new_imputed==1                             ~ "Hispanic",
-      raceeth_new_imputed==2                             ~ "Black",
-      raceeth_new_imputed==3                             ~ "Asian/Pacific Islander",
-      raceeth_new_imputed==4                             ~ "White",
-      raceeth_new_imputed %in% c(-1,5)                   ~ "Other",
-      TRUE                                               ~ "Miscoded"
-    )
-  ) 
-
-%>%  
-  mutate(
-    ami_recoded=case_when(
+  ),
+  poverty_status=case_when(
+    num_persons_related==1 & discrete_income<=30120        ~ "under_2x_poverty",
+    num_persons_related==2 & discrete_income<=40880        ~ "under_2x_poverty",
+    num_persons_related==3 & discrete_income<=51640        ~ "under_2x_poverty",
+    num_persons_related==4 & discrete_income<=62400        ~ "under_2x_poverty",
+    num_persons_related==5 & discrete_income<=73160        ~ "under_2x_poverty",
+    num_persons_related==6 & discrete_income<=83920        ~ "under_2x_poverty",
+    num_persons_related==7 & discrete_income<=94680        ~ "under_2x_poverty",
+    num_persons_related>=8 & discrete_income<=105440       ~ "under_2x_poverty",
+    TRUE                                                   ~ "over_2x_poverty"
+  ),
+  ami_recoded=case_when(
       discrete_income/bay_median< 0.5                                  ~ "Under 50 percent AMI",
       discrete_income/bay_median>=0.5 & discrete_income/bay_median<1   ~ "50 to 100 percent AMI",
       discrete_income/bay_median>=1 & discrete_income/bay_median<2     ~ "100 to 200 percent AMI",
       discrete_income/bay_median>=2                                    ~ "Over 200 percent AMI",
       TRUE                                                             ~ "Miscoded"
-    ))  %>%  
-  select(hh_id,person_id,income_recoded,race_recoded,income_detailed,income_imputed_rmove_only,raceeth_new_imputed,ami_recoded,discrete_income,reported_home_lat,reported_home_lon)
+    ))  
 
 # Get race from PUMS for comparing to freeway facilities
 
-PERSON_RDATA = "M:/Data/Census/PUMS/PUMS 2019/pbayarea19.Rdata"
+PERSON_RDATA = "M:/Data/Census/PUMS/PUMS 2022/pbayarea22.Rdata"
 load (PERSON_RDATA)
 
-race19 <- pbayarea19 %>% 
+race22 <- pbayarea22 %>% 
 mutate(racerc=case_when(
   HISP>1               ~"Hispanic",
   HISP==1 & RAC1P==1   ~"White",
@@ -237,27 +219,27 @@ mutate(racerc=case_when(
 recoded_trip <- trip %>% 
   mutate(
     purpose_recoded=case_when(
-      d_purpose_category_imputed %in% c(1,11)            ~ "Home", # Home, spent night elsewhere
-      d_purpose_category_imputed %in% c(2,3)             ~ "Work", # Work or work related
-      d_purpose_category_imputed %in% c(4,5,14)          ~ "School/escort", # School, related, or escort
-      d_purpose_category_imputed %in% c(6,7,8)           ~ "Shop,meal,social,recreational",
-      d_purpose_category_imputed==9                      ~ "Errand/appointment",
-      d_purpose_category_imputed==10                     ~ "Change mode",
-      d_purpose_category_imputed %in% c(-1,12)           ~ "Other/missing",
-      TRUE                                               ~ "Miscoded"
+      d_purpose_category %in% c(1,12)            ~ "Home", # Home, spent night elsewhere
+      d_purpose_category %in% c(2,3)             ~ "Work", # Work or work related
+      d_purpose_category %in% c(4,5)             ~ "School", # School, related
+      d_purpose_category %in% c(6)               ~ "Escort", 
+      d_purpose_category %in% c(7,8,9)           ~ "Shop,meal,social,recreational",
+      d_purpose_category==10                      ~ "Errand/appointment",
+      d_purpose_category==11                     ~ "Change mode",
+      d_purpose_category %in% c(-1,13)           ~ "Other/missing",
+      TRUE                                       ~ "Miscoded"
     )
   )
 
 # Join trips file with facility flag file 
 # Create flag for all freeways, used later to sum trip characteristics among full freeway network
-# Filter out trips that don't have a drive mode (defined as "car_vector, above)
-# Include trips with missing mode information (assuming drive)
+# Remove trips that don't have rmove weights
 
-working <- left_join(facility_flag,recoded_trip,by=c("hh_id","person_id","trip_id")) %>% 
-  left_join(.,person_joiner,by=c("hh_id","person_id")) %>% 
+working <- left_join(facility_flag,recoded_trip,by="trip_id") %>% 
+  left_join(.,person_joiner,by=c("person_id")) %>% 
   mutate(All_Freeways=1) %>% 
-  relocate(All_Freeways,.after = "Mar_Son_101_12To580") %>% 
-  filter((mode_1 %in% c(car_vector,997,-9998) | mode_2 %in% car_vector | mode_3 %in% car_vector | mode_4 %in% car_vector),daywt_alladult_wkday>0)
+  relocate(All_Freeways,.after = "i80_680_to_12") %>% 
+  filter(hh_weight_rmove_only>0 & person_weight_rmove_only>0 & trip_weight>0)
 
 # Function to analyze data and calculate standard errors
 # Filter for facility value==1 (i.e., traverses that facility) 
@@ -269,9 +251,9 @@ working <- left_join(facility_flag,recoded_trip,by=c("hh_id","person_id","trip_i
 # Define tod=time of day using departure hour ("all_day","peak","am_peak","pm_peak","off_peak)
 # "all_day" is by definition all day and therefore not a subset/filtering of data
 
-peak <- c(6,7,8,9,15,16,17,18)
-am_peak <- c(6,7,8,9)
-pm_peak <- c(15,16,17,18)
+peak <- c(6:9,15:18)
+am_peak <- c(6:9)
+pm_peak <- c(15:18)
 off_peak <- c(0:5,10:14,19:23)
 
 # Now create function
