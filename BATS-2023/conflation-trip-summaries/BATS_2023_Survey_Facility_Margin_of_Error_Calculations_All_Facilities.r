@@ -99,6 +99,7 @@ bay_income <- hbayarea22  %>%
 bay_median <- weighted.median(x=bay_income$income,w=bay_income$WGTP)
 
 # Calculate share of PUMS households by percentage AMI
+# Calculate share of Bay Area persons below 200 percent poverty, exclude people with NA poverty calculation
 
 bay_income_med <- bay_income  %>%  
 mutate(
@@ -112,6 +113,15 @@ mutate(
   group_by(ami_recoded)  %>%  
   summarize(count=n(),total=sum(WGTP))  %>%  
   transmute(ami_recoded,PUMS_household_share=total/sum(total)) %>% 
+  ungroup()
+
+bay_poverty <- pbayarea22 %>% 
+  select(County_Name,POVPIP,PWGTP) %>% 
+  filter(!is.na(POVPIP)) %>% 
+  mutate(poverty_status=if_else(POVPIP<200,"under_2x_poverty","over_2x_poverty")) %>% 
+  group_by(poverty_status)  %>%  
+  summarize(count=n(),total=sum(PWGTP))  %>%  
+  transmute(poverty_status,PUMS_poverty_share=total/sum(total)) %>% 
   ungroup()
 
 
@@ -212,7 +222,7 @@ mutate(racerc=case_when(
   TRUE                 ~"Uncoded")) %>% 
   group_by(racerc) %>% 
   summarize(total=sum(PWGTP)) %>% 
-  mutate(race_share=total/sum(total))
+  mutate(PUMS_race_share=total/sum(total))
 
 # Recoded trip purpose on linked trip file
 
@@ -399,7 +409,7 @@ final2 <- left_join(final1,freeway_coords,by="roadway")
 
 # Output file for analysis in Tableau
 
-write.csv(final2,file.path(Output,"BATS_2019_Facility_Daypart_Summary.csv"),row.names = FALSE)
+write.csv(final2,file.path(Output,"BATS_2023_Facility_Daypart_Summary.csv"),row.names = FALSE)
 
 # Create a file with PUMS AMI income and race joined as rows, not columns, output file
 
@@ -413,7 +423,13 @@ race_joiner <- race22 %>%
   mutate(roadway="Bay_Area_Population", category="ethnicity",time_period="Bay Area Population",count=NA_real_,
          total=NA_real_,standard_error=NA_real_,ci_95=NA_real_,lower_bound=NA_real_,upper_bound=NA_real_,
          range=NA_real_,cv=NA_real_,est_reliability=NA_character_) %>% 
-  rename(metric=racerc, share_value=race_share) 
+  rename(metric=race_recoded, share_value=PUMS_race_share) 
+
+poverty_joiner <- bay_poverty %>% 
+  mutate(roadway="Bay_Area_Population", category="poverty",time_period="Bay Area Population",count=NA_real_,
+         total=NA_real_,standard_error=NA_real_,ci_95=NA_real_,lower_bound=NA_real_,upper_bound=NA_real_,
+         range=NA_real_,cv=NA_real_,est_reliability=NA_character_) %>% 
+  rename(metric=poverty_status, share_value=PUMS_poverty_share) 
 
 final3 <- rbind(final,ami_joiner) %>% 
   left_join(.,freeway_coords,by="roadway")
@@ -421,8 +437,12 @@ final3 <- rbind(final,ami_joiner) %>%
 final4 <- rbind(final,race_joiner) %>% 
   left_join(.,freeway_coords,by="roadway")
 
-write.csv(final3,file.path(Output,"BATS_2019_Facility_Daypart_Summary_AMI_in_Rows.csv"),row.names = FALSE)
-write.csv(final4,file.path(Output,"BATS_2019_Facility_Daypart_Summary_Race_in_Rows.csv"),row.names = FALSE)
+final5 <- rbind(final,poverty_joiner) %>% 
+  left_join(.,freeway_coords,by="roadway")
+
+write.csv(final3,file.path(Output,"BATS_2023_Facility_Daypart_Summary_AMI_in_Rows.csv"),row.names = FALSE)
+write.csv(final4,file.path(Output,"BATS_2023_Facility_Daypart_Summary_Race_in_Rows.csv"),row.names = FALSE)
+write.csv(final5,file.path(Output,"BATS_2023_Facility_Daypart_Summary_Poverty_in_Rows.csv"),row.names = FALSE)
 
 
 
