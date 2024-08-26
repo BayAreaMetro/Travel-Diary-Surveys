@@ -85,6 +85,9 @@ full_facilities_list <- c("bay_bridge",
 HH_RDATA = "M:/Data/Census/PUMS/PUMS 2022/hbayarea22.Rdata"
 load (HH_RDATA)
 
+PERSON_RDATA = "M:/Data/Census/PUMS/PUMS 2022/pbayarea22.Rdata"
+load (PERSON_RDATA)
+
 # Adjust income to inflation-correct values for 2019
 # Remove group quarters and vacant housing
 
