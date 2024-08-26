@@ -19,6 +19,7 @@ BOX_dir1       <- file.path(USERPROFILE, "Box", "Modeling and Surveys","Surveys"
 Box_dir2       <- file.path(BOX_dir1,"Biennial Travel Diary Survey","Data","2023")
 conflation_loc <- file.path(Box_dir2,"Survey Conflation")
 data_loc       <- file.path(Box_dir2,"Full Weighted 2023 Dataset","WeightedDataset_08092024")
+output         <- file.path(Box_dir2,"Summaries")
 
 # Bring in BATS 2023 survey files
 # Select only the variables needed for this script
@@ -44,11 +45,12 @@ household      <- read.csv(file=file.path(data_loc,"hh.csv"))%>%
   ))
   
 
+# Commenting out the below for possible future use in plotting freeways
 # Bring in freeway coordinates for placing pie charts on map
 # File also has long name equivalencies for facilities and Bay Area geographical designations
 
-#freeway_coords_in <- file.path(Output,"Freeway Facility Coordinates.csv")
-#freeway_coords <- read.csv(freeway_coords_in)
+# freeway_coords_in <- file.path(Output,"Freeway Facility Coordinates.csv")
+# freeway_coords <- read.csv(freeway_coords_in)
 
 # Bring in facility flag file (file that indicates whether a given trip traverses a given freeway/bridge)
 # Create vector of facilities for analysis
@@ -115,7 +117,7 @@ mutate(
   ))  %>%  
   group_by(ami_recoded)  %>%  
   summarize(count=n(),total=sum(WGTP))  %>%  
-  transmute(ami_recoded,PUMS_household_share=total/sum(total)) %>% 
+  mutate(PUMS_household_share=total/sum(total)) %>% 
   ungroup()
 
 bay_poverty <- pbayarea22 %>% 
@@ -124,7 +126,7 @@ bay_poverty <- pbayarea22 %>%
   mutate(poverty_status=if_else(POVPIP<200,"under_2x_poverty","over_2x_poverty")) %>% 
   group_by(poverty_status)  %>%  
   summarize(count=n(),total=sum(PWGTP))  %>%  
-  transmute(poverty_status,PUMS_poverty_share=total/sum(total)) %>% 
+  mutate(PUMS_poverty_share=total/sum(total)) %>% 
   ungroup()
 
 
@@ -212,7 +214,7 @@ PERSON_RDATA = "M:/Data/Census/PUMS/PUMS 2022/pbayarea22.Rdata"
 load (PERSON_RDATA)
 
 race22 <- pbayarea22 %>% 
-mutate(racerc=case_when(
+mutate(race_recoded=case_when(
   HISP>1               ~"Hispanic",
   HISP==1 & RAC1P==1   ~"White",
   HISP==1 & RAC1P==2   ~"Black",
@@ -223,8 +225,8 @@ mutate(racerc=case_when(
   HISP==1 & RAC1P==7   ~"Asian/Pacific Islander",
   HISP==1 & RAC1P>=8   ~"Other",
   TRUE                 ~"Uncoded")) %>% 
-  group_by(racerc) %>% 
-  summarize(total=sum(PWGTP)) %>% 
+  group_by(race_recoded) %>% 
+  summarize(count=n(),total=sum(PWGTP)) %>% 
   mutate(PUMS_race_share=total/sum(total))
 
 # Recoded trip purpose on linked trip file
@@ -345,7 +347,7 @@ if (tod=="off_peak"){
     group_by(poverty_status) %>% 
     summarize(count=n(),total=sum(trip_weight_rmove_only),share_value=sum(trip_weight_rmove_only)/total_trips) %>% 
     mutate(category="poverty_status") %>% 
-    rename(metric=poverty_recoded) %>% 
+    rename(metric=poverty_status) %>% 
     ungroup()
   
 # Calculate standard error, 95 percent confidence interval, lower and upper bound values
@@ -400,52 +402,37 @@ full_off_peak <- purrr::map_dfr(full_facilities_list, ~{calculations(df=working,
                                                           facility = .x, 
                                                           tod = "off_peak")})
 
-final <- bind_rows(full_all_day,full_peak,full_am_peak,full_pm_peak,full_off_peak)
+temp <- bind_rows(full_all_day,full_peak,full_am_peak,full_pm_peak,full_off_peak)
 
 # Join PUMS household share of AMI to compare population shares vs. people driving on freeways
-
-final1 <- left_join(final,bay_income_med,by=c("metric"="ami_recoded"))
-
-# Join with location file to place pie charts on map
-
-final2 <- left_join(final1,freeway_coords,by="roadway")
-
-# Output file for analysis in Tableau
-
-write.csv(final2,file.path(Output,"BATS_2023_Facility_Daypart_Summary.csv"),row.names = FALSE)
-
-# Create a file with PUMS AMI income and race joined as rows, not columns, output file
+# Rename "count" and "total" variables in final dataset to unweighted and weighted (more intuitive)
 
 ami_joiner <- bay_income_med %>% 
-  mutate(roadway="Bay_Area_Population", category="ami_income",time_period="Bay Area Population",count=NA_real_,
-         total=NA_real_,standard_error=NA_real_,ci_95=NA_real_,lower_bound=NA_real_,upper_bound=NA_real_,
+  mutate(roadway="Bay_Area_Population", category="ami_income",time_period="Bay Area Population",
+         standard_error=NA_real_,ci_95=NA_real_,lower_bound=NA_real_,upper_bound=NA_real_,
          range=NA_real_,cv=NA_real_,est_reliability=NA_character_) %>% 
-         rename(metric=ami_recoded, share_value=PUMS_household_share) 
+  rename(metric=ami_recoded, share_value=PUMS_household_share) 
 
 race_joiner <- race22 %>% 
-  mutate(roadway="Bay_Area_Population", category="ethnicity",time_period="Bay Area Population",count=NA_real_,
-         total=NA_real_,standard_error=NA_real_,ci_95=NA_real_,lower_bound=NA_real_,upper_bound=NA_real_,
+  mutate(roadway="Bay_Area_Population", category="ethnicity",time_period="Bay Area Population",
+         standard_error=NA_real_,ci_95=NA_real_,lower_bound=NA_real_,upper_bound=NA_real_,
          range=NA_real_,cv=NA_real_,est_reliability=NA_character_) %>% 
   rename(metric=race_recoded, share_value=PUMS_race_share) 
 
 poverty_joiner <- bay_poverty %>% 
-  mutate(roadway="Bay_Area_Population", category="poverty",time_period="Bay Area Population",count=NA_real_,
-         total=NA_real_,standard_error=NA_real_,ci_95=NA_real_,lower_bound=NA_real_,upper_bound=NA_real_,
+  mutate(roadway="Bay_Area_Population", category="poverty_status",time_period="Bay Area Population",
+         standard_error=NA_real_,ci_95=NA_real_,lower_bound=NA_real_,upper_bound=NA_real_,
          range=NA_real_,cv=NA_real_,est_reliability=NA_character_) %>% 
   rename(metric=poverty_status, share_value=PUMS_poverty_share) 
 
-final3 <- rbind(final,ami_joiner) %>% 
-  left_join(.,freeway_coords,by="roadway")
+final <- bind_rows(temp,ami_joiner,race_joiner,poverty_joiner) %>% 
+  rename(unweighted=count,weighted=total)
 
-final4 <- rbind(final,race_joiner) %>% 
-  left_join(.,freeway_coords,by="roadway")
+# Output file to CSV
 
-final5 <- rbind(final,poverty_joiner) %>% 
-  left_join(.,freeway_coords,by="roadway")
+write.csv(final,file=file.path(output,"BATS_2023_race_AMI_poverty_purpose_shares.csv"),row.names=F)
 
-write.csv(final3,file.path(Output,"BATS_2023_Facility_Daypart_Summary_AMI_in_Rows.csv"),row.names = FALSE)
-write.csv(final4,file.path(Output,"BATS_2023_Facility_Daypart_Summary_Race_in_Rows.csv"),row.names = FALSE)
-write.csv(final5,file.path(Output,"BATS_2023_Facility_Daypart_Summary_Poverty_in_Rows.csv"),row.names = FALSE)
+
 
 
 
