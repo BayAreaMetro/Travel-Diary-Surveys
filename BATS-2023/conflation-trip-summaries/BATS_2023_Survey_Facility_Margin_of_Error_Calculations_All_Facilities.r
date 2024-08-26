@@ -224,7 +224,7 @@ recoded_trip <- trip %>%
       d_purpose_category %in% c(4,5)             ~ "School", # School, related
       d_purpose_category %in% c(6)               ~ "Escort", 
       d_purpose_category %in% c(7,8,9)           ~ "Shop,meal,social,recreational",
-      d_purpose_category==10                      ~ "Errand/appointment",
+      d_purpose_category==10                     ~ "Errand/appointment",
       d_purpose_category==11                     ~ "Change mode",
       d_purpose_category %in% c(-1,13)           ~ "Other/missing",
       TRUE                                       ~ "Miscoded"
@@ -239,7 +239,7 @@ working <- left_join(facility_flag,recoded_trip,by="trip_id") %>%
   left_join(.,person_joiner,by=c("person_id")) %>% 
   mutate(All_Freeways=1) %>% 
   relocate(All_Freeways,.after = "i80_680_to_12") %>% 
-  filter(hh_weight_rmove_only>0 & person_weight_rmove_only>0 & trip_weight>0)
+  filter(trip_weight_rmove_only>0)
 
 # Function to analyze data and calculate standard errors
 # Filter for facility value==1 (i.e., traverses that facility) 
@@ -270,62 +270,69 @@ stopifnot(tod %in% c("all_day","peak","am_peak","pm_peak","off_peak"))
 if (tod=="all_day"){
 temp_df <- df %>% 
   filter(.[[facility]]==1) %>%
-mutate(squared_standard_weights=(daywt_alladult_wkday/sum(daywt_alladult_wkday))^2)}
+mutate(squared_standard_weights=(trip_weight_rmove_only/sum(trip_weight_rmove_only))^2)}
 
 if (tod=="peak"){
   temp_df <- df %>% 
     filter(.[[facility]]==1,.$depart_hour %in% peak) %>%
-    mutate(squared_standard_weights=(daywt_alladult_wkday/sum(daywt_alladult_wkday))^2)}
+    mutate(squared_standard_weights=(trip_weight_rmove_only/sum(trip_weight_rmove_only))^2)}
 
 if (tod=="am_peak"){
   temp_df <- df %>% 
     filter(.[[facility]]==1,.$depart_hour %in% am_peak) %>%
-    mutate(squared_standard_weights=(daywt_alladult_wkday/sum(daywt_alladult_wkday))^2)}
+    mutate(squared_standard_weights=(trip_weight_rmove_only/sum(trip_weight_rmove_only))^2)}
 
 if (tod=="pm_peak"){
   temp_df <- df %>% 
     filter(.[[facility]]==1,.$depart_hour %in% pm_peak) %>%
-    mutate(squared_standard_weights=(daywt_alladult_wkday/sum(daywt_alladult_wkday))^2)}
+    mutate(squared_standard_weights=(trip_weight_rmove_only/sum(trip_weight_rmove_only))^2)}
 
 if (tod=="off_peak"){
   temp_df <- df %>% 
     filter(.[[facility]]==1,.$depart_hour %in% off_peak) %>%
-    mutate(squared_standard_weights=(daywt_alladult_wkday/sum(daywt_alladult_wkday))^2)}
+    mutate(squared_standard_weights=(trip_weight_rmove_only/sum(trip_weight_rmove_only))^2)}
 
 # Store value of summed squared standardized weights in a variable for later use  
   error_summation <- sum(temp_df$squared_standard_weights)
   
 # Store total trips for calculating shares within each summary
-  total_trips <- sum(temp_df$daywt_alladult_wkday)
+  total_trips <- sum(temp_df$trip_weight_rmove_only)
   
 # Summarize data by race/ethnicity, trip purpose, and income
 
   race <- temp_df %>% 
     group_by(race_recoded) %>% 
-    summarize(count=n(),total=sum(daywt_alladult_wkday),share_value=sum(daywt_alladult_wkday)/total_trips) %>% 
+    summarize(count=n(),total=sum(trip_weight_rmove_only),share_value=sum(trip_weight_rmove_only)/total_trips) %>% 
     mutate(category="ethnicity") %>% 
     rename(metric=race_recoded) %>% 
     ungroup()
   
   purpose <- temp_df %>% 
     group_by(purpose_recoded) %>% 
-    summarize(count=n(),total=sum(daywt_alladult_wkday),share_value=sum(daywt_alladult_wkday)/total_trips) %>% 
+    summarize(count=n(),total=sum(trip_weight_rmove_only),share_value=sum(trip_weight_rmove_only)/total_trips) %>% 
     mutate(category="trip_purpose") %>% 
     rename(metric=purpose_recoded) %>% 
     ungroup()
   
-  income <- temp_df %>% 
-    group_by(income_recoded) %>% 
-    summarize(count=n(),total=sum(daywt_alladult_wkday),share_value=sum(daywt_alladult_wkday)/total_trips) %>% 
-    mutate(category="income") %>% 
-    rename(metric=income_recoded) %>% 
-    ungroup()
+#  income <- temp_df %>% 
+#    group_by(income_recoded) %>% 
+#    summarize(count=n(),total=sum(trip_weight_rmove_only),share_value=sum(trip_weight_rmove_only)/total_trips) %>% 
+#    mutate(category="income") %>% 
+#    rename(metric=income_recoded) %>% 
+#    ungroup()
   
   income_ami <- temp_df %>% 
     group_by(ami_recoded) %>% 
-    summarize(count=n(),total=sum(daywt_alladult_wkday),share_value=sum(daywt_alladult_wkday)/total_trips) %>% 
+    summarize(count=n(),total=sum(trip_weight_rmove_only),share_value=sum(trip_weight_rmove_only)/total_trips) %>% 
     mutate(category="ami_income") %>% 
     rename(metric=ami_recoded) %>% 
+    ungroup()
+  
+  poverty <- temp_df %>% 
+    group_by(poverty_status) %>% 
+    summarize(count=n(),total=sum(trip_weight_rmove_only),share_value=sum(trip_weight_rmove_only)/total_trips) %>% 
+    mutate(category="poverty_status") %>% 
+    rename(metric=poverty_recoded) %>% 
     ungroup()
   
 # Calculate standard error, 95 percent confidence interval, lower and upper bound values
@@ -336,7 +343,7 @@ if (tod=="off_peak"){
 # • Low Reliability: CVs over 30% ‐ use with extreme caution  
 # Page 2,http://sites.tufts.edu/gis/files/2013/11/Amercian-Community-Survey_Margin-of-error-tutorial.pdf
   
-  temp_output <- bind_rows(temp_output,race,purpose,income,income_ami) %>% 
+  temp_output <- bind_rows(temp_output,race,purpose,income_ami,poverty) %>% 
     mutate(roadway=facility,
            standard_error=sqrt((share_value*(1-share_value)*error_summation)),
            ci_95=1.96*standard_error,
@@ -402,7 +409,7 @@ ami_joiner <- bay_income_med %>%
          range=NA_real_,cv=NA_real_,est_reliability=NA_character_) %>% 
          rename(metric=ami_recoded, share_value=PUMS_household_share) 
 
-race_joiner <- race19 %>% 
+race_joiner <- race22 %>% 
   mutate(roadway="Bay_Area_Population", category="ethnicity",time_period="Bay Area Population",count=NA_real_,
          total=NA_real_,standard_error=NA_real_,ci_95=NA_real_,lower_bound=NA_real_,upper_bound=NA_real_,
          range=NA_real_,cv=NA_real_,est_reliability=NA_character_) %>% 
