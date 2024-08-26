@@ -81,7 +81,7 @@ full_facilities_list <- c("bay_bridge",
                           "i80_13_to_580",
                           "i80_580_to_Carquinez",
                           "i80_680_to_12",
-                          "all_script_freeways")
+                          "all_script_facilities")
                           
 
 # Bring in 2022 PUMS data, household and person files for various tasks
@@ -252,8 +252,8 @@ recoded_trip <- trip %>%
 
 working <- left_join(facility_flag,recoded_trip,by="trip_id") %>% 
   left_join(.,person_joiner,by=c("person_id")) %>% 
-  mutate(all_script_freeways=1) %>% 
-  relocate(all_script_freeways,.after = "i80_680_to_12") %>% 
+  mutate(all_script_facilities=1) %>% 
+  relocate(all_script_facilities,.after = "i80_680_to_12") %>% 
   filter(trip_weight_rmove_only>0)
 
 # Function to analyze data and calculate standard errors
