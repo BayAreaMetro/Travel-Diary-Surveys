@@ -4,7 +4,7 @@
 
 # Set output directory
 
-Output        <- "M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Full Weighted 2023 Dataset Aggregated to TAZ 1454"
+output        <- "M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Full Weighted 2023 Dataset Aggregated to TAZ 1454"
 
 # Bring in libraries and set options to remove scientific notation
 
@@ -118,20 +118,21 @@ trip_destination <- trip %>%
 
 temp_trip_origin <- st_join(trip_origin,taz_shp, join=st_within,left=TRUE)%>%
   as.data.frame(.) %>% select(-geometry) %>% 
-  select(person_id,day_num, hh_id,person_num,trip_id,trip_num,linked_trip_id,leg_num,origin_tract_geoid=GEOID)
+  select(person_id,day_num, hh_id,trip_id,trip_num,o_taz=TAZ1454)
 
 temp_trip_destination <- st_join(trip_destination,taz_shp, join=st_within,left=TRUE)%>%
   as.data.frame(.) %>% select(-geometry) %>% 
-  select(person_id,day_num, hh_id,person_num,trip_id,trip_num,linked_trip_id,leg_num,destination_tract_geoid=GEOID)
+  select(person_id,day_num, hh_id,trip_id,trip_num,d_taz=TAZ1454)
 
 trip_out <- trip %>% 
-  left_join(.,temp_trip_origin,by=c("person_id","day_num","hh_id","person_num","trip_id","trip_num",
-                                    "linked_trip_id","leg_num")) %>% 
-  left_join(.,temp_trip_destination,by=c("person_id","day_num","hh_id","person_num","trip_id","trip_num",
-                                         "linked_trip_id","leg_num")) %>% 
-  relocate(origin_tract_geoid,.before = o_county_fips) %>% 
-  relocate(destination_tract_geoid,.before = d_county_fips) %>% 
-  select(-o_bg_geo_id,-d_bg_geo_id,-o_lat,-o_lon,-d_lat,-d_lon,-o_taz,-d_taz)
+  left_join(.,temp_trip_origin,by=c("person_id","day_num","hh_id","trip_id","trip_num")) %>% 
+  left_join(.,temp_trip_destination,by=c("person_id","day_num","hh_id","trip_id","trip_num")) %>% 
+  relocate(o_taz,.before = o_county) %>% 
+  relocate(d_taz,.before = d_county) %>% 
+  select(-o_lat,-o_lon,-d_lat,-d_lon,-o_bg_2010,-o_bg_2020,-o_puma_2012,-o_puma_2022,
+         -d_bg_2010,-d_bg_2020,-d_puma_2012,-d_puma_2022) %>% 
+  left_join(.,facility_flag,by="trip_id") %>% 
+  mutate_at(vars(95:116), ~ ifelse(is.na(.), 0, .))
 
 # Nothing recoded for vehicle file
 
@@ -139,9 +140,9 @@ vehicle_out <- vehicle
 
 # Output recoded files
 
-write.csv(day_out,file.path(Output,"BATS_2019_Day.csv"),row.names = FALSE)
-write.csv(household_out,file.path(Output,"BATS_2019_Household.csv"),row.names = FALSE)
-write.csv(person_out,file.path(Output,"BATS_2019_Person.csv"),row.names = FALSE)
-write.csv(trip_out,file.path(Output,"BATS_2019_Trip.csv"),row.names = FALSE)
-write.csv(vehicle_out,file.path(Output,"BATS_2019_Vehicle.csv"),row.names = FALSE)
+write.csv(day_out,file.path(output,"BATS_2023_Day_TAZ1454.csv"),row.names = FALSE)
+write.csv(household_out,file.path(output,"BATS_2019_Household_TAZ1454.csv"),row.names = FALSE)
+write.csv(person_out,file.path(output,"BATS_2019_Person_TAZ1454.csv"),row.names = FALSE)
+write.csv(trip_out,file.path(output,"BATS_2019_Trip_TAZ1454.csv"),row.names = FALSE)
+write.csv(vehicle_out,file.path(output,"BATS_2019_Vehicle_TAZ1454.csv"),row.names = FALSE)
 
