@@ -1,49 +1,50 @@
 # BATS-2023-Matched-to-TM1_TAZ.r
 # Remove point level data and match TM1 (1454) TAZs
+# Join with trip trace facility match file
 
 # Set output directory
 
-Output        <- "M:/Data/HomeInterview/TNC Survey/Data/Task 8 Data Refinement Version/Census Tract Matched Version for NDA Sharing/Bay Area Travel Survey 2019 Data"
+Output        <- "M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Full Weighted 2023 Dataset Aggregated to TAZ 1454"
 
-# Bring in libraries
+# Bring in libraries and set options to remove scientific notation
 
-library(tigris)
 suppressMessages(library(tidyverse))
 library(sf)
+options(scipen = 999)
 
-# Set up working directory
+# Set up inputs directories
 
-temp                  <- "M:/Data/HomeInterview/TNC Survey/Data/Task 8 Data Refinement Version"
-file_location         <- file.path(temp,"Final Updated Dataset as of 10-18-2021","RSG_HTS_Oct2021_bayarea")
-day_location          <- file.path(file_location,"day.tsv")
-hh_location           <- file.path(file_location,"hh.tsv")
-person_location       <- file.path(file_location,"person.tsv")
-trip_location         <- file.path(file_location,"trip.tsv")
-trip_linked_location  <- file.path(file_location,"trip_linked.tsv")
-vehicle_location      <- file.path(file_location,"vehicle.tsv")
+file_location         <- "M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Full Weighted 2023 Dataset/WeightedDataset_08092024"
+day_location          <- file.path(file_location,"day.csv")
+hh_location           <- file.path(file_location,"hh.csv")
+person_location       <- file.path(file_location,"person.csv")
+trip_location         <- file.path(file_location,"trip.csv")
+vehicle_location      <- file.path(file_location,"vehicle.csv")
 
-# Set up vector of counties for Bay Area and beyond
-
-
+USERPROFILE    <- gsub("////","/", Sys.getenv("USERPROFILE"))
+BOX_dir1       <- file.path(USERPROFILE, "Box", "Modeling and Surveys","Surveys","Travel Diary Survey")
+Box_dir2       <- file.path(BOX_dir1,"Biennial Travel Diary Survey","Data","2023")
+conflation_loc <- file.path(Box_dir2,"Survey Conflation")
 
 # Bring in datasets
 
-day            <- read_tsv(day_location,col_names=TRUE)
-household      <- read_tsv(hh_location,col_names=TRUE)
-person         <- read_tsv(person_location,col_names=TRUE)
-trip           <- read_tsv(trip_location,col_names=TRUE)
-linked_trip    <- read_tsv(trip_linked_location,col_names=TRUE)
-vehicle        <- read_tsv(vehicle_location,col_names=TRUE)
+day            <- read.csv(day_location)
+household      <- read.csv(hh_location)
+person         <- read.csv(person_location)
+trip           <- read.csv(trip_location)
+vehicle        <- read.csv(vehicle_location)
 
 # Bring in shapefile
 
-taz_shp    <- "M:/Data/GIS layers/Travel_Analysis_Zones_(TAZ1454)/Travel Analysis Zones.shp"
+taz_shp    <- st_read("M:/Data/GIS layers/Travel_Analysis_Zones_(TAZ1454)/Travel Analysis Zones.shp") %>% 
+  select(TAZ1454)
 
+# Bring in facility flag for later merging
 
-
+facility_flag <- read.csv(file = file.path(conflation_loc,"BATS 2023 Facility Use Booleans.csv"))
 
 # Where geocoding is necessary, assigned CRS=4326, World Geodetic System, then convert to 26910, spatially match
-# Append census tract locations, relocate variables to be near similar geolocation variables
+# Append TAZ locations, relocate variables to be near similar geolocation variables
 
 # Day file has no location information
 
@@ -52,13 +53,15 @@ day_out <- day
 # Household file needs geocoding
 
 household_places <- household %>% 
-  filter(!(is.na(reported_home_lat)),!(is.na(reported_home_lon))) %>% 
-  st_as_sf(., coords = c("reported_home_lon", "reported_home_lat"), crs = 4326) %>% 
+  filter(!(is.na(home_lat)),!(is.na(home_lon))) %>% 
+  st_as_sf(., coords = c("home_lon", "home_lat"), crs = 4326) %>% 
   st_transform(., crs=st_crs(taz_shp))
 
 household_out <- st_join(household_places,taz_shp, join=st_within,left=TRUE)%>%
-  as.data.frame(.) %>% select(-geometry,-sample_home_lat,-sample_home_lon,-home_bg_geoid,-home_taz) %>% 
-  relocate(home_tract_geoid=GEOID,.before=home_county_fips)
+  as.data.frame(.) %>% select(-geometry,-home_bg_2010,-home_bg_2020,
+                              -home_puma_2012,-home_puma_2022,-sample_home_lat,-sample_home_lon,
+                              -sample_home_bg) %>% 
+relocate(home_taz=TAZ1454,.before=home_county)
 
 # Person file needs geocoding for school and work locations
 
@@ -72,20 +75,34 @@ person_work <- person %>%
   st_as_sf(., coords = c("work_lon", "work_lat"), crs = 4326) %>% 
   st_transform(., crs=st_crs(taz_shp))
 
+person_second_home <- person %>% 
+  filter(!(is.na(second_home_lat)),!(is.na(second_home_lon))) %>% 
+  st_as_sf(., coords = c("second_home_lon", "second_home_lat"), crs = 4326) %>% 
+  st_transform(., crs=st_crs(taz_shp))
+
 temp_person_school <- st_join(person_school,taz_shp, join=st_within,left=TRUE)%>%
   as.data.frame(.) %>% select(-geometry) %>% 
-  select(person_id,hh_id,person_num,school_tract_geoid=GEOID)
+  select(person_id,hh_id,school_taz=TAZ1454)
 
 temp_person_work <- st_join(person_work,taz_shp, join=st_within,left=TRUE)%>%
   as.data.frame(.) %>% select(-geometry) %>% 
-  select(person_id,hh_id,person_num,work_tract_geoid=GEOID)
+  select(person_id,hh_id,work_taz=TAZ1454)
+
+temp_person_second_home <- st_join(person_second_home,taz_shp, join=st_within,left=TRUE)%>%
+  as.data.frame(.) %>% select(-geometry) %>% 
+  select(person_id,hh_id,second_home_taz=TAZ1454)
 
 person_out <- person %>% 
-  left_join(.,temp_person_school,by=c("person_id","hh_id","person_num")) %>% 
-  left_join(.,temp_person_work,by=c("person_id","hh_id","person_num")) %>% 
-  relocate(school_tract_geoid,.before = school_county_fips) %>% 
-  relocate(work_tract_geoid,.before = work_county_fips) %>% 
-  select(-school_bg_geo_id,-work_bg_geo_id,-school_lat,-school_lon,-work_lat,-work_lon,-school_taz,-work_taz)
+  left_join(.,temp_person_school,by=c("person_id","hh_id")) %>% 
+  left_join(.,temp_person_work,by=c("person_id","hh_id")) %>% 
+  left_join(.,temp_person_second_home,by=c("person_id","hh_id")) %>% 
+  relocate(school_taz,.before = school_county) %>% 
+  relocate(work_taz,.before = work_county) %>% 
+  relocate(second_home_taz,.before = second_home_county) %>% 
+  select(-school_bg_2010,-school_bg_2020,-school_puma_2012,-school_puma_2022,
+         -work_bg_2010,-work_bg_2020,-work_puma_2012,-work_puma_2022,
+         -second_home_bg_2010,-second_home_bg_2020,-second_home_puma_2012,-second_home_puma_2022,
+         -school_lat,-school_lon,-work_lat,-work_lon,-second_home_lat,-second_home_lon)
 
 # Trip file needs origin/destination recoded
 
@@ -126,6 +143,5 @@ write.csv(day_out,file.path(Output,"BATS_2019_Day.csv"),row.names = FALSE)
 write.csv(household_out,file.path(Output,"BATS_2019_Household.csv"),row.names = FALSE)
 write.csv(person_out,file.path(Output,"BATS_2019_Person.csv"),row.names = FALSE)
 write.csv(trip_out,file.path(Output,"BATS_2019_Trip.csv"),row.names = FALSE)
-write.csv(linked_trip_out,file.path(Output,"BATS_2019_Linked_Trip.csv"),row.names = FALSE)
 write.csv(vehicle_out,file.path(Output,"BATS_2019_Vehicle.csv"),row.names = FALSE)
 
