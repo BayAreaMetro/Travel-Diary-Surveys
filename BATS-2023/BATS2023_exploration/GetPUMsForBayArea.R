@@ -45,6 +45,7 @@ pums_df <- get_pums(
   variables = c(
          "HUPAC",    # Housing unit type
          "HINCP",    # Household income
+         "ADJINC",   # Adjustment factor for income and earnings dollar amounts (need to understand this one a bit more)
          "HHT",      # Household type
          "VEH",      # Vehicle owership
          "RELSHIPP", # Relationship (to reference person)
@@ -58,17 +59,37 @@ pums_df <- get_pums(
 # Add labels
 # --------------------------------------------------------------------------------
 pums_df <- pums_df %>%
-  mutate(HHT = as.character(HHT)) %>% # Convert to character to handle both numeric and non-numeric values (b)
-  mutate(VEH = as.character(VEH)) %>% # Convert to character to handle both numeric and non-numeric values (b)
+  
+  # Convert HHT and VEH to character to handle both numeric and non-numeric values (e.g., "b")
+  mutate(
+    HHT = as.character(HHT),
+    VEH = as.character(VEH)
+  ) %>%
+  
+  # Convert HINCP and ADJINC to numeric; non-numeric values will become NA
+  mutate(
+    HINCP_numeric = as.numeric(HINCP),
+    ADJINC_numeric = as.numeric(ADJINC)
+  ) %>%
+  
+  # Create a check for any discrepancies between HINCP_numeric and HINCP
+  mutate(
+    HINCP_check = HINCP_numeric - HINCP
+  ) %>%
+  
+  # Calculate adjusted income
+  mutate(income= HINCP_numeric*ADJINC_numeric)    %>% # Need to confirm that the adjustment is needed
+
+  # Add labels
   mutate( 
     Household_Type_Label_3types = case_when(
-      HHT == "1" ~ "1. Family",
-      HHT == "2" ~ "1. Family",
-      HHT == "3" ~ "1. Family",
-      HHT == "4" ~ "3. Living alone",
-      HHT == "5" ~ "2. Nonfamily",
-      HHT == "6" ~ "3. Living alone",
-      HHT == "7" ~ "2. Nonfamily",
+      HHT == "1" ~ "2. Family",
+      HHT == "2" ~ "2. Family",
+      HHT == "3" ~ "2. Family",
+      HHT == "4" ~ "1. Living alone",
+      HHT == "5" ~ "3. Nonfamily",
+      HHT == "6" ~ "1. Living alone",
+      HHT == "7" ~ "3. Nonfamily",
       HHT == "b" ~ "N/A (GQ/vacant)",  
       TRUE ~ "Unknown"
     ),
@@ -82,6 +103,14 @@ pums_df <- pums_df %>%
       VEH == "6" ~ "6 or more vehicles available",
       VEH == "b" ~ "N/A (GQ/vacant)",  
       TRUE ~ "Unknown"
+    ),
+    Income_Label = case_when(
+    income < 25000                     ~ "1. Under $25,000",
+    income >= 25000 & income < 50000   ~ "2. $25,000-$49,999",
+    income >= 50000 & income < 75000   ~ "3. $50,000-$74,999",
+    income >= 75000 & income < 100000  ~ "4. $75,000-$99,999",
+    income >= 100000 & income < 200000 ~ "5. $100,000-$199,999",
+    income >= 200000                   ~ "6. $200,000 or more"
     ),
   )
 
@@ -124,8 +153,8 @@ pums_df <- pums_df %>%
 # --------------------------------------------------------------------------------
 # export the data to csv for easy visualization in Tableau
 # --------------------------------------------------------------------------------
-write_csv(pums_df, "M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Full Weighted 2023 Dataset/WeightedDataset_08092024/BATS2023_exploration/PUMS2022_SelectedVars_person.csv")
-
+#write_csv(pums_df, "M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Full Weighted 2023 Dataset/WeightedDataset_08092024/BATS2023_exploration/PUMS2022_SelectedVars_person.csv")
+write_csv(pums_df, "M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Full Weighted 2023 Dataset/WeightedDataset_09112024/BAT2023_SepDeliverable_Review/PUMS2022_SelectedVars_person.csv")
 
 
 # --------------------------------------------------------------------------------
@@ -137,4 +166,25 @@ pums_hhld_df <- pums_df %>%
   filter(RELSHIPP == 20) # Filters only householders
 
 # export the data to csv for easy visualization in Tableau
-write_csv(pums_hhld_df, "M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Full Weighted 2023 Dataset/WeightedDataset_08092024/BATS2023_exploration/PUMS2022_SelectedVars_hh.csv")
+#write_csv(pums_hhld_df, "M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Full Weighted 2023 Dataset/WeightedDataset_08092024/BATS2023_exploration/PUMS2022_SelectedVars_hh.csv")
+write_csv(pums_hhld_df, "M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Full Weighted 2023 Dataset/WeightedDataset_09112024/BAT2023_SepDeliverable_Review/PUMS2022_SelectedVars_hh.csv")
+
+# --------------------------------------------------------------------------------
+# Tabulations
+# --------------------------------------------------------------------------------
+
+# get income distribution by household type
+crosstab_IncByHhldType <- pums_hhld_df %>%
+  group_by(Income_Label, Household_Type_Label_3types) %>%
+  summarise(weight_sum = sum(WGTP, na.rm = TRUE)) %>%  # Sum of weights
+  spread(Household_Type_Label_3types, weight_sum, fill = 0)
+
+print(crosstab_IncByHhldType)
+
+# get income distribution by household type by county
+crosstab_IncByHhldTypeByCounty <- pums_hhld_df %>%
+  group_by(County, Income_Label, Household_Type_Label_3types) %>%  
+  summarise(weight_sum = sum(WGTP, na.rm = TRUE)) %>%  
+  spread(Household_Type_Label_3types, weight_sum, fill = 0)
+
+print(crosstab_IncByHhldTypeByCounty, n = Inf)
