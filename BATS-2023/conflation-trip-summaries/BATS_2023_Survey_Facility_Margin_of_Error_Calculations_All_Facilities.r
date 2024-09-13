@@ -19,7 +19,7 @@ USERPROFILE    <- gsub("////","/", Sys.getenv("USERPROFILE"))
 BOX_dir1       <- file.path(USERPROFILE, "Box", "Modeling and Surveys","Surveys","Travel Diary Survey")
 Box_dir2       <- file.path(BOX_dir1,"Biennial Travel Diary Survey","Data","2023")
 conflation_loc <- file.path(Box_dir2,"Survey Conflation")
-data_loc       <- file.path(Box_dir2,"Full Weighted 2023 Dataset","WeightedDataset_08092024")
+data_loc       <- file.path(Box_dir2,"Full Weighted 2023 Dataset","WeightedDataset_09112024")
 output         <- file.path(Box_dir2,"Summaries")
 
 # Bring in BATS 2023 survey files
