@@ -10,8 +10,15 @@ p_load (tidyverse,sf)
 
 USERPROFILE       <- gsub("////","/", Sys.getenv("USERPROFILE"))
 BOX_dir           <- file.path(USERPROFILE, "Box", "Modeling and Surveys","Surveys","Travel Diary Survey","Biennial Travel Diary Survey")
-segments_in       <- file.path(BOX_dir,"Data","2023","Survey Conflation","osmid_facility_equivalence_lookup.csv")
+segments_in       <- file.path(BOX_dir,"Data","2023","Survey Conflation","osmid_facility_equivalence_lookup_direction.csv")
 facility_segments <- read.csv(segments_in)
+
+# De-dupe records to get unique segments for error-free later matching
+# Duplicated segments/osmids is an odd feature of the OSM map
+# Rename data frame to indicate that direction is included for some facilities (notably bridges)
+
+facility_segments_direction <- facility_segments %>%
+  distinct()
 
 # Excerpt conflation file data frame from its geopackage
 
@@ -20,8 +27,6 @@ conflation_file   <- file.path(file_temp,"WeightedDataset_08092024/OSM_match_v2/
 conflation_df     <- st_read(conflation_file,layer = "matched_path_gdf")
 con_attr_df       <- st_drop_geometry(conflation_df) %>% 
   select(trip_id,osmid,ref,name,highway)  
-
-"M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Full Weighted 2023 Dataset/WeightedDataset_08092024/OSM_match_v2/tds_conflation_results.gpkg"
 
 # Bring in weighted trip file, keep only trip_id and weight, for use at end of this script
 
