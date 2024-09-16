@@ -1,9 +1,9 @@
 # -----------------------------------------------------------------------
-# This script aims to add a two variables to the BATS household and person data file:
+# This script aims to add a two variables to the BATS household file:
 # - hhInc_continuous and poverty_status
 #
 # This script is largely an excerpt of BATS_2023_Survey_Facility_Margin_of_Error_Calculations_All_Facilities.r by Shimon
-# Except that I added some modification in relation to the treatment of family and nonfamily households
+# Except that I added some notes (and some code) in relation to the treatment of family and nonfamily households
 #
 # Shimon's original script BATS_2023_Survey_Facility_Margin_of_Error_Calculations_All_Facilities.r is in:
 # https://github.com/BayAreaMetro/Travel-Diary-Surveys/blob/master/BATS-2023/conflation-trip-summaries/
@@ -26,9 +26,8 @@ suppressMessages(library(tidyverse))
 USERPROFILE     <- gsub("////","/", Sys.getenv("USERPROFILE"))
 TDS_dir         <- file.path(USERPROFILE, "Box", "Modeling and Surveys","Surveys","Travel Diary Survey")
 TDSyear_dir     <- file.path(TDS_dir,"Biennial Travel Diary Survey","Data","2023")
-TDSdata_dir     <- file.path(TDSyear_dir,"Full Weighted 2023 Dataset","WeightedDataset_08092024")
-#output_dir      <- file.path(TDSyear_dir,"Full Weighted 2023 Dataset","WeightedDataset_08092024", "Processed")
-output_dir      <- file.path(USERPROFILE, "Documents", "temp","BridgeTollAnalysis")
+TDSdata_dir     <- file.path(TDSyear_dir,"Full Weighted 2023 Dataset","WeightedDataset_09112024")
+output_dir      <- file.path("M:/Data/HomeInterview/Bay Area Travel Study 2023/Data","Full Weighted 2023 Dataset","WeightedDataset_09112024", "Processed")
 
 
 # -----------------------------------------------------------------------
@@ -61,7 +60,9 @@ household_df   <- read.csv(file=file.path(TDSdata_dir,"hh.csv"))%>%
 
 # Bring in 2022 PUMS data, household and person files for various tasks
 
-# TODO: add a reference to the script that generate hbayarea22.Rdata and pbayarea22.Rdata
+# The script that generate hbayarea22.Rdata and pbayarea22.Rdata:
+# https://github.com/BayAreaMetro/census-tools-for-planning/blob/master/Create_Data_Sets/ACS_PUMS_2022_create_BayArea_datasets.R
+# It's a straight download and includes all variables
 PUMS_hBayArea_Rdata = "M:/Data/Census/PUMS/PUMS 2022/hbayarea22.Rdata"
 load(PUMS_hBayArea_Rdata)
 
@@ -80,7 +81,12 @@ PUMS_hBayArea_income_df <- PUMS_hBayArea_df  %>%
   filter(!is.na(income)) %>%                                 # Remove records with no income (vacant houses, group quarters)
   select(PUMA,SERIALNO,income,HINCP,ADJINC,adjustment,WGTP)  # Select relevant variables
 
-# TODO: Important!!! need to select only families and 1 person households in PUMS
+# TODO, but perhaps these are refinement:
+# -- Apply family income distribution (rather than household income distribution) to families and 1 person households from PUMS, since the income data collected represent family income
+# -- Apply a person income distribution to the non-family households in BATS
+# -- Noting that the non-family households in BATS are incomplete households. They are really single persons who share a housing unit with other non-relatives. 
+# -- For these "single person living in non-family household", from PUMS we can pick a random person (or pick the householder) from each PUMS non-family household to generate an income distribution.
+
 
 # -----------------------------------------------------------------------
 # Defines a function to impute an income value from the income categories
@@ -149,7 +155,10 @@ hh_related_persons_df <- person_df %>%
   group_by(hh_id) %>%                      # Group by hh_id
   summarize(num_persons_related = n())  
 
-# TODO: create a dataframe of households including only families and 1 person households (because we did not collect income for nonfamily households)
+# ----------------------------
+# Preparing for future work on family income vs personal income of those 1 persons living in non-family household 
+# ----------------------------
+# creates a dataframe of households including only families and 1 person households (because we did not collect income from nonfamily members)
 # i.e. exclude nonfamily households
 person_hhldType_df <- person_df %>%
   group_by(hh_id) %>%
@@ -161,7 +170,7 @@ person_hhldType_df <- person_df %>%
       Num_People == 1                                                         ~ "1-person Household",
       Household_Has_Spouse_Or_Partner == 1                                    ~ "Family Household",
       Household_Has_Spouse_Or_Partner == 0 & Household_Has_Family_Person == 1 ~ "Family Household",
-      TRUE ~ "Non-Family Household"
+      TRUE ~ "Single person Living in Non-Family Household"
     )
   ) %>%
   ungroup() %>%
@@ -180,12 +189,11 @@ BATShh_AddedVars_df <- household_df %>%
   left_join(.,hh_hhldType_df, by="hh_id") %>%
   select(hh_id, Num_People, Household_Has_Spouse_Or_Partner, Household_Has_Family_Person, Household_Type_3Groups, everything())
 
-# filter so that only family and 1 person households are included 
-BATShh_FamAnd1Per_df <- BATShh_AddedVars_df %>%
-  filter(Household_Type_3Groups != "Non-Family Household")
+# returning to income imputation
+# ----------------------------
 
 # Apply the income imputation to BATS data
-BATShh_FamAnd1Per_incomeImputed_df  <- BATShh_FamAnd1Per_df  %>% 
+BATShh_incomeImputed_df  <- BATShh_AddedVars_df  %>% 
   rowwise()  %>%  
   mutate(hhInc_continuous=ImputeIncomeFromCategories_f(income_detailed,income_imputed_rmove_only)) %>%   # Run income imputation function defined above
   ungroup() %>%
@@ -193,27 +201,34 @@ BATShh_FamAnd1Per_incomeImputed_df  <- BATShh_FamAnd1Per_df  %>%
 
 
 # add poverty status
-BATShh_FamAnd1Per_incomeImputed_df <- BATShh_FamAnd1Per_incomeImputed_df %>%
+BATShh_incomeImputed_df <- BATShh_incomeImputed_df %>%
+  left_join(.,hh_related_persons_df, by="hh_id") %>% 
   mutate(
     poverty_status = case_when(
-      Num_People == 1 & hhInc_continuous <= 30120   ~ "under_2x_poverty",
-      Num_People == 2 & hhInc_continuous <= 40880   ~ "under_2x_poverty",
-      Num_People == 3 & hhInc_continuous <= 51640   ~ "under_2x_poverty",
-      Num_People == 4 & hhInc_continuous <= 62400   ~ "under_2x_poverty",
-      Num_People == 5 & hhInc_continuous <= 73160   ~ "under_2x_poverty",
-      Num_People == 6 & hhInc_continuous <= 83920   ~ "under_2x_poverty",
-      Num_People == 7 & hhInc_continuous <= 94680   ~ "under_2x_poverty",
-      Num_People >= 8 & hhInc_continuous <= 105440  ~ "under_2x_poverty",
+      num_persons_related == 1 & hhInc_continuous <= 30120   ~ "under_2x_poverty",
+      num_persons_related == 2 & hhInc_continuous <= 40880   ~ "under_2x_poverty",
+      num_persons_related == 3 & hhInc_continuous <= 51640   ~ "under_2x_poverty",
+      num_persons_related == 4 & hhInc_continuous <= 62400   ~ "under_2x_poverty",
+      num_persons_related == 5 & hhInc_continuous <= 73160   ~ "under_2x_poverty",
+      num_persons_related == 6 & hhInc_continuous <= 83920   ~ "under_2x_poverty",
+      num_persons_related == 7 & hhInc_continuous <= 94680   ~ "under_2x_poverty",
+      num_persons_related >= 8 & hhInc_continuous <= 105440  ~ "under_2x_poverty",
       TRUE                                          ~ "over_2x_poverty"
     )
   )
-
-# TODO: explicit code those with unknown income
-
+ 
 # TODO: some visualizations of PUMS income distribution vs that in the imputed BATS would be good
+ 
 
 # -----------------------------------------------------------------------
 # Write a household file
 # -----------------------------------------------------------------------
-write.csv(BATShh_FamAnd1Per_incomeImputed_df, file.path(output_dir,"BATShh_FamAnd1Per_incomeImputed.csv"), row.names = FALSE)
+write.csv(BATShh_incomeImputed_df, file.path(output_dir,"BATShh_incomeImputed.csv"), row.names = FALSE)
+
+# or should I write out just hh_id and the two new variables (hhInc_continuous and poverty_status)
+
+# separately we should do some validation against ACS or PUMS 2023 regarding the number of hhld above/below 200% poverty threshold
+# do a sense check for now:
+# As per vitalsigns, "Just under 19% of Bay Area households had incomes below 200% of the federal poverty threshold in 2021".
+# https://vitalsigns.mtc.ca.gov/indicators/poverty
 
