@@ -57,30 +57,19 @@ household      <- read.csv(file=file.path(data_loc,"hh.csv"))%>%
 # Bring in facility flag file (file that indicates whether a trip traverses a given freeway/bridge)
 # Create vector of facilities (full_facilities_list) for passing into a later function
 
-facility_flag <- read.csv(file = file.path(conflation_loc,"BATS 2023 Facility Use Booleans.csv"))
+facility_flag <- read.csv(file = file.path(conflation_loc,"BATS 2023 Facility Use Booleans Toll.csv"))
 
-full_facilities_list <- c("bay_bridge",
-                          "sm_bridge",
-                          "dum_bridge",
-                          "rsr_bridge",
-                          "carq_bridge",
-                          "bm_bridge",
-                          "ant_bridge",
-                          "gg_bridge",
-                          "bata_bridges",
-                          "sr37_80_to_mare",
-                          "sr37_mare_to_121",
-                          "sr37_121_to_101",
-                          "sr37_80_to_101",
-                          "i880_baybridge_to_237",
-                          "i680_80_to_580",
-                          "i680_580_to_101",
-                          "sr4_80_to_160",
-                          "i580_hayward_to_sanjoaquin",
-                          "i580_hayward_to_baybridge",
-                          "i80_13_to_580",
-                          "i80_580_to_Carquinez",
-                          "i80_680_to_12",
+full_facilities_list <- c("bay_bridge_toll", "bay_bridge_notoll", "bay_bridge", 
+                          "sm_bridge_toll", "sm_bridge_notoll", "sm_bridge", "dum_bridge_toll", 
+                          "dum_bridge_notoll", "dum_bridge", "rsr_bridge_toll", "rsr_bridge_notoll", 
+                          "rsr_bridge", "carq_bridge_toll", "carq_bridge_notoll", "carq_bridge", 
+                          "bm_bridge_toll", "bm_bridge_notoll", "bm_bridge", "ant_bridge_toll", 
+                          "ant_bridge_notoll", "ant_bridge", "gg_bridge_toll", "gg_bridge_notoll", 
+                          "gg_bridge", "bata_bridges_toll", "bata_bridges_notoll", "bata_bridges", 
+                          "sr37_80_to_mare", "sr37_mare_to_121", "sr37_121_to_101", "sr37_80_to_101", 
+                          "i880_baybridge_to_237", "i680_80_to_580", "i680_580_to_101", 
+                          "sr4_80_to_160", "i580_hayward_to_sanjoaquin", "i580_hayward_to_baybridge", 
+                          "i80_13_to_580", "i80_580_to_Carquinez", "i80_680_to_12",
                           "all_script_facilities")
                           
 
@@ -153,7 +142,7 @@ race22 <- pbayarea22 %>%
 # The discrete income value is guessed (imputed) in the tightest income category for which there is a categorical data response
 # Start with more detailed income (which has missing data) then use imputed records to addressing missing records
 # The "TRUE" value in the function below is for records with neither an income_detailed nor an income_imputed_rmove_only record
-# In such a condition, a record is chosen at random from the full PUMS dataset to match. 
+# In such a condition, a record is chosen at random from the full PUMS dataset records under $250k to match. 
 # In the existing TDS dataset, no such records exist, but the line is included so the function runs in every case (other datasets, etc.)
 
 set.seed(1)
