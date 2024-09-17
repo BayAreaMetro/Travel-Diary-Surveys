@@ -157,7 +157,7 @@ final <- sum_links %>%
 
 # Export CSV of trips for joining with trip file
 
-write.csv(final,file.path(BOX_dir,"Data","2023","Survey Conflation","BATS 2023 Facility Use Booleans toll.csv"),row.names = FALSE)
+write.csv(final,file.path(BOX_dir,"Data","2023","Survey Conflation","BATS 2023 Facility Use Booleans Toll.csv"),row.names = FALSE)
 
 # Summarize number of trips by facility, unweighted and weighted, for trips with >0 weight, output CSV
 
@@ -172,5 +172,5 @@ trips_by_facility_sum <- trips_with_weights %>%
   group_by(Facility) %>% 
   summarize(Total_Unweighted_Trips=sum(Unweighted),Total_Weighted_Trips=sum(Weighted)) 
 
-write.csv(trips_by_facility_sum,file.path(BOX_dir,"Data","2023","Survey Conflation","BATS 2023 Survey Trips Per Facility toll.csv"),row.names = FALSE)
+write.csv(trips_by_facility_sum,file.path(BOX_dir,"Data","2023","Survey Conflation","BATS 2023 Survey Trips Per Facility Toll.csv"),row.names = FALSE)
 
