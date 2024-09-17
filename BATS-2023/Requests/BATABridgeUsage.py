@@ -11,7 +11,7 @@ TRIP_CSV = os.path.join(BATS_DIR, "trip.csv")
 
 USERPROFILE = os.getenv("USERPROFILE")
 CONFLATION_DIR = os.path.join(USERPROFILE, "Box", "Modeling and Surveys", "Surveys", "Travel Diary Survey", "Biennial Travel Diary Survey", "Data", "2023", "Survey Conflation")
-FACILITY_BOOL_CSV = os.path.join(CONFLATION_DIR, "BATS 2023 Facility Use Booleans.csv")
+FACILITY_BOOL_CSV = os.path.join(CONFLATION_DIR, "BATS 2023 Facility Use Booleans Toll.csv")
 
 #HH_POVERTY_CSV = os.path.join(USERPROFILE, "Documents", "temp","BridgeTollAnalysis","BATShh_incomeImputed.csv")
 HH_POVERTY_CSV = os.path.join("M:/Data/HomeInterview/Bay Area Travel Study 2023/Data","Full Weighted 2023 Dataset","WeightedDataset_09112024", "Processed","BATShh_incomeImputed.csv")
@@ -88,16 +88,16 @@ hhTripFacility_df.to_csv(output_test1, index=False)
 # ************************************************************************
 
 # join the trips + facility booleans + households + poverty status
-hhTripFacilityPoverty_df = pd.merge(hhTripFacility_df, hh_poverty_filtered_df, on='hh_id', how='outer', indicator=True)
+TripFacilityhhPoverty_df = pd.merge(hhTripFacility_df, hh_poverty_filtered_df, on='hh_id', how='outer', indicator=True)
 
 # Write the file to csv for checking
-output_test2 = os.path.join(OUTPUT_DIR, 'hhTripFacilityPoverty.csv')
-hhTripFacilityPoverty_df.to_csv(output_test2, index=False)
+output_test2 = os.path.join(OUTPUT_DIR, 'TripFacilityhhPoverty.csv')
+TripFacilityhhPoverty_df.to_csv(output_test2, index=False)
 
 # ************************************************************************
 # Summarize
 # ************************************************************************
-# need BATS 2023 Facility Use Booleans.csv to have directions
+# Note that BATS 2023 Facility Use Booleans.csv have directions
 # Bay Bridge (San Francisco-Oakland): Tolls are collected only in the westbound direction (towards San Francisco).
 # Richmond-San Rafael Bridge: Tolls are collected only in the westbound direction (towards San Rafael).
 # San Mateo-Hayward Bridge: Tolls are collected only in the westbound direction (towards San Mateo).
@@ -105,20 +105,18 @@ hhTripFacilityPoverty_df.to_csv(output_test2, index=False)
 # Carquinez Bridge: Tolls are collected only in the southbound direction (towards Vallejo).
 # Benicia-Martinez Bridge: Tolls are collected only in the southbound direction (towards Benicia).
 
-# Todo: since many bridges are tolled in one direction e.g. bay bridge westbound
-# need to create a version of "BATS 2023 Facility Use Booleans.csv" that includes direction (hopefully Shimon can help)
-hhTripFacilityPoverty_df['num_BATAtoll'] = (
-    hhTripFacilityPoverty_df['bay_bridge'] + 
-    hhTripFacilityPoverty_df['sm_bridge'] + 
-    hhTripFacilityPoverty_df['dum_bridge'] + 
-    hhTripFacilityPoverty_df['rsr_bridge'] + 
-    hhTripFacilityPoverty_df['carq_bridge'] + 
-    hhTripFacilityPoverty_df['bm_bridge']
+TripFacilityhhPoverty_df['num_BATAtoll'] = (
+    TripFacilityhhPoverty_df['bay_bridge_toll'] + 
+    TripFacilityhhPoverty_df['sm_bridge_toll'] + 
+    TripFacilityhhPoverty_df['dum_bridge_toll'] + 
+    TripFacilityhhPoverty_df['rsr_bridge_toll'] + 
+    TripFacilityhhPoverty_df['carq_bridge_toll'] + 
+    TripFacilityhhPoverty_df['bm_bridge_toll']
 )
 
 
 # Group by 'hh_id' and aggregate
-hhTripFacilityPoverty_grouped_df = hhTripFacilityPoverty_df.groupby('hh_id').agg(
+TripFacilityhhPoverty_grouped_df = TripFacilityhhPoverty_df.groupby('hh_id').agg(
     num_BATAtoll=('num_BATAtoll', 'sum'),
     poverty_status=('poverty_status', 'first'),
     hh_weight_rmove_only=('hh_weight_rmove_only', 'first')
@@ -126,7 +124,7 @@ hhTripFacilityPoverty_grouped_df = hhTripFacilityPoverty_df.groupby('hh_id').agg
 
 # Group by poverty_status and get the frequency distribution of num_BATAtoll UNWEIGHTED
 num_BATAtoll_distribution_by_poverty_UNweighted_df = (
-    hhTripFacilityPoverty_grouped_df.groupby('poverty_status')['num_BATAtoll']
+    TripFacilityhhPoverty_grouped_df.groupby('poverty_status')['num_BATAtoll']
     .value_counts()
     .sort_index()
     .reset_index(name='frequency')
@@ -141,7 +139,7 @@ print()  # This prints a blank line
 
 # Create a weighted frequency distribution
 num_BATAtoll_distribution_by_poverty_weighted_df = (
-    hhTripFacilityPoverty_grouped_df.groupby(['poverty_status', 'num_BATAtoll'])['hh_weight_rmove_only']
+    TripFacilityhhPoverty_grouped_df.groupby(['poverty_status', 'num_BATAtoll'])['hh_weight_rmove_only']
     .sum()
     .reset_index(name='weighted_frequency')
 )
