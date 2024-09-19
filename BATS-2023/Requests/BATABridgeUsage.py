@@ -120,8 +120,8 @@ logging.info("")  # This prints a blank line
 hhTripFacility_df = hhTripFacility_df.drop(columns=['_merge'])
 
 # Write the file to csv for checking
-output_test1 = os.path.join(OUTPUT_DIR, 'hhTripFacility.csv')
-hhTripFacility_df.to_csv(output_test1, index=False)
+# output_test1 = os.path.join(OUTPUT_DIR, 'hhTripFacility.csv')
+# hhTripFacility_df.to_csv(output_test1, index=False)
 
 # ************************************************************************
 # Add poverty status
@@ -145,24 +145,30 @@ logging.info("")  # This prints a blank line
 TripFacilityPoverty_df = TripFacilityPoverty_df.drop(columns=['_merge'])
 
 # Write the file to csv for checking
-output_test2 = os.path.join(OUTPUT_DIR, 'TripFacilityPoverty.csv')
-TripFacilityPoverty_df.to_csv(output_test2, index=False)
+# output_test2 = os.path.join(OUTPUT_DIR, 'TripFacilityPoverty.csv')
+# TripFacilityPoverty_df.to_csv(output_test2, index=False)
 
 # ************************************************************************************************************
 # De-duplicate person-trips that are in shared vehicles so the results are representative of vehicle-trips
 # ************************************************************************************************************
 # Create a "VehTrip_index" for deduplication
 
-# ideally want to use field with no missing data for this index
-# confirming no missing data in depart_date
+# first create a string listing all the household members who are part of the trip
+TripFacilityPoverty_df['hh_member_string'] = 'hh_member_' + TripFacilityPoverty_df[['hh_member_1', 'hh_member_2', 'hh_member_3', 'hh_member_4', 
+                                                                    'hh_member_5', 'hh_member_6', 'hh_member_7', 'hh_member_8']].astype(str).agg(''.join, axis=1)
 
 TripFacilityPoverty_df['VehTrip_index'] = (
     TripFacilityPoverty_df['hh_id'].astype(str) + '_' +
     TripFacilityPoverty_df['depart_date'].astype(str) + '_' +
     TripFacilityPoverty_df['depart_hour'].astype(str) + '_' +
     TripFacilityPoverty_df['mode_1'].astype(str) + '_' +
-    TripFacilityPoverty_df['num_hh_travelers'].astype(str)
+    TripFacilityPoverty_df['num_hh_travelers'].astype(str) + '_' +
+    TripFacilityPoverty_df['hh_member_string'].astype(str)
 )
+
+# Write the file to csv for checking
+output_intermediate2 = os.path.join(OUTPUT_DIR, 'TripFacilityPoverty_wVehTripIndex.csv')
+TripFacilityPoverty_df.to_csv(output_intermediate2, index=False)
 
 # Deduplicate based on 'VehTrip_index'
 TripFacilityPoverty_deduped_df = TripFacilityPoverty_df.drop_duplicates(subset=['VehTrip_index'])
@@ -345,6 +351,10 @@ num_BATAtoll_distribution_byPoverty_df = pd.merge(
     on=['poverty_status', 'num_BATAtoll'],
     how='outer'  
 )
+
+# Make sure 'weighted_frequency' is numeric
+num_BATAtoll_distribution_byPoverty_df['weighted_frequency'] = pd.to_numeric(num_BATAtoll_distribution_byPoverty_df['weighted_frequency'], errors='coerce')
+
 
 # Print the unweighted and weighted distribution
 logging.info("----------------------------------------------")
