@@ -29,8 +29,8 @@ FACILITY_BOOL_CSV = os.path.join(CONFLATION_DIR, "BATS 2023 Facility Use Boolean
 
 HH_POVERTY_CSV = os.path.join("M:/Data/HomeInterview/Bay Area Travel Study 2023/Data","Full Weighted 2023 Dataset","WeightedDataset_09112024", "Processed","BATShh_incomeImputed.csv")
 
-OUTPUT_DIR = os.path.join("E:/temp", "BridgeTollAnalysis_Edrive")
-
+#OUTPUT_DIR = os.path.join("E:/temp", "BridgeTollAnalysis_Edrive")
+OUTPUT_DIR = os.path.join("M:/Data", "HomeInterview", "Bay Area Travel Study 2023", "Data", "Full Weighted 2023 Dataset", "WeightedDataset_09112024", "Requests", "BATA_bridge_usage")
 
 # ************************************************************************
 # Set up logging
@@ -186,6 +186,9 @@ logging.info(f"Number of records dropped: {records_dropped}")
 logging.info(f"Number of rows in the trip file: {len(TripFacilityPoverty_deduped_df)}")
 logging.info("")  # This prints a blank line
 
+num_unique_hh_id = TripFacilityPoverty_deduped_df['hh_id'].nunique()
+logging.info(f"Number of unique hh_id after 'VehTrip_index' processing: {num_unique_hh_id}")
+
 # Naive deletion 
 # The number of new cases dropped should be zero if the above "VehTrip_index" for deduping is perfect.
 # But missing data (e.g. 995) in one of the fields used by "VehTrip_index" mean that the VehTrip_index may miss things
@@ -216,6 +219,9 @@ logging.info(f"Number of records dropped: {records_dropped}")
 logging.info(f"Number of rows in the trip file: {len(TripFacilityPoverty_deduped1_df)}")
 logging.info("")  # This prints a blank line
 
+num_unique_hh_id = TripFacilityPoverty_deduped1_df['hh_id'].nunique()
+logging.info(f"Number of unique hh_id after deleting 'driver'==2: {num_unique_hh_id}")
+# TODO: need a better way to handle this so we don't lose hh. e.g. add a new boolean toll_paying instead of deleting them
 
 # -----------------
 # Naive deletion 2: Keep only the rows where the "copied_from_proxy" column does not equal 1
@@ -234,6 +240,9 @@ logging.info("----------------------------------------------")
 logging.info(f"Number of records dropped: {records_dropped}")
 logging.info(f"Number of rows in the trip file: {len(TripFacilityPoverty_deduped2_df)}")
 logging.info("")  # This prints a blank line
+
+num_unique_hh_id = TripFacilityPoverty_deduped2_df['hh_id'].nunique()
+logging.info(f"Number of unique hh_id after deleting trips that are 'copied_from_proxy': {num_unique_hh_id}")
 
 
 # Vehicle-trip file for summarization
@@ -267,13 +276,11 @@ TripFacilityPoverty_groupedbyhh_df  = TripFacilityPoverty_ToVehTrip_df.groupby('
     hh_weight_rmove_only=('hh_weight_rmove_only', 'first')
 ).reset_index()
 
+num_unique_hh_id = TripFacilityPoverty_groupedbyhh_df['hh_id'].nunique()
+logging.info(f"Number of unique hh_id after converting the trip table to a household table: {num_unique_hh_id}")
+
+
 # Group by poverty_status and get the frequency distribution of num_BATAtoll UNWEIGHTED
-#num_BATAtoll_distribution_by_poverty_UNweighted_df = (
-#    TripFacilityPoverty_groupedbyhh_df .groupby('poverty_status')['num_BATAtoll']
-#    .value_counts()
-#    .sort_index()
-#    .reset_index(name='frequency')
-#)
 
 # ----
 # make sure the frequency distribution has all combinations
