@@ -11,6 +11,7 @@
 
 import os
 import pandas as pd
+import numpy as np
 
 import logging
 from datetime import datetime
@@ -29,8 +30,8 @@ FACILITY_BOOL_CSV = os.path.join(CONFLATION_DIR, "BATS 2023 Facility Use Boolean
 
 HH_POVERTY_CSV = os.path.join("M:/Data/HomeInterview/Bay Area Travel Study 2023/Data","Full Weighted 2023 Dataset","WeightedDataset_09112024", "derived_variables","BATShh_ImputedIncomeValues.csv")
 
-OUTPUT_DIR = os.path.join("E:/temp", "BridgeTollAnalysis_Edrive")
-#OUTPUT_DIR = os.path.join("M:/Data", "HomeInterview", "Bay Area Travel Study 2023", "Data", "Full Weighted 2023 Dataset", "WeightedDataset_09112024", "Requests", "BATA_bridge_usage")
+#OUTPUT_DIR = os.path.join("E:/temp", "BridgeTollAnalysis_Edrive")
+OUTPUT_DIR = os.path.join("M:/Data", "HomeInterview", "Bay Area Travel Study 2023", "Data", "Full Weighted 2023 Dataset", "WeightedDataset_09112024", "Requests", "BATA_bridge_usage")
 
 # ************************************************************************
 # Set up logging
@@ -149,13 +150,77 @@ TripFacilityPoverty_df = TripFacilityPoverty_df.drop(columns=['_merge'])
 # TripFacilityPoverty_df.to_csv(output_test2, index=False)
 
 # ************************************************************************************************************
-# De-duplicate person-trips that are in shared vehicles so the results are representative of vehicle-trips
+# Note that the data represents person-trip
+# But for this analysis we are interested in vehicle-trips
+# Address this issue by assiging one of the person-trip to be "responsible for paying"
 # ************************************************************************************************************
-# Create a "VehTrip_index" for deduplication
+
+# start from some tabulations
+driver_tabulation = TripFacilityPoverty_df['driver'].value_counts()
+logging.info("----------------------------------------------")
+logging.info("Tabulate the 'driver' variable")
+logging.info("Note that the value_labels for 'driver' are:")
+logging.info("driver	1	Driver")
+logging.info("driver	2	Passenger")
+logging.info("driver	3	Both (switched drivers during trip)")
+logging.info("driver	995	Missing Response")
+logging.info("----------------------------------------------")
+logging.info(driver_tabulation)
+logging.info("")  # This prints a blank line
+
+
+CopiedFromProxy_tabulation = TripFacilityPoverty_df['copied_from_proxy'].value_counts()
+logging.info("----------------------------------------------")
+logging.info("Tabulate the 'copied_from_proxy' variable")
+logging.info("Note that the value_labels for 'copied_from_proxy' are:")
+logging.info("copied_from_proxy	0	No")
+logging.info("copied_from_proxy	1	Yes")
+logging.info("# 995	Missing Response")
+logging.info("----------------------------------------------")
+logging.info(CopiedFromProxy_tabulation)
+logging.info("")  # This prints a blank line
+
+# Create a variable 'ResponsibleForPaying' and initialize it to 1
+TripFacilityPoverty_df['ResponsibleForPaying'] = 1
+
+ResponsibleForPaying_tabulation = TripFacilityPoverty_df['ResponsibleForPaying'].value_counts()
+logging.info("----------------------------------------------")
+logging.info("Initially, assume everyone pay")
+logging.info("----------------------------------------------")
+logging.info(ResponsibleForPaying_tabulation)
+logging.info("")  # This prints a blank line
+
+# Set ResponsibleForPaying = 1 where driver != 2
+TripFacilityPoverty_df['ResponsibleForPaying'] = np.where(TripFacilityPoverty_df['driver'] != 2, 1, 0)
+
+ResponsibleForPaying_tabulation = TripFacilityPoverty_df['ResponsibleForPaying'].value_counts()
+logging.info("----------------------------------------------")
+logging.info("After applying the assumption that passengers don't pay")
+logging.info("----------------------------------------------")
+logging.info(ResponsibleForPaying_tabulation)
+logging.info("")  # This prints a blank line
+
+# Set ResponsibleForPaying = 0 where copied_from_proxy = 1
+TripFacilityPoverty_df['ResponsibleForPaying'] = np.where(TripFacilityPoverty_df['copied_from_proxy'] == 1, 0, TripFacilityPoverty_df['ResponsibleForPaying'])
+
+ResponsibleForPaying_tabulation = TripFacilityPoverty_df['ResponsibleForPaying'].value_counts()
+logging.info("----------------------------------------------")
+logging.info("After applying the assumption that trips copied from proxy don't pay")
+logging.info("----------------------------------------------")
+logging.info(ResponsibleForPaying_tabulation)
+logging.info("")  # This prints a blank line
+
+# Now create a "VehTrip_index" for deduplication (to deal with the ambigious cases in 'driver' and 'copied_from_proxy')
 
 # first create a string listing all the household members who are part of the trip
-TripFacilityPoverty_df['hh_member_string'] = 'hh_member_' + TripFacilityPoverty_df[['hh_member_1', 'hh_member_2', 'hh_member_3', 'hh_member_4', 
-                                                                    'hh_member_5', 'hh_member_6', 'hh_member_7', 'hh_member_8']].astype(str).agg(''.join, axis=1)
+TripFacilityPoverty_df['hh_member_string'] = (
+    'hh_member_' + 
+    TripFacilityPoverty_df[['hh_member_1', 'hh_member_2', 'hh_member_3', 'hh_member_4',  
+                             'hh_member_5', 'hh_member_6', 'hh_member_7', 'hh_member_8']]
+    .astype(str)  # Convert to strings
+    .agg(''.join, axis=1)
+)
+# somehow can't convert hh_member_1, hh_member_2, etc to integers
 
 TripFacilityPoverty_df['VehTrip_index'] = (
     TripFacilityPoverty_df['hh_id'].astype(str) + '_' +
@@ -166,91 +231,27 @@ TripFacilityPoverty_df['VehTrip_index'] = (
     TripFacilityPoverty_df['hh_member_string'].astype(str)
 )
 
-# Write the file to csv for checking
-output_intermediate2 = os.path.join(OUTPUT_DIR, 'TripFacilityPoverty_wVehTripIndex.csv')
-TripFacilityPoverty_df.to_csv(output_intermediate2, index=False)
+# Write the file to csv for checking the VehTripIndex
+#output_intermediate2 = os.path.join(OUTPUT_DIR, 'TripFacilityPoverty_wVehTripIndex.csv')
+#TripFacilityPoverty_df.to_csv(output_intermediate2, index=False)
 
-# Deduplicate based on 'VehTrip_index'
-TripFacilityPoverty_deduped_df = TripFacilityPoverty_df.drop_duplicates(subset=['VehTrip_index'])
+# Modify ResponsibleForPaying based on 'VehTrip_index'
+TripFacilityPoverty_df['ResponsibleForPaying'] = TripFacilityPoverty_df.groupby('VehTrip_index')['person_num'].transform(
+    lambda x: np.where(x == x.min(), TripFacilityPoverty_df.loc[x.index, 'ResponsibleForPaying'], 0)
+)
 
-# Write the file to csv for checking
-output_intermediate3 = os.path.join(OUTPUT_DIR, 'TripFacilityPoverty_ToVehTrips.csv')
-TripFacilityPoverty_deduped_df.to_csv(output_intermediate3, index=False)
-
-# print the number of records dropped and the new number of records in the trip file
-records_dropped = len(TripFacilityPoverty_df) - len(TripFacilityPoverty_deduped_df)
+ResponsibleForPaying_tabulation = TripFacilityPoverty_df['ResponsibleForPaying'].value_counts()
 logging.info("----------------------------------------------")
-logging.info("After deduplication based on 'VehTrip_index'")
+logging.info("After applying the 'VehTrip_index' processing")
 logging.info("----------------------------------------------")
-logging.info(f"Number of records dropped: {records_dropped}")
-logging.info(f"Number of rows in the trip file: {len(TripFacilityPoverty_deduped_df)}")
+logging.info(ResponsibleForPaying_tabulation)
 logging.info("")  # This prints a blank line
-
-num_unique_hh_id = TripFacilityPoverty_deduped_df['hh_id'].nunique()
-logging.info(f"Number of unique hh_id after 'VehTrip_index' processing: {num_unique_hh_id}")
-
-# Naive deletion 
-# The number of new cases dropped should be zero if the above "VehTrip_index" for deduping is perfect.
-# But missing data (e.g. 995) in one of the fields used by "VehTrip_index" mean that the VehTrip_index may miss things
-# Note that the value_labels for "driver" are:
-# 1	Driver
-# 2	Passenger
-# 3	Both (switched drivers during trip)
-# 995	Missing Response
-#
-# -----------------
-# Naive deletion 1: Keep only the rows where the "driver" column does not equal 2
-#
-# Note that the value_labels for "driver" are:
-# driver	1	Driver
-# driver	2	Passenger
-# driver	3	Both (switched drivers during trip)
-# driver	995	Missing Response
-#
-# -----------------
-TripFacilityPoverty_deduped1_df = TripFacilityPoverty_deduped_df[TripFacilityPoverty_deduped_df['driver'] != 2]
-
-# print the number of records dropped and the new number of records in the trip file
-records_dropped = len(TripFacilityPoverty_deduped_df) - len(TripFacilityPoverty_deduped1_df)
-logging.info("----------------------------------------------")
-logging.info("After naive deletion 1")
-logging.info("----------------------------------------------")
-logging.info(f"Number of records dropped: {records_dropped}")
-logging.info(f"Number of rows in the trip file: {len(TripFacilityPoverty_deduped1_df)}")
-logging.info("")  # This prints a blank line
-
-num_unique_hh_id = TripFacilityPoverty_deduped1_df['hh_id'].nunique()
-logging.info(f"Number of unique hh_id after deleting 'driver'==2: {num_unique_hh_id}")
-# TODO: need a better way to handle this so we don't lose hh. e.g. add a new boolean toll_paying instead of deleting them
-
-# -----------------
-# Naive deletion 2: Keep only the rows where the "copied_from_proxy" column does not equal 1
-# Note that the value_labels for "copied_from_proxy" are:
-# copied_from_proxy	0	No
-# copied_from_proxy	1	Yes
-# 995	Missing Response
-# -----------------
-TripFacilityPoverty_deduped2_df = TripFacilityPoverty_deduped1_df[TripFacilityPoverty_deduped1_df['copied_from_proxy'] != 1]
-
-# print the number of records dropped and the new number of records in the trip file
-records_dropped = len(TripFacilityPoverty_deduped1_df) - len(TripFacilityPoverty_deduped2_df)
-logging.info("----------------------------------------------")
-logging.info("After naive deletion 2")
-logging.info("----------------------------------------------")
-logging.info(f"Number of records dropped: {records_dropped}")
-logging.info(f"Number of rows in the trip file: {len(TripFacilityPoverty_deduped2_df)}")
-logging.info("")  # This prints a blank line
-
-num_unique_hh_id = TripFacilityPoverty_deduped2_df['hh_id'].nunique()
-logging.info(f"Number of unique hh_id after deleting trips that are 'copied_from_proxy': {num_unique_hh_id}")
-
-
-# Vehicle-trip file for summarization
-TripFacilityPoverty_ToVehTrip_df = TripFacilityPoverty_deduped2_df
 
 # ************************************************************************
 # Summarize
 # ************************************************************************
+
+# Summarize bridge usage
 # Note that BATS 2023 Facility Use Booleans.csv have directions
 # Bay Bridge (San Francisco-Oakland): Tolls are collected only in the westbound direction (towards San Francisco).
 # Richmond-San Rafael Bridge: Tolls are collected only in the westbound direction (towards San Rafael).
@@ -259,18 +260,20 @@ TripFacilityPoverty_ToVehTrip_df = TripFacilityPoverty_deduped2_df
 # Carquinez Bridge: Tolls are collected only in the southbound direction (towards Vallejo).
 # Benicia-Martinez Bridge: Tolls are collected only in the southbound direction (towards Benicia).
 
-TripFacilityPoverty_ToVehTrip_df['num_BATAtoll'] = (
-    TripFacilityPoverty_ToVehTrip_df['bay_bridge_toll'] + 
-    TripFacilityPoverty_ToVehTrip_df['sm_bridge_toll'] + 
-    TripFacilityPoverty_ToVehTrip_df['dum_bridge_toll'] + 
-    TripFacilityPoverty_ToVehTrip_df['rsr_bridge_toll'] + 
-    TripFacilityPoverty_ToVehTrip_df['carq_bridge_toll'] + 
-    TripFacilityPoverty_ToVehTrip_df['bm_bridge_toll']
+TripFacilityPoverty_df['count_BATAtoll'] = (
+    TripFacilityPoverty_df['bay_bridge_toll'] + 
+    TripFacilityPoverty_df['sm_bridge_toll'] + 
+    TripFacilityPoverty_df['dum_bridge_toll'] + 
+    TripFacilityPoverty_df['rsr_bridge_toll'] + 
+    TripFacilityPoverty_df['carq_bridge_toll'] + 
+    TripFacilityPoverty_df['bm_bridge_toll']
 )
+
+TripFacilityPoverty_df['num_BATAtoll'] = TripFacilityPoverty_df['count_BATAtoll'] * TripFacilityPoverty_df['ResponsibleForPaying']
 
 
 # Group by 'hh_id' and aggregate
-TripFacilityPoverty_groupedbyhh_df  = TripFacilityPoverty_ToVehTrip_df.groupby('hh_id').agg(
+TripFacilityPoverty_groupedbyhh_df  = TripFacilityPoverty_df.groupby('hh_id').agg(
     num_BATAtoll=('num_BATAtoll', 'sum'),
     poverty_status=('poverty_status', 'first'),
     hh_weight_rmove_only=('hh_weight_rmove_only', 'first')
@@ -291,7 +294,6 @@ logging.info("Check outliers (where num_BATAtoll is greater than 10)")
 logging.info("----------------------------------------------")
 # Print hh_id along with num_BATAtoll
 for index, row in outliers_df.iterrows():
-    #logging.info(f"hh_id: {row['hh_id']}, num_BATAtoll: {row['num_BATAtoll']}, num_people: {row['num_people']}, num_adults: {row['num_adults']}, num_vehicles: {row['num_vehicles']}")
     logging.info(f"hh_id: {row['hh_id']}, num_BATAtoll: {row['num_BATAtoll']}")
 logging.info("")  # This prints a blank line
 
