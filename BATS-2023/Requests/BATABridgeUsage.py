@@ -27,10 +27,10 @@ USERPROFILE = os.getenv("USERPROFILE")
 CONFLATION_DIR = os.path.join(USERPROFILE, "Box", "Modeling and Surveys", "Surveys", "Travel Diary Survey", "Biennial Travel Diary Survey", "Data", "2023", "Survey Conflation")
 FACILITY_BOOL_CSV = os.path.join(CONFLATION_DIR, "BATS 2023 Facility Use Booleans Toll.csv")
 
-HH_POVERTY_CSV = os.path.join("M:/Data/HomeInterview/Bay Area Travel Study 2023/Data","Full Weighted 2023 Dataset","WeightedDataset_09112024", "Processed","BATShh_incomeImputed.csv")
+HH_POVERTY_CSV = os.path.join("M:/Data/HomeInterview/Bay Area Travel Study 2023/Data","Full Weighted 2023 Dataset","WeightedDataset_09112024", "derived_variables","BATShh_ImputedIncomeValues.csv")
 
-#OUTPUT_DIR = os.path.join("E:/temp", "BridgeTollAnalysis_Edrive")
-OUTPUT_DIR = os.path.join("M:/Data", "HomeInterview", "Bay Area Travel Study 2023", "Data", "Full Weighted 2023 Dataset", "WeightedDataset_09112024", "Requests", "BATA_bridge_usage")
+OUTPUT_DIR = os.path.join("E:/temp", "BridgeTollAnalysis_Edrive")
+#OUTPUT_DIR = os.path.join("M:/Data", "HomeInterview", "Bay Area Travel Study 2023", "Data", "Full Weighted 2023 Dataset", "WeightedDataset_09112024", "Requests", "BATA_bridge_usage")
 
 # ************************************************************************
 # Set up logging
@@ -70,7 +70,7 @@ facility_bool_df = pd.read_csv(FACILITY_BOOL_CSV)
 
 hh_poverty_df=pd.read_csv(HH_POVERTY_CSV)
 # Don't need all the columns
-hh_poverty_filtered_df = hh_poverty_df[['hhInc_continuous', 'poverty_status', 'hh_id']]
+#hh_poverty_filtered_df = hh_poverty_df[['hhInc_continuous', 'poverty_status', 'hh_id']]
 
 # Print out the number of rows in the files read
 logging.info("")  # This prints a blank line
@@ -128,7 +128,7 @@ hhTripFacility_df = hhTripFacility_df.drop(columns=['_merge'])
 # ************************************************************************
 
 # join the trips + facility booleans + households + poverty status
-TripFacilityPoverty_df = pd.merge(hhTripFacility_df, hh_poverty_filtered_df, on='hh_id', how='outer', indicator=True)
+TripFacilityPoverty_df = pd.merge(hhTripFacility_df, hh_poverty_df, on='hh_id', how='outer', indicator=True)
 
 # Have a look at the merge indicator
 merge_indicator_counts = TripFacilityPoverty_df['_merge'].value_counts()
@@ -278,7 +278,22 @@ TripFacilityPoverty_groupedbyhh_df  = TripFacilityPoverty_ToVehTrip_df.groupby('
 
 num_unique_hh_id = TripFacilityPoverty_groupedbyhh_df['hh_id'].nunique()
 logging.info(f"Number of unique hh_id after converting the trip table to a household table: {num_unique_hh_id}")
+logging.info("")  # This prints a blank line
 
+# ----
+# Check outliers
+# ----
+# Filter rows where num_BATAtoll is greater than 10
+outliers_df = TripFacilityPoverty_groupedbyhh_df[TripFacilityPoverty_groupedbyhh_df['num_BATAtoll'] > 10]
+
+logging.info("----------------------------------------------")
+logging.info("Check outliers (where num_BATAtoll is greater than 10)")
+logging.info("----------------------------------------------")
+# Print hh_id along with num_BATAtoll
+for index, row in outliers_df.iterrows():
+    #logging.info(f"hh_id: {row['hh_id']}, num_BATAtoll: {row['num_BATAtoll']}, num_people: {row['num_people']}, num_adults: {row['num_adults']}, num_vehicles: {row['num_vehicles']}")
+    logging.info(f"hh_id: {row['hh_id']}, num_BATAtoll: {row['num_BATAtoll']}")
+logging.info("")  # This prints a blank line
 
 # Group by poverty_status and get the frequency distribution of num_BATAtoll UNWEIGHTED
 
