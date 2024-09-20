@@ -1,5 +1,5 @@
 # -----------------------------------------------------------------------
-# This script aims to add a two variables to the BATS household file:
+# This script aims to create two variables that can be linked to the BATS household file as needed:
 # - hhInc_continuous and poverty_status
 #
 # This script is largely an excerpt of BATS_2023_Survey_Facility_Margin_of_Error_Calculations_All_Facilities.r by Shimon
@@ -9,6 +9,7 @@
 # https://github.com/BayAreaMetro/Travel-Diary-Surveys/blob/master/BATS-2023/conflation-trip-summaries/
 #
 # In the long term, I think BATS_2023_Survey_Facility_Margin_of_Error_Calculations_All_Facilities.r should be broken down into its components, so I started this script
+# The code that does income imputation should be removed from that script in the long term, to minimize duplication
 #
 # -----------------------------------------------------------------------
 
@@ -27,7 +28,7 @@ USERPROFILE     <- gsub("////","/", Sys.getenv("USERPROFILE"))
 TDS_dir         <- file.path(USERPROFILE, "Box", "Modeling and Surveys","Surveys","Travel Diary Survey")
 TDSyear_dir     <- file.path(TDS_dir,"Biennial Travel Diary Survey","Data","2023")
 TDSdata_dir     <- file.path(TDSyear_dir,"Full Weighted 2023 Dataset","WeightedDataset_09112024")
-output_dir      <- file.path("M:/Data/HomeInterview/Bay Area Travel Study 2023/Data","Full Weighted 2023 Dataset","WeightedDataset_09112024", "Processed")
+output_dir      <- file.path("M:/Data/HomeInterview/Bay Area Travel Study 2023/Data","Full Weighted 2023 Dataset","WeightedDataset_09112024", "derived_variables")
 
 
 # -----------------------------------------------------------------------
@@ -193,7 +194,7 @@ BATShh_AddedVars_df <- household_df %>%
 # ----------------------------
 
 # Apply the income imputation to BATS data
-BATShh_incomeImputed_df  <- BATShh_AddedVars_df  %>% 
+BATShh_ImputedIncomeValues_df  <- BATShh_AddedVars_df  %>% 
   rowwise()  %>%  
   mutate(hhInc_continuous=ImputeIncomeFromCategories_f(income_detailed,income_imputed_rmove_only)) %>%   # Run income imputation function defined above
   ungroup() %>%
@@ -201,7 +202,7 @@ BATShh_incomeImputed_df  <- BATShh_AddedVars_df  %>%
 
 
 # add poverty status
-BATShh_incomeImputed_df <- BATShh_incomeImputed_df %>%
+BATShh_ImputedIncomeValues_df <- BATShh_ImputedIncomeValues_df %>%
   left_join(.,hh_related_persons_df, by="hh_id") %>% 
   mutate(
     poverty_status = case_when(
@@ -217,15 +218,16 @@ BATShh_incomeImputed_df <- BATShh_incomeImputed_df %>%
     )
   )
  
-# TODO: some visualizations of PUMS income distribution vs that in the imputed BATS would be good
+# TODO: some tabulations and visualizations of PUMS income distribution vs that in the imputed BATS would be good
+# in particular, it'd be helpful to understand the number of PUMS record being used in each imputation, in case we want to slice and dice the data even further
  
 
 # -----------------------------------------------------------------------
-# Write a household file
+# Write a file containing the hh_id and the two new variables (hhInc_continuous and poverty_status)
 # -----------------------------------------------------------------------
-write.csv(BATShh_incomeImputed_df, file.path(output_dir,"BATShh_incomeImputed.csv"), row.names = FALSE)
-
-# or should I write out just hh_id and the two new variables (hhInc_continuous and poverty_status)
+write.csv(BATShh_ImputedIncomeValues_df[, c("hh_id","hhInc_continuous", "poverty_status")], 
+          file.path(output_dir, "BATShh_ImputedIncomeValues.csv"), 
+          row.names = FALSE)
 
 # separately we should do some validation against ACS or PUMS 2023 regarding the number of hhld above/below 200% poverty threshold
 # do a sense check for now:
