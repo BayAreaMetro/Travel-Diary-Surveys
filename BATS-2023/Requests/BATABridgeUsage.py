@@ -138,8 +138,7 @@ logging.info("Check the merge indicator in TripFacilityPoverty_df")
 logging.info("----------------------------------------------")
 logging.info(merge_indicator_counts)
 logging.info("")  # This prints a blank line
-logging.info("Note 1: nothing yet")
-logging.info("Note 2: nothing yet.")
+logging.info("Note 1: 'both' in this merge should be the sum of 'both' and 'left_only' in the last table")
 logging.info("")  # This prints a blank line
 
 # Done with the merge indicator. Drop it.
@@ -210,8 +209,7 @@ logging.info("----------------------------------------------")
 logging.info(ResponsibleForPaying_tabulation)
 logging.info("")  # This prints a blank line
 
-# Now create a "VehTrip_index" for deduplication (to deal with the ambigious cases in 'driver' and 'copied_from_proxy')
-
+# Now create a "VehTrip_index_1" for deduplication (to deal with the ambigious cases in 'driver' e.g. when it's 3 or 995)
 # first create a string listing all the household members who are part of the trip
 TripFacilityPoverty_df['hh_member_string'] = (
     'hh_member_' + 
@@ -220,9 +218,37 @@ TripFacilityPoverty_df['hh_member_string'] = (
     .astype(str)  # Convert to strings
     .agg(''.join, axis=1)
 )
-# somehow can't convert hh_member_1, hh_member_2, etc to integers
 
-TripFacilityPoverty_df['VehTrip_index'] = (
+TripFacilityPoverty_df['VehTrip_index1'] = (
+    TripFacilityPoverty_df['hh_id'].astype(str) + '_' +
+    TripFacilityPoverty_df['depart_date'].astype(str) + '_' +
+    TripFacilityPoverty_df['depart_hour'].astype(str) + '_' +
+    TripFacilityPoverty_df['depart_minute'].astype(str) + '_' +
+    TripFacilityPoverty_df['mode_1'].astype(str) + '_' +
+    TripFacilityPoverty_df['num_hh_travelers'].astype(str) + '_' +
+    TripFacilityPoverty_df['hh_member_string'].astype(str)
+)
+# todo: somehow can't convert hh_member_1, hh_member_2, etc to integers (ignore this for now)
+
+# Modify ResponsibleForPaying based on 'VehTrip_index1'
+TripFacilityPoverty_df['ResponsibleForPaying'] = TripFacilityPoverty_df.groupby('VehTrip_index1')['person_num'].transform(
+    lambda x: np.where(x == x.min(), TripFacilityPoverty_df.loc[x.index, 'ResponsibleForPaying'], 0)
+)
+
+ResponsibleForPaying_tabulation = TripFacilityPoverty_df['ResponsibleForPaying'].value_counts()
+logging.info("----------------------------------------------")
+logging.info("After applying the 'VehTrip_index1' processing (the index includes depart_minute)")
+logging.info("----------------------------------------------")
+logging.info(ResponsibleForPaying_tabulation)
+logging.info("")  # This prints a blank line
+
+# Write the file to csv for checking the VehTripIndex
+#output_intermediate2 = os.path.join(OUTPUT_DIR, 'TripFacilityPoverty_wVehTripIndex.csv')
+#TripFacilityPoverty_df.to_csv(output_intermediate2, index=False)
+
+# not sure if it's reasonable to assume that the trip records between hh members will be matched to the minute 
+# create a "VehTrip_index2
+TripFacilityPoverty_df['VehTrip_index2'] = (
     TripFacilityPoverty_df['hh_id'].astype(str) + '_' +
     TripFacilityPoverty_df['depart_date'].astype(str) + '_' +
     TripFacilityPoverty_df['depart_hour'].astype(str) + '_' +
@@ -231,18 +257,14 @@ TripFacilityPoverty_df['VehTrip_index'] = (
     TripFacilityPoverty_df['hh_member_string'].astype(str)
 )
 
-# Write the file to csv for checking the VehTripIndex
-#output_intermediate2 = os.path.join(OUTPUT_DIR, 'TripFacilityPoverty_wVehTripIndex.csv')
-#TripFacilityPoverty_df.to_csv(output_intermediate2, index=False)
-
 # Modify ResponsibleForPaying based on 'VehTrip_index'
-TripFacilityPoverty_df['ResponsibleForPaying'] = TripFacilityPoverty_df.groupby('VehTrip_index')['person_num'].transform(
+TripFacilityPoverty_df['ResponsibleForPaying'] = TripFacilityPoverty_df.groupby('VehTrip_index2')['person_num'].transform(
     lambda x: np.where(x == x.min(), TripFacilityPoverty_df.loc[x.index, 'ResponsibleForPaying'], 0)
 )
 
 ResponsibleForPaying_tabulation = TripFacilityPoverty_df['ResponsibleForPaying'].value_counts()
 logging.info("----------------------------------------------")
-logging.info("After applying the 'VehTrip_index' processing")
+logging.info("After applying the 'VehTrip_index2' processing (the index does not include depart_minute)")
 logging.info("----------------------------------------------")
 logging.info(ResponsibleForPaying_tabulation)
 logging.info("")  # This prints a blank line
