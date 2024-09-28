@@ -8,16 +8,18 @@ p_load (tidyverse,sf)
 
 # Input segment equivalency directory and read file
 
-USERPROFILE       <- gsub("////","/", Sys.getenv("USERPROFILE"))
+USERPROFILE       <- gsub("\\\\","/", Sys.getenv("USERPROFILE"))
 BOX_dir           <- file.path(USERPROFILE, "Box", "Modeling and Surveys","Surveys","Travel Diary Survey","Biennial Travel Diary Survey")
 segments_in       <- file.path(BOX_dir,"Data","2023","Survey Conflation","osmid_facility_equivalence_lookup_direction.csv")
 facility_segments <- read.csv(segments_in)
 
+# Keep only records with non-empty facility name (>0 works to filter this expression)
 # De-dupe records to get unique segments for error-free later matching
 # Duplicated segments/osmids is an odd feature of the OSM map
 # Rename data frame to indicate that direction is included for some facilities (notably bridges)
 
-facility_segments_direction <- facility_segments %>%
+facility_segments_direction <- facility_segments %>% 
+  filter(Facility>0) %>%
   distinct()
 
 rm(facility_segments) # Remove interim file to eliminate ambiguity
@@ -39,17 +41,23 @@ hh                <- read.csv(hh_in) %>%
   select(hh_id,participation_group,hh_weight_rmove_only)
 person            <- read.csv(person_in)
 trip              <- read.csv(trip_in) %>%
-  select(trip_id,trip_weight_rmove_only)
+  select(trip_id,managed_lane_use,driver,num_travelers,num_hh_travelers,mode_type,mode_1,mode_2,trip_weight_rmove_only)
 
 
 # Join segments to paths
 # Create facilities with directionality
 # Retain all paths with non-na freeway values
+# Create express_lanes variable that indicates a household car is using an EL
 # Summarize links by trip ID and facility
 # Pivot from long to wide to better understand trip and facility relationship
 
 joined <- left_join(con_attr_df,facility_segments_direction,by="osmid") %>% 
+  left_join(.,trip %>% select(trip_id,driver,managed_lane_use,num_travelers,num_hh_travelers,mode_type,mode_1,mode_2),by="trip_id") %>% 
   filter(!(is.na(Facility))) %>% 
+  mutate(express_lanes=if_else(
+    mode_type==8 & managed_lane_use==1 &                                    # Must be mode_type 8 and managed_lane_use==1 and...
+      (driver==1 | num_travelers==1 | num_travelers==num_hh_travelers |     # Must either be driver==1, single occupant, or all occupants are hh members
+         (mode_1 %in% c(1,6,7,8) & mode_2 %in% c(1,6,7,8,995))),1,0)) %>%   # Or, vehicle must be a hh vehicle, walk leg
   mutate(Facility_Final=case_when(
     Facility=="ant_bridge" & Direction=="northbound"      ~ "ant_bridge_toll",
     Facility=="ant_bridge" & Direction=="southbound"      ~ "ant_bridge_notoll",
@@ -74,6 +82,9 @@ joined <- left_join(con_attr_df,facility_segments_direction,by="osmid") %>%
     
     Facility=="gg_bridge" & Direction=="northbound"       ~ "gg_bridge_notoll",
     Facility=="gg_bridge" & Direction=="southbound"       ~ "gg_bridge_toll",
+    
+    Facility=="i880_baybridge_to_237" & express_lanes==1  ~ "i880_baybridge_to_237_exp",
+    Facility=="i880_baybridge_to_237" & express_lanes==0  ~ "i880_baybridge_to_237_gp",
     
     TRUE                                                  ~ .$Facility
   ))
