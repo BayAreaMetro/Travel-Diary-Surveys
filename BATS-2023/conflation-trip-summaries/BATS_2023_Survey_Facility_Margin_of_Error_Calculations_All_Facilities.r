@@ -15,12 +15,12 @@ library(spatstat)
 
 # Set file directories for input and output
 
-USERPROFILE    <- gsub("////","/", Sys.getenv("USERPROFILE"))
+USERPROFILE    <- gsub("\\\\","/", Sys.getenv("USERPROFILE"))
 BOX_dir1       <- file.path(USERPROFILE, "Box", "Modeling and Surveys","Surveys","Travel Diary Survey")
 Box_dir2       <- file.path(BOX_dir1,"Biennial Travel Diary Survey","Data","2023")
 conflation_loc <- file.path(Box_dir2,"Survey Conflation")
-data_loc       <- file.path(Box_dir2,"Full Weighted 2023 Dataset","WeightedDataset_09112024")
-output         <- file.path(Box_dir2,"Summaries")
+data_loc       <- "M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Full Weighted 2023 Dataset/WeightedDataset_09112024"
+output         <- file.path(data_loc,"Summaries")
 
 # Bring in BATS 2023 survey files
 # Select only the variables needed for this script
@@ -254,11 +254,12 @@ working <- left_join(facility_flag,recoded_trip,by="trip_id") %>%
 
 # Define tod=time of day using departure hour ("all_day","peak","am_peak","pm_peak","off_peak)
 # "all_day" is by definition all day and therefore not a subset/filtering of data
+# Note that AM peak here varies from the modeling time periods and is specified for the RSR project
 
-peak <- c(6:9,15:18)
-am_peak <- c(6:9)
+peak <- c(5:9,15:18)
+am_peak <- c(5:9)
 pm_peak <- c(15:18)
-off_peak <- c(0:5,10:14,19:23)
+off_peak <- c(0:4,10:14,19:23)
 
 # Now create function for iterating by facility analyzed and time of day
 # The variagle squared_standard_weights is saved to later calculate standard error of a weighted sample, as referenced above. 
