@@ -69,8 +69,8 @@ full_facilities_list <- c("bay_bridge_toll", "bay_bridge_notoll", "bay_bridge",
                           "sr37_80_to_mare", "sr37_mare_to_121", "sr37_121_to_101", "sr37_80_to_101", 
                           "i880_baybridge_to_237", "i680_80_to_580", "i680_580_to_101", 
                           "sr4_80_to_160", "i580_hayward_to_sanjoaquin", "i580_hayward_to_baybridge", 
-                          "i80_13_to_580", "i80_580_to_Carquinez", "i80_680_to_12",
-                          "all_script_facilities")
+                          "i80_13_to_580", "i80_580_to_Carquinez", "i80_680_to_505","i880_baybridge_to_237_exp",
+                          "i680_bm_bridge_to_580","i680_bm_bridge_to_580_exp","all_script_facilities")
                           
 
 # Bring in 2022 PUMS data, household and person files for various tasks
