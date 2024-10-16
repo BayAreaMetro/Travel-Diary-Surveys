@@ -242,7 +242,7 @@ recoded_trip <- trip %>%
 working <- left_join(facility_flag,recoded_trip,by="trip_id") %>% 
   left_join(.,person_joiner,by=c("person_id")) %>% 
   mutate(all_script_facilities=1) %>% 
-  relocate(all_script_facilities,.after = "i80_680_to_12") %>% 
+  relocate(all_script_facilities,.after = "i80_680_to_505") %>% 
   filter(trip_weight_rmove_only>0)
 
 # Function to analyze data and calculate standard errors
