@@ -3067,11 +3067,21 @@
       <layout-options>
         <caption>
           <formatted-text>
-            <run>So far, I haven&apos;t figured out how to do this without saving a special parameter with the total  </run>
+            <run fontcolor='#000000' lmargin='-720' rmargin='-480'>Flavia&apos;s note on Nov 10, 2024</run>
+            <run lmargin='-720' rmargin='-480'>Æ&#10;&#10;</run>
+            <run fontcolor='#000000' lmargin='-720' rmargin='-480'>I updated MOE_in_tableau.twb to work without the param [Total Daywt Alladult Wkday Param]. I found two ways to do it — one using FIXED, and another using TOTAL. Either one works — FIXED requires the filters to be specified explicitly (which makes it less flexible) whereas TOTAL takes into account of the filters in the view.  See the  formulas in [WeightSum] and [WeightSum_Generic] respectively.</run>
+            <run lmargin='-720' rmargin='-480'>Æ&#10;&#10;</run>
+            <run fontcolor='#000000' lmargin='-720' rmargin='-480'>I think the formula using TOTAL is preferable in this MOE_in_tableau.twb, because we don&apos;t have to worry about separating the dataset into Pre and Post Covid. For the TransitPassengerSurvey_overTime.twb Tableau, the choice between TOTAL VS FIXED is less clear. TOTAL only gives the right answer only works if [Pre or Post Pandemic] is in &quot;Columns&quot; (I&apos;ll illustrate this in a future post). So, I think I prefer using FIXED in WeightSum calculation in the TransitPassengerSurvey_overTime.twb Tableau.</run>
+            <run lmargin='-720' rmargin='-480'>Æ&#10;</run>
+            <run>
+~~
+Lisa&apos;s notes on Nov 7, 2024
+So far, I haven&apos;t figured out how to do this without saving a special parameter with the total  </run>
             <run fontcolor='#4e79a7'>Daywt Alladult Wkday </run>
             <run fontcolor='#555555'>for the filter (e.g. the roadway filter).</run>
             <run>Æ&#10;&#10;</run>
-            <run fontcolor='#555555'><![CDATA[Parameter value: <[Parameters].[Parameter 1]>]]></run>
+            <run fontcolor='#555555'>Parameter value: </run>
+            <run bold='true' fontcolor='#ff0000'>&lt;!Missing Field!&gt;</run>
             <run>Æ&#10;&#10;</run>
             <run fontcolor='#555555'>Compare to: </run>
             <run auto-url='true' fontcolor='#555555' hyperlink='tabdoc:load-url url=&amp;quot;https://public.tableau.com/views/BayAreaTravelStudy2019-FreewayFacilityUserSummary/IncomegroupswithCI?:language=en-US&amp;amp;:sid=&amp;amp;:redirect=auth&amp;amp;:display_count=n&amp;amp;:origin=viz_share_link&amp;quot;'>https://public.tableau.com/views/BayAreaTravelStudy2019-FreewayFacilityUserSummary/IncomegroupswithCI?:language=en-US&amp;:sid=&amp;:redirect=auth&amp;:display_count=n&amp;:origin=viz_share_link</run>
@@ -3085,7 +3095,6 @@
           <datasources>
             <datasource caption='BATS_2019_Facility_Daypart_Disaggregate' name='federated.1803hpi0c0yiyh0zipllo0x9q39t' />
           </datasources>
-          <datasource-dependencies datasource='Parameters' />
           <datasource-dependencies datasource='federated.1803hpi0c0yiyh0zipllo0x9q39t'>
             <column aggregation='Sum' caption='Al 580 238To80' datatype='integer' name='[Al_580_238To80]' role='dimension' type='ordinal' />
             <column caption='WeightSum_Generic' datatype='real' name='[Calculation_1186135565187563520]' role='measure' type='quantitative'>
@@ -3397,7 +3406,7 @@
           </strip>
         </edge>
         <edge name='bottom'>
-          <strip size='198'>
+          <strip size='2147483647'>
             <card type='caption' />
           </strip>
         </edge>
