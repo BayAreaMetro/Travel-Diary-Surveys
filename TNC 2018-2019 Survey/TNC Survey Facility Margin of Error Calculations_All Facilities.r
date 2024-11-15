@@ -14,9 +14,15 @@ library(spatstat)
 
 # Set output directory
 
+USER          <- Sys.getenv("USERNAME")
 USERPROFILE   <- gsub("////","/", Sys.getenv("USERPROFILE"))
-Box_TM1       <- file.path(USERPROFILE, "Box", "Modeling and Surveys", "Surveys", "Travel Diary Survey")
-Box_TM2       <- file.path(Box_TM1,"MPO Partner Household Travel Survey","Bay Area Travel Study 2018-2019","SFCTA Map Matching")
+BOX_DIR       <- file.path(USERPROFILE, "Box")
+if (USER %in% c("lzorn")) {
+  BOX_DIR     <- file.path("E:/Box")
+}
+Box_TM1       <- file.path(BOX_DIR,"Modeling and Surveys", "Surveys", "Travel Diary Survey")
+Box_TM2       <- file.path(Box_TM1,"MPO Partner Household Travel Survey (Includes 2018_2019 TNC Survey)",
+                           "Bay Area Travel Study 2018-2019","SFCTA Map Matching")
 Output        <- file.path(Box_TM2,"Facility Summaries")
 OSM_Path      <- "M:/Data/HomeInterview/TNC Survey/SFCTA Map Matching"
 
@@ -214,6 +220,9 @@ working <- left_join(facility_flag,recoded_trip,by=c("hh_id","person_id","trip_i
   mutate(All_Freeways=1) %>% 
   relocate(All_Freeways,.after = "Mar_Son_101_12To580") %>% 
   filter((mode_1 %in% c(car_vector,997,-9998) | mode_2 %in% car_vector | mode_3 %in% car_vector | mode_4 %in% car_vector),daywt_alladult_wkday>0)
+
+# write this to cwd
+write.csv(working,"BATS_2019_Facility_Daypart_Disaggregate.csv",row.names = FALSE)
 
 # Function to analyze data and calculate standard errors
 # Filter for facility value==1 (i.e., traverses that facility) 
