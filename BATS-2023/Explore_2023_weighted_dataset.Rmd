@@ -1,10 +1,10 @@
 ---
 title: "MTC *Final* Weighted 2023 Travel Diary Survey Review"
 output:
-  pdf_document:
-    toc: true
   html_document:
     theme: cosmo
+    toc: true
+  pdf_document:
     toc: true
   word_document:
     toc: true
