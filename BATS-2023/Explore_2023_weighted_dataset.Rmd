@@ -1,10 +1,12 @@
 ---
-title: "MTC Weighted 2023 Travel Diary Survey Review"
+title: "MTC *Final* Weighted 2023 Travel Diary Survey Review"
 output:
-  word_document:
+  pdf_document:
     toc: true
   html_document:
     theme: cosmo
+    toc: true
+  word_document:
     toc: true
 ---
 
@@ -15,7 +17,7 @@ library(tidycensus)
 library(survey)
 
 # Load the data
-folder  <- "M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Full Weighted 2023 Dataset/WeightedDataset_08092024"
+folder  <- "M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Full Weighted 2023 Dataset/WeightedDataset_11272024"
 day     <- read.csv(file.path(folder,"day.csv"))
 hh      <- read.csv(file.path(folder,"hh.csv"))
 person  <- read.csv(file.path(folder,"person.csv"))
@@ -38,7 +40,8 @@ household <- hh %>%
     "6081" = "San Mateo",
     "6085" = "Santa Clara",
     "6095" = "Solano",
-    "6097" = "Sonoma"))
+    "6097" = "Sonoma")) %>% 
+  mutate(hh_weight_rmove_only=if_else(is.na(hh_weight_rmove_only),0,hh_weight_rmove_only)) 
 
 #table(household$home_county)
 #survey_design <- svydesign(ids = ~1, data = household, weights = ~hh_weight)
@@ -46,7 +49,7 @@ household <- hh %>%
 #print(weighted_freq)
 
 household_county_bats <- household %>% 
-  group_by(home_county) %>% 
+  group_by(home_county) %>%
   summarize(Total_BATS=round(sum(hh_weight)),rMove_BATS=round(sum(hh_weight_rmove_only))) %>% 
   ungroup() %>% 
   rename(County=home_county)
@@ -68,7 +71,7 @@ household_county_acs <- get_acs(
   county = c("Alameda","Contra Costa","Marin","Napa","San Francisco","San Mateo","Santa Clara","Solano","Sonoma"),
   state = "california",
   variables = "B08201_001",
-  year = 2022,
+  year = 2023,
   survey = "acs1") %>% 
   rename(County=NAME) %>% 
    mutate(County = gsub(" County, California", "", County)) %>% 
@@ -107,6 +110,9 @@ household_comparison_rmove
 household_joiner <- household %>% 
   select(hh_id,home_county)
 
+person <- person %>% 
+  mutate(person_weight_rmove_only=if_else(is.na(person_weight_rmove_only),0,person_weight_rmove_only)) 
+
 person_county_bats <- person %>%
   left_join(.,household_joiner,by="hh_id") %>% 
   group_by(home_county) %>% 
@@ -133,7 +139,7 @@ person_county_acs <- get_acs(
   county = c("Alameda","Contra Costa","Marin","Napa","San Francisco","San Mateo","Santa Clara","Solano","Sonoma"),
   state = "california",
   variables = "B01001_001",
-  year = 2022,
+  year = 2023,
   survey = "acs1") %>% 
   rename(County=NAME) %>% 
    mutate(County = gsub(" County, California", "", County)) %>% 
