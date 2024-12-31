@@ -1,0 +1,231 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+%
+\documentclass[
+]{article}
+\usepackage{amsmath,amssymb}
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math} % this also loads fontspec
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+\usepackage{lmodern}
+\ifPDFTeX\else
+  % xetex/luatex font selection
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{xcolor}
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
+\makeatother
+% Scale images if necessary, so that they will not overflow the page
+% margins by default, and it is still possible to overwrite the defaults
+% using explicit options in \includegraphics[width, height, ...]{}
+\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+% Set default figure placement to htbp
+\makeatletter
+\def\fps@figure{htbp}
+\makeatother
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+\ifLuaTeX
+  \usepackage{selnolig}  % disable illegal ligatures
+\fi
+\usepackage{bookmark}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\urlstyle{same}
+\hypersetup{
+  pdftitle={MTC Final Weighted 2023 Travel Diary Survey Review},
+  hidelinks,
+  pdfcreator={LaTeX via pandoc}}
+
+\title{MTC \emph{Final} Weighted 2023 Travel Diary Survey Review}
+\author{}
+\date{\vspace{-2.5em}}
+
+\begin{document}
+\maketitle
+
+{
+\setcounter{tocdepth}{2}
+\tableofcontents
+}
+\section{Households by County (Total)}\label{households-by-county-total}
+
+\begin{verbatim}
+## Getting data from the 2023 1-year ACS
+\end{verbatim}
+
+\begin{verbatim}
+## The 1-year ACS provides data for geographies with populations of 65,000 and greater.
+\end{verbatim}
+
+\begin{verbatim}
+## # A tibble: 11 x 4
+##    County            Total_BATS Total_ACS BATS_ACS_Diff
+##    <chr>                  <dbl>     <dbl>         <dbl>
+##  1 Alameda               616296    608534             1
+##  2 Contra Costa          419192    416172             1
+##  3 Marin                  99399    101608            -2
+##  4 Napa                   57774     51167            13
+##  5 San Francisco         368364    372027            -1
+##  6 San Mateo             276975    265124             4
+##  7 Santa Clara           681663    665549             2
+##  8 Solano                163016    157766             3
+##  9 Sonoma                194058    192765             1
+## 10 Marin_Napa_Sonoma     351231    345540             2
+## 11 Bay Area             2876737   2830712             2
+\end{verbatim}
+
+\section{Households by County (rMove
+Only)}\label{households-by-county-rmove-only}
+
+\begin{verbatim}
+## # A tibble: 11 x 4
+##    County            rMove_BATS Total_ACS rMove_ACS_Diff
+##    <chr>                  <dbl>     <dbl>          <dbl>
+##  1 Alameda               616732    608534              1
+##  2 Contra Costa          420397    416172              1
+##  3 Marin                  96334    101608             -5
+##  4 Napa                   63162     51167             23
+##  5 San Francisco         368416    372027             -1
+##  6 San Mateo             277578    265124              5
+##  7 Santa Clara           682787    665549              3
+##  8 Solano                164439    157766              4
+##  9 Sonoma                195097    192765              1
+## 10 Marin_Napa_Sonoma     354593    345540              3
+## 11 Bay Area             2884942   2830712              2
+\end{verbatim}
+
+\section{Population by County (Total)}\label{population-by-county-total}
+
+\begin{verbatim}
+## Getting data from the 2023 1-year ACS
+\end{verbatim}
+
+\begin{verbatim}
+## The 1-year ACS provides data for geographies with populations of 65,000 and greater.
+\end{verbatim}
+
+\begin{verbatim}
+## # A tibble: 11 x 4
+##    County            Total_BATS Total_ACS BATS_ACS_Diff
+##    <chr>                  <dbl>     <dbl>         <dbl>
+##  1 Alameda              1581757   1622188            -2
+##  2 Contra Costa         1140619   1155025            -1
+##  3 Marin                 218616    254407           -14
+##  4 Napa                  155104    133216            16
+##  5 San Francisco         777524    808988            -4
+##  6 San Mateo             710960    726353            -2
+##  7 Santa Clara          1835370   1877592            -2
+##  8 Solano                437860    449218            -3
+##  9 Sonoma                469098    481812            -3
+## 10 Marin_Napa_Sonoma     842818    869435            -3
+## 11 Bay Area             7326907   7508799            -2
+\end{verbatim}
+
+\section{Population by County (rMove
+Only)}\label{population-by-county-rmove-only}
+
+\begin{verbatim}
+## # A tibble: 11 x 4
+##    County            rMove_BATS Total_ACS rMove_ACS_Diff
+##    <chr>                  <dbl>     <dbl>          <dbl>
+##  1 Alameda              1581030   1622188             -3
+##  2 Contra Costa         1137672   1155025             -2
+##  3 Marin                 201691    254407            -21
+##  4 Napa                  167513    133216             26
+##  5 San Francisco         777295    808988             -4
+##  6 San Mateo             709060    726353             -2
+##  7 Santa Clara          1833775   1877592             -2
+##  8 Solano                435868    449218             -3
+##  9 Sonoma                467162    481812             -3
+## 10 Marin_Napa_Sonoma     836366    869435             -4
+## 11 Bay Area             7311066   7508799             -3
+\end{verbatim}
+
+\section{Range of HH Weights by Income Category
+(Total)}\label{range-of-hh-weights-by-income-category-total}
+
+\begin{verbatim}
+## # A tibble: 6 x 6
+##   income_imputed    min_tot pct25_tot med_tot pct75_tot max_tot
+##   <chr>               <dbl>     <dbl>   <dbl>     <dbl>   <dbl>
+## 1 Under $25,000           6        56     114       303    5502
+## 2 $25,000-$49,999         6        61     100       342    5439
+## 3 $50,000-$74,999         8        60      94       310    5517
+## 4 $75,000-$99,999         8        54      79       221    3900
+## 5 $100,000-$199,999       6        53      81       201    5249
+## 6 $200,000 or more        6        64     128       369    5500
+\end{verbatim}
+
+\section{Range of HH Weights by Income Category
+(rMove)}\label{range-of-hh-weights-by-income-category-rmove}
+
+\begin{verbatim}
+## # A tibble: 6 x 6
+##   income_imputed    min_rmov pct25_rmov med_rmov pct75_rmov max_rmov
+##   <chr>                <dbl>      <dbl>    <dbl>      <dbl>    <dbl>
+## 1 Under $25,000            6         59      129        499     6469
+## 2 $25,000-$49,999          6         65      102        360     6517
+## 3 $50,000-$74,999          8         60      102        339     6517
+## 4 $75,000-$99,999          8         59       79        188     6331
+## 5 $100,000-$199,999        6         52       79        157     6517
+## 6 $200,000 or more         6         73      104        319     6517
+\end{verbatim}
+
+\section{Range of Person Weights by Race/Ethnicity
+(Total)}\label{range-of-person-weights-by-raceethnicity-total}
+
+\begin{verbatim}
+## # A tibble: 5 x 6
+##   race_recoded_total min_tot pct25_total med_tot pct75_tot max_tot
+##   <chr>                <dbl>       <dbl>   <dbl>     <dbl>   <dbl>
+## 1 white                    6          61      87       232    7752
+## 2 black                   12          64     158       525   14489
+## 3 asian_pacific            6          64     130       395   10619
+## 4 other                   11          88     292      1099    5829
+## 5 hispanic                 6          74     270      1335    7220
+\end{verbatim}
+
+\section{Range of Person Weights by Race/Ethnicity
+(rMove)}\label{range-of-person-weights-by-raceethnicity-rmove}
+
+\begin{verbatim}
+## # A tibble: 5 x 6
+##   race_recoded_rmove min_rmov pct25_rmov med_rmov pct75_rmov max_rmov
+##   <chr>                 <dbl>      <dbl>    <dbl>      <dbl>    <dbl>
+## 1 white                     6         60       92        218    12585
+## 2 black                    13         78      205        813    26409
+## 3 asian_pacific             6         73      111        392    13651
+## 4 other                    13         90      320       1569    11166
+## 5 hispanic                  6         78      299       1910    14805
+\end{verbatim}
+
+\end{document}
