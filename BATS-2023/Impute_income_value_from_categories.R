@@ -1,6 +1,6 @@
 # -----------------------------------------------------------------------
-# This script aims to create two variables that can be linked to the BATS household file as needed:
-# - hhInc_continuous and poverty_status
+# This script aims to create three variables that can be linked to the BATS household file as needed:
+# - hhInc_continuous, poverty_status, and ami_share
 #
 # This script is largely an excerpt of BATS_2023_Survey_Facility_Margin_of_Error_Calculations_All_Facilities.r by Shimon
 # Except that I added some notes (and some code) in relation to the treatment of family and nonfamily households
@@ -20,14 +20,15 @@
 
 # Bring in libraries
 suppressMessages(library(tidyverse))
+library(spatstat) # Used for weighted median calculation
 
 
 # Set file directories for input and output
 
-USERPROFILE     <- gsub("////","/", Sys.getenv("USERPROFILE"))
+USERPROFILE     <- gsub("\\\\","/", Sys.getenv("USERPROFILE"))
 TDS_dir         <- file.path(USERPROFILE, "Box", "Modeling and Surveys","Surveys","Travel Diary Survey")
 TDSyear_dir     <- file.path(TDS_dir,"Biennial Travel Diary Survey","Data","2023")
-TDSdata_dir     <- file.path(TDSyear_dir,"Full Weighted 2023 Dataset","WeightedDataset_09112024")
+TDSdata_dir     <- file.path(TDSyear_dir,"Full Weighted 2023 Dataset","WeightedDataset_09112024_1")
 output_dir      <- file.path("M:/Data/HomeInterview/Bay Area Travel Study 2023/Data","Full Weighted 2023 Dataset","WeightedDataset_09112024", "derived_variables")
 
 
@@ -59,21 +60,21 @@ household_df   <- read.csv(file=file.path(TDSdata_dir,"hh.csv"))%>%
 # PUMS processing
 # -----------------------------------------------------------------------
 
-# Bring in 2022 PUMS data, household and person files for various tasks
+# Bring in 2023 PUMS data, household and person files for various tasks
 
-# The script that generate hbayarea22.Rdata and pbayarea22.Rdata:
-# https://github.com/BayAreaMetro/census-tools-for-planning/blob/master/Create_Data_Sets/ACS_PUMS_2022_create_BayArea_datasets.R
+# The script that generate hbayarea23.Rdata and pbayarea23.Rdata:
+# https://github.com/BayAreaMetro/census-tools-for-planning/blob/master/Create_Data_Sets/ACS_PUMS_create_BayArea_datasets.R
 # It's a straight download and includes all variables
-PUMS_hBayArea_Rdata = "M:/Data/Census/PUMS/PUMS 2022/hbayarea22.Rdata"
+PUMS_hBayArea_Rdata = "M:/Data/Census/PUMS/PUMS 2023/hbayarea23.Rdata"
 load(PUMS_hBayArea_Rdata)
 
-# the data frame in hbayarea22.Rdata is named hbayarea22
+# the data frame in hbayarea23.Rdata is named hbayarea
 # rename it to make it clear that this is PUMS data
-PUMS_hBayArea_df <-hbayarea22
-rm(hbayarea22)
+PUMS_hBayArea_df <-hbayarea
+rm(hbayarea)
 
 
-# Use PUMS 2022 adjustment variable to inflation-correct values for 2022 (data collected over 12 months, so provides a constant dollar value)
+# Use PUMS 2023 adjustment variable to inflation-correct values for 2023 (data collected over 12 months, so provides a constant dollar value)
 # Remove group quarters and vacant housing
 
 PUMS_hBayArea_income_df <- PUMS_hBayArea_df  %>% 
@@ -217,15 +218,29 @@ BATShh_ImputedIncomeValues_df <- BATShh_ImputedIncomeValues_df %>%
       TRUE                                          ~ "over_2x_poverty"
     )
   )
+
+# Add ami_share variable
+# First calculate ami from PUMS data, then calculate share variable
+
+bay_median <- weighted.median(x=PUMS_hBayArea_income_df$income,w=PUMS_hBayArea_income_df$WGTP)
+
+BATShh_ImputedIncomeValues_df <- BATShh_ImputedIncomeValues_df %>%
+  mutate(ami_share=case_when(
+    hhInc_continuous/bay_median< 0.5                                    ~ "Under 50 percent AMI",
+    hhInc_continuous/bay_median>=0.5 & hhInc_continuous/bay_median<1    ~ "50 to 100 percent AMI",
+    hhInc_continuous/bay_median>=1 & hhInc_continuous/bay_median<2      ~ "100 to 200 percent AMI",
+    hhInc_continuous/bay_median>=2                                      ~ "Over 200 percent AMI",
+    TRUE                                                                ~ "Miscoded"
+))  
  
 # TODO: some tabulations and visualizations of PUMS income distribution vs that in the imputed BATS would be good
 # in particular, it'd be helpful to understand the number of PUMS record being used in each imputation, in case we want to slice and dice the data even further
  
 
 # -----------------------------------------------------------------------
-# Write a file containing the hh_id and the two new variables (hhInc_continuous and poverty_status)
+# Write a file containing the hh_id and the three new variables (hhInc_continuous, poverty_status, and ami_share)
 # -----------------------------------------------------------------------
-write.csv(BATShh_ImputedIncomeValues_df[, c("hh_id","hhInc_continuous", "poverty_status")], 
+write.csv(BATShh_ImputedIncomeValues_df[, c("hh_id","hhInc_continuous", "poverty_status", "ami_share")], 
           file.path(output_dir, "BATShh_ImputedIncomeValues.csv"), 
           row.names = FALSE)
 
