@@ -1,5 +1,5 @@
 ---
-title: "MTC *Final* Weighted 2023 Travel Diary Survey Review"
+title: "MTC *Final* (February 21, 2025) Weighted 2023 Travel Diary Survey Review"
 output:
   html_document:
     theme: cosmo
@@ -17,7 +17,9 @@ library(tidycensus)
 library(survey)
 
 # Load the data
-folder  <- "M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Full Weighted 2023 Dataset/WeightedDataset_11272024"
+userprofile     <- gsub("\\\\","/", Sys.getenv("USERPROFILE"))
+box_dir         <- file.path(userprofile, "Box", "Modeling and Surveys","Surveys","Travel Diary Survey","Biennial Travel Diary Survey","MTC_RSG_Partner Repository")
+folder  <- file.path(box_dir,"5.Deliverables","Task 10 - Weighting and Expansion Data Files","WeightedDataset_02212025")
 day     <- read.csv(file.path(folder,"day.csv"))
 hh      <- read.csv(file.path(folder,"hh.csv"))
 person  <- read.csv(file.path(folder,"person.csv"))
@@ -138,7 +140,7 @@ person_county_acs <- get_acs(
   geography = "county",
   county = c("Alameda","Contra Costa","Marin","Napa","San Francisco","San Mateo","Santa Clara","Solano","Sonoma"),
   state = "california",
-  variables = "B01001_001",
+  variables = "B25008_001",
   year = 2023,
   survey = "acs1") %>% 
   rename(County=NAME) %>% 
