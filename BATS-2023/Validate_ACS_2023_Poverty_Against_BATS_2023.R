@@ -9,8 +9,11 @@ library(tidycensus)
 
 # Set file directories for input and output
 
-TDSdata_dir     <- file.path("M:/Data/HomeInterview/Bay Area Travel Study 2023/Data","Full Weighted 2023 Dataset","WeightedDataset_09112024")
-output_dir      <- file.path("M:/Data/HomeInterview/Bay Area Travel Study 2023/Data","Full Weighted 2023 Dataset","WeightedDataset_09112024")
+userprofile     <- gsub("\\\\","/", Sys.getenv("USERPROFILE"))
+box_dir         <- file.path(userprofile, "Box", "Modeling and Surveys","Surveys","Travel Diary Survey","Biennial Travel Diary Survey","MTC_RSG_Partner Repository")
+TDSdata_dir     <- file.path(box_dir,"5.Deliverables","Task 10 - Weighting and Expansion Data Files","WeightedDataset_02212025")
+impute_dir      <- "M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Full Weighted 2023 Dataset/WeightedDataset_02212025/derived_variables"
+output_dir      <- file.path("M:/Data/HomeInterview/Bay Area Travel Study 2023/Data","Full Weighted 2023 Dataset","WeightedDataset_02212025")
 
 
 # -----------------------------------------------------------------------
@@ -35,7 +38,7 @@ household_df   <- read.csv(file=file.path(TDSdata_dir,"hh.csv")) %>%
 
 # Append poverty status, sum person weights by household poverty status and county
 
-derived        <- read.csv(file=file.path(TDSdata_dir,"derived_variables","BATShh_ImputedIncomeValues.csv")) %>% 
+derived        <- read.csv(file=file.path(impute_dir,"BATShh_ImputedIncomeValues.csv")) %>% 
   select(hh_id,poverty_status)
 
 combined <- left_join(derived,household_df,by="hh_id") 
@@ -108,6 +111,7 @@ share_acs <- combined_acs %>%
 
 combined_data <- bind_rows(share_bats,share_acs)
   
-# Output file
+# Output files
 
-write.csv(combined_data,file=file.path(output_dir,"BAT2023_SepDeliverable_Review","BATS_2023_Poverty_Summary.csv"),row.names=F)
+write.csv(combined_data,file=file.path(output_dir,"BATS_2023_Poverty_Summary.csv"),row.names=F)
+write.csv(combined_bats,file=file.path(output_dir,"BATS_2023_Poverty_Totals.csv"),row.names=F)
