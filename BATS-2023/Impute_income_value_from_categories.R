@@ -25,11 +25,10 @@ library(spatstat) # Used for weighted median calculation
 
 # Set file directories for input and output
 
-USERPROFILE     <- gsub("\\\\","/", Sys.getenv("USERPROFILE"))
-TDS_dir         <- file.path(USERPROFILE, "Box", "Modeling and Surveys","Surveys","Travel Diary Survey")
-TDSyear_dir     <- file.path(TDS_dir,"Biennial Travel Diary Survey","Data","2023")
-TDSdata_dir     <- file.path(TDSyear_dir,"Full Weighted 2023 Dataset","WeightedDataset_09112024_1")
-output_dir      <- file.path("M:/Data/HomeInterview/Bay Area Travel Study 2023/Data","Full Weighted 2023 Dataset","WeightedDataset_09112024", "derived_variables")
+userprofile     <- gsub("\\\\","/", Sys.getenv("USERPROFILE"))
+box_dir         <- file.path(userprofile, "Box", "Modeling and Surveys","Surveys","Travel Diary Survey","Biennial Travel Diary Survey","MTC_RSG_Partner Repository")
+TDSdata_dir     <- file.path(box_dir,"5.Deliverables","Task 10 - Weighting and Expansion Data Files","WeightedDataset_02212025")
+output_dir      <- file.path("M:/Data/HomeInterview/Bay Area Travel Study 2023/Data","Full Weighted 2023 Dataset","WeightedDataset_02212025", "derived_variables")
 
 
 # -----------------------------------------------------------------------
