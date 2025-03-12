@@ -22,7 +22,7 @@ output_dir      <- file.path("M:/Data/HomeInterview/Bay Area Travel Study 2023/D
 
 
 person_df      <- read.csv(file=file.path(TDSdata_dir,"person.csv")) %>% 
-  select(hh_id,person_id,person_weight)
+  select(hh_id,person_id,person_weight,person_weight_rmove_only)
 household_df   <- read.csv(file=file.path(TDSdata_dir,"hh.csv")) %>% 
   select(hh_id,home_county) %>% 
   mutate(home_county = recode(home_county,
@@ -43,26 +43,46 @@ derived        <- read.csv(file=file.path(impute_dir,"BATShh_ImputedIncomeValues
 
 combined <- left_join(derived,household_df,by="hh_id") 
 
-person_combined <- left_join(person_df,combined,by="hh_id")
+person_combined <- left_join(person_df,combined,by="hh_id") %>% 
+  mutate(person_weight_rmove_only=if_else(is.na(person_weight_rmove_only),0,person_weight_rmove_only))
 
 bats_cleaned <- person_combined %>% 
   group_by(home_county,poverty_status) %>% 
-  summarize(Total=sum(person_weight)) %>% 
-  pivot_wider(names_from=poverty_status,values_from=Total) %>% 
+  summarize(Total_Base=sum(person_weight),Total_rMove=sum(person_weight_rmove_only))
+
+bats_cleaned_base <- bats_cleaned %>% 
+  select(-Total_rMove) %>% 
+  pivot_wider(names_from=poverty_status,values_from=Total_Base) %>% 
   select(County=home_county,under_2x_poverty,over_2x_poverty) %>% 
-  mutate(Total=under_2x_poverty+over_2x_poverty,Source="BATS") %>% 
+  mutate(Total=under_2x_poverty+over_2x_poverty,Source="BATS_Base") %>% 
   ungroup()
 
-bay_bats <- bats_cleaned %>% 
-  summarize(County="Bay Area", under_2x_poverty=sum(under_2x_poverty),over_2x_poverty=sum(over_2x_poverty),
-            Total=sum(Total), Source="BATS")
+bats_cleaned_rmove <- bats_cleaned %>% 
+  select(-Total_Base) %>% 
+  pivot_wider(names_from=poverty_status,values_from=Total_rMove) %>% 
+  select(County=home_county,under_2x_poverty,over_2x_poverty) %>% 
+  mutate(Total=under_2x_poverty+over_2x_poverty,Source="BATS_rMove") %>% 
+  ungroup()
 
-marin_napa_bats <- bats_cleaned %>%
+bay_bats_base <- bats_cleaned_base %>% 
+  summarize(County="Bay Area", under_2x_poverty=sum(under_2x_poverty),over_2x_poverty=sum(over_2x_poverty),
+            Total=sum(Total), Source="BATS_Base")
+
+bay_bats_rmove <- bats_cleaned_rmove %>% 
+  summarize(County="Bay Area", under_2x_poverty=sum(under_2x_poverty),over_2x_poverty=sum(over_2x_poverty),
+            Total=sum(Total), Source="BATS_rMove")
+
+marin_napa_bats_base <- bats_cleaned_base %>%
   filter(County %in% c("Marin","Napa")) %>% 
   summarize(County="Marin_Napa", under_2x_poverty=sum(under_2x_poverty),over_2x_poverty=sum(over_2x_poverty),
-            Total=sum(Total), Source="BATS")
+            Total=sum(Total), Source="BATS_Base")
 
-combined_bats <- bind_rows(bats_cleaned,marin_napa_bats,bay_bats)
+marin_napa_bats_rmove <- bats_cleaned_rmove %>%
+  filter(County %in% c("Marin","Napa")) %>% 
+  summarize(County="Marin_Napa", under_2x_poverty=sum(under_2x_poverty),over_2x_poverty=sum(over_2x_poverty),
+            Total=sum(Total), Source="BATS_rMove")
+
+combined_bats <- bind_rows(bats_cleaned_base,marin_napa_bats_base,bay_bats_base,bats_cleaned_rmove,marin_napa_bats_rmove,bay_bats_rmove)
 
 share_bats <- combined_bats %>% 
   mutate(under_2x_share=under_2x_poverty/Total) %>% 
