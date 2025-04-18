@@ -12,7 +12,7 @@ library(tidycensus)
 userprofile     <- gsub("\\\\","/", Sys.getenv("USERPROFILE"))
 box_dir         <- file.path(userprofile, "Box", "Modeling and Surveys","Surveys","Travel Diary Survey","Biennial Travel Diary Survey","MTC_RSG_Partner Repository")
 TDSdata_dir     <- file.path(box_dir,"5.Deliverables","Task 10 - Weighting and Expansion Data Files","WeightedDataset_02212025")
-output_dir      <- file.path("M:/Data/HomeInterview/Bay Area Travel Study 2023/Data","Full Weighted 2023 Dataset","WeightedDataset_02212025")
+output_dir      <- file.path(userprofile,"Box","Plan Bay Area 2050+","Performance and Equity","Equity Analysis","Investment Analysis")
 
 
 # -----------------------------------------------------------------------
@@ -21,7 +21,7 @@ output_dir      <- file.path("M:/Data/HomeInterview/Bay Area Travel Study 2023/D
 
 
 person_df      <- read.csv(file=file.path(TDSdata_dir,"person.csv")) %>% 
-  select(person_id,hh_id,grep("race|ethnicity|weight",names(.),ignore.case = T))
+  select(person_id,hh_id,matches("race|ethnicity|weight",ignore.case = T))
 
 household_df   <- read.csv(file=file.path(TDSdata_dir,"hh.csv")) %>% 
   mutate(home_county = recode(home_county,
@@ -34,107 +34,89 @@ household_df   <- read.csv(file=file.path(TDSdata_dir,"hh.csv")) %>%
                               "6085" = "Santa Clara",
                               "6095" = "Solano",
                               "6097" = "Sonoma")) %>% 
-select(hh_id,grep("income",names(.),ignore.case = T))
+select(hh_id,home_county,matches("income",ignore.case = T))
 
 trip_df        <- read.csv(file=file.path(TDSdata_dir,"trip.csv")) %>% 
   select(person_id,hh_id,matches("mode|weight",ignore.case = T))
 
-# Append poverty status, sum person weights by household poverty status and county
+# Join income and race/ethnicity to trip file
+# Recode mode into roadway and transit. From the "mode_type" variable, transit is ferry and "transit". Roadway is everything else. 
+# Race uses the race_imputed and ethnicity_imputed variables. If ethnicity_imputed is "hispanic" then the person is Hispanic. Otherwise, 
+# they are the race_imputed and not_hispanic. 
 
-derived        <- read.csv(file=file.path(impute_dir,"BATShh_ImputedIncomeValues.csv")) %>% 
-  select(hh_id,poverty_status)
+combined <- left_join(trip_df,household_df,by="hh_id") %>% 
+  left_join(.,person_df,by=c("hh_id","person_id")) %>% 
+  mutate(mode_simple=case_when(
+    mode_type %in% c(1:11,14,995)        ~ "roadway",
+    mode_type %in% c(12:13)              ~ "transit",
+    TRUE                                 ~ "miscoded"
+  ),
+  race_simple=if_else(ethnicity_imputed=="hispanic","hispanic",race_imputed)) %>% 
+  relocate(mode_simple,.after = "mode_type") %>% 
+  relocate(race_simple,.after = "race_imputed")
 
-combined <- left_join(derived,household_df,by="hh_id") 
+# Summarize total trips by income, then roadway and transit
 
-person_combined <- left_join(person_df,combined,by="hh_id") %>% 
-  mutate(person_weight_rmove_only=if_else(is.na(person_weight_rmove_only),0,person_weight_rmove_only))
+total_income <- combined %>% 
+  group_by(home_county,income_imputed) %>% 
+  summarize(total=sum(trip_weight),.groups = "drop") %>% 
+  pivot_wider(.,names_from = income_imputed,values_from = total) %>% 
+  select("home_county", "Under $25,000", "$25,000-$49,999","$50,000-$74,999", "$75,000-$99,999",
+         "$100,000-$199,999", "$200,000 or more")
 
-bats_cleaned <- person_combined %>% 
-  group_by(home_county,poverty_status) %>% 
-  summarize(Total_Base=sum(person_weight),Total_rMove=sum(person_weight_rmove_only))
+# Roadway by income
 
-bats_cleaned_base <- bats_cleaned %>% 
-  select(-Total_rMove) %>% 
-  pivot_wider(names_from=poverty_status,values_from=Total_Base) %>% 
-  select(County=home_county,under_2x_poverty,over_2x_poverty) %>% 
-  mutate(Total=under_2x_poverty+over_2x_poverty,Source="BATS_Base") %>% 
-  ungroup()
+roadway_income <- combined %>% 
+  filter(mode_simple=="roadway") %>% 
+  group_by(home_county,income_imputed) %>% 
+  summarize(total=sum(trip_weight),.groups = "drop") %>% 
+  pivot_wider(.,names_from = income_imputed,values_from = total) %>% 
+  select("home_county", "Under $25,000", "$25,000-$49,999","$50,000-$74,999", "$75,000-$99,999",
+         "$100,000-$199,999", "$200,000 or more")
 
-bats_cleaned_rmove <- bats_cleaned %>% 
-  select(-Total_Base) %>% 
-  pivot_wider(names_from=poverty_status,values_from=Total_rMove) %>% 
-  select(County=home_county,under_2x_poverty,over_2x_poverty) %>% 
-  mutate(Total=under_2x_poverty+over_2x_poverty,Source="BATS_rMove") %>% 
-  ungroup()
+# Transit by income
 
-bay_bats_base <- bats_cleaned_base %>% 
-  summarize(County="Bay Area", under_2x_poverty=sum(under_2x_poverty),over_2x_poverty=sum(over_2x_poverty),
-            Total=sum(Total), Source="BATS_Base")
+transit_income <- combined %>% 
+  filter(mode_simple=="transit") %>% 
+  group_by(home_county,income_imputed) %>% 
+  summarize(total=sum(trip_weight),.groups = "drop") %>% 
+  pivot_wider(.,names_from = income_imputed,values_from = total) %>% 
+  select("home_county", "Under $25,000", "$25,000-$49,999","$50,000-$74,999", "$75,000-$99,999",
+         "$100,000-$199,999", "$200,000 or more")
 
-bay_bats_rmove <- bats_cleaned_rmove %>% 
-  summarize(County="Bay Area", under_2x_poverty=sum(under_2x_poverty),over_2x_poverty=sum(over_2x_poverty),
-            Total=sum(Total), Source="BATS_rMove")
+# Summarize total trips by race, then roadway and transit
 
-marin_napa_bats_base <- bats_cleaned_base %>%
-  filter(County %in% c("Marin","Napa")) %>% 
-  summarize(County="Marin_Napa", under_2x_poverty=sum(under_2x_poverty),over_2x_poverty=sum(over_2x_poverty),
-            Total=sum(Total), Source="BATS_Base")
+total_race <- combined %>%
+  group_by(home_county,race_simple) %>% 
+  summarize(total=sum(trip_weight),.groups = "drop") %>% 
+  pivot_wider(.,names_from = race_simple,values_from = total) %>% 
+  select(home_county,white_nh=white, black_nh=afam,asian_pacific_nh=asian_pacific,other_nh=other,hispanic)
 
-marin_napa_bats_rmove <- bats_cleaned_rmove %>%
-  filter(County %in% c("Marin","Napa")) %>% 
-  summarize(County="Marin_Napa", under_2x_poverty=sum(under_2x_poverty),over_2x_poverty=sum(over_2x_poverty),
-            Total=sum(Total), Source="BATS_rMove")
+# Roadway by race
 
-combined_bats <- bind_rows(bats_cleaned_base,marin_napa_bats_base,bay_bats_base,bats_cleaned_rmove,marin_napa_bats_rmove,bay_bats_rmove)
+roadway_race <- combined %>% 
+  filter(mode_simple=="roadway") %>%
+  group_by(home_county,race_simple) %>% 
+  summarize(total=sum(trip_weight),.groups = "drop") %>% 
+  pivot_wider(.,names_from = race_simple,values_from = total) %>% 
+  select(home_county,white_nh=white, black_nh=afam,asian_pacific_nh=asian_pacific,other_nh=other,hispanic)
 
-share_bats <- combined_bats %>% 
-  mutate(under_2x_share=under_2x_poverty/Total) %>% 
-  select(County,under_2x_share,Source)
+# Transit by race
 
-# Now download ACS 2023 poverty data
+transit_race <- combined %>% 
+  filter(mode_simple=="transit") %>%
+  group_by(home_county,race_simple) %>% 
+  summarize(total=sum(trip_weight),.groups = "drop") %>% 
+  pivot_wider(.,names_from = race_simple,values_from = total) %>% 
+  select(home_county,white_nh=white, black_nh=afam,asian_pacific_nh=asian_pacific,other_nh=other,hispanic)
 
-bay_counties <- c("Alameda", "Contra Costa", "Marin", "Napa", "San Francisco", "San Mateo",
-                  "Santa Clara", "Solano","Sonoma")
-
-acs_poverty_2023 <- get_acs(
-  geography = "county",
-  table = "C17002",
-  year = 2023,  
-  state = "CA",  
-  county = bay_counties,
-  survey = "acs1",
-  output = "wide"
-)
-
-# Remove MOE values
-
-acs_cleaned <- acs_poverty_2023 %>% 
-  mutate(NAME = str_remove(NAME, " County, California$"),
-         under_2x_poverty=C17002_001E-C17002_008E,
-         over_2x_poverty=C17002_008E,
-         Source="ACS") %>% 
-  rename(County=NAME, Total=C17002_001E) %>% 
-  select(-matches("_00[1-8]"),-GEOID) %>% 
-  relocate(Total,.after = over_2x_poverty)
-
-bay_acs <- acs_cleaned %>% 
-  summarize(County="Bay Area", under_2x_poverty=sum(under_2x_poverty),over_2x_poverty=sum(over_2x_poverty),
-            Total=sum(Total), Source="ACS")
-
-marin_napa_acs <- acs_cleaned %>%
-  filter(County %in% c("Marin","Napa")) %>% 
-  summarize(County="Marin_Napa", under_2x_poverty=sum(under_2x_poverty),over_2x_poverty=sum(over_2x_poverty),
-            Total=sum(Total), Source="ACS")
-
-combined_acs <- bind_rows(acs_cleaned,marin_napa_acs,bay_acs)
-
-share_acs <- combined_acs %>% 
-  mutate(under_2x_share=under_2x_poverty/Total) %>% 
-  select(County,under_2x_share,Source)
-
-combined_data <- bind_rows(share_bats,share_acs)
-  
 # Output files
 
-write.csv(combined_data,file=file.path(output_dir,"BATS_2023_Poverty_Summary.csv"),row.names=F)
-write.csv(combined_bats,file=file.path(output_dir,"BATS_2023_Poverty_Totals.csv"),row.names=F)
+write.csv(total_income,file.path(output_dir,"BATS_2023_Total_Income.csv"),row.names=F)
+write.csv(roadway_income,file.path(output_dir,"BATS_2023_Roadway_Income.csv"),row.names=F)
+write.csv(transit_income,file.path(output_dir,"BATS_2023_Transit_Income.csv"),row.names=F)
+
+write.csv(total_race,file.path(output_dir,"BATS_2023_Total_Race.csv"),row.names=F)
+write.csv(roadway_race,file.path(output_dir,"BATS_2023_Roadway_Race.csv"),row.names=F)
+write.csv(transit_race,file.path(output_dir,"BATS_2023_Transit_Race.csv"),row.names=F)
+
