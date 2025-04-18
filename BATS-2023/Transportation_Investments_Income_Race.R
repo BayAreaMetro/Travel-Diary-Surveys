@@ -21,9 +21,9 @@ output_dir      <- file.path("M:/Data/HomeInterview/Bay Area Travel Study 2023/D
 
 
 person_df      <- read.csv(file=file.path(TDSdata_dir,"person.csv")) %>% 
-  select(hh_id,person_id,person_weight,person_weight_rmove_only)
+  select(person_id,hh_id,grep("race|ethnicity|weight",names(.),ignore.case = T))
+
 household_df   <- read.csv(file=file.path(TDSdata_dir,"hh.csv")) %>% 
-  select(hh_id,home_county) %>% 
   mutate(home_county = recode(home_county,
                               "6001" = "Alameda",
                               "6013" = "Contra Costa",
@@ -33,8 +33,11 @@ household_df   <- read.csv(file=file.path(TDSdata_dir,"hh.csv")) %>%
                               "6081" = "San Mateo",
                               "6085" = "Santa Clara",
                               "6095" = "Solano",
-                              "6097" = "Sonoma"))
-trip_df        <- read.csv(file=file.path(TDSdata_dir,"trip.csv")) 
+                              "6097" = "Sonoma")) %>% 
+select(hh_id,grep("income",names(.),ignore.case = T))
+
+trip_df        <- read.csv(file=file.path(TDSdata_dir,"trip.csv")) %>% 
+  select(person_id,hh_id,matches("mode|weight",ignore.case = T))
 
 # Append poverty status, sum person weights by household poverty status and county
 
