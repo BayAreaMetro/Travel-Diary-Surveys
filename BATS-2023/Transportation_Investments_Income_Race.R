@@ -82,7 +82,8 @@ transit_income <- combined %>%
   summarize(total=sum(trip_weight),.groups = "drop") %>% 
   pivot_wider(.,names_from = income_imputed,values_from = total) %>% 
   select("home_county", "Under $25,000", "$25,000-$49,999","$50,000-$74,999", "$75,000-$99,999",
-         "$100,000-$199,999", "$200,000 or more")
+         "$100,000-$199,999", "$200,000 or more") %>%
+  mutate(across(where(is.numeric), ~replace_na(., 0)))
 
 # Summarize total trips by race, then roadway and transit
 
@@ -108,7 +109,8 @@ transit_race <- combined %>%
   group_by(home_county,race_simple) %>% 
   summarize(total=sum(trip_weight),.groups = "drop") %>% 
   pivot_wider(.,names_from = race_simple,values_from = total) %>% 
-  select(home_county,white_nh=white, black_nh=afam,asian_pacific_nh=asian_pacific,other_nh=other,hispanic)
+  select(home_county,white_nh=white, black_nh=afam,asian_pacific_nh=asian_pacific,other_nh=other,hispanic) %>%
+  mutate(across(where(is.numeric), ~replace_na(., 0)))
 
 # Output files
 
