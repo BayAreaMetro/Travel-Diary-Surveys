@@ -74,7 +74,7 @@ roadway_income <- combined %>%
   select("home_county", "Under $25,000", "$25,000-$49,999","$50,000-$74,999", "$75,000-$99,999",
          "$100,000-$199,999", "$200,000 or more")
 
-# Transit by income
+# Transit by income, replace NA values with zero
 
 transit_income <- combined %>% 
   filter(mode_simple=="transit") %>% 
@@ -102,7 +102,7 @@ roadway_race <- combined %>%
   pivot_wider(.,names_from = race_simple,values_from = total) %>% 
   select(home_county,white_nh=white, black_nh=afam,asian_pacific_nh=asian_pacific,other_nh=other,hispanic)
 
-# Transit by race
+# Transit by race, replace NA values with zero
 
 transit_race <- combined %>% 
   filter(mode_simple=="transit") %>%
