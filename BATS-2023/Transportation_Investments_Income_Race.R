@@ -3,8 +3,6 @@
 
 # Bring in libraries
 suppressMessages(library(tidyverse))
-library(tidycensus)
-
 
 
 # Set file directories for input and output
