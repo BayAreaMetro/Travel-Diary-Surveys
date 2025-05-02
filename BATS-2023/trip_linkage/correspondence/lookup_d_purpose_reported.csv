@@ -1,0 +1,42 @@
+d_purpose_reported,d_purpose_reported_des,d_purpose_reported_priority,d_purpose_reported_priority_des,link_d_purpose_reported_priority,link_d_purpose_reported_des,link_d_purpose_reported,link_d_purpose_category_new,link_d_purpose_category_new_des,link_d_purpose_new,link_d_purpose_new_des
+10,Went to primary workplace,1,Work,1,Work,10,2,Work,10,Went to primary workplace
+11,"Went to work-related activity (e.g., meeting, delivery, worksite) ",2,Work related,2,Work related,11,3,Work related,11,"Went to work-related activity (e.g., meeting, delivery, worksite) "
+13,Volunteering,3,Work related,3,Work related,13,3,Work related,13,Volunteering
+14,Other work-related,4,Work related,4,Work related,14,3,Work related,14,Other work-related
+2,"Went to work, work-related, volunteer-related",5,Work related,5,Work related,2,3,Work related,2,"Went to work, work-related, volunteer-related"
+21,Attend K-12 school,6,School,6,School,21,4,School,21,Attend K-12 school
+22,Attend college/university,7,School,7,School,22,4,School,22,Attend college/university
+23,"Attend other type of class (e.g., cooking class)",8,School,8,School,23,4,School,23,"Attend other type of class (e.g., cooking class)"
+25,Attend vocational education class,9,School,9,School,25,4,School,25,Attend vocational education class
+26,Attend daycare or preschool,10,School,10,School,26,4,School,26,Attend daycare or preschool
+3,Attended school/class,11,School,11,School,3,4,School,3,Attended school/class
+24,"Attend other education-related activity (e.g., field trip)",12,School related,12,School related,24,5,School related,24,"Attend other education-related activity (e.g., field trip)"
+44,"Other activity only (e.g., attend meeting, pick-up or drop-off item)",13,Escort,13,Escort,44,6,Escort,44,"Other activity only (e.g., attend meeting, pick-up or drop-off item)"
+45,Pick someone up,14,Escort,14,Escort,45,6,Escort,45,Pick someone up
+46,Drop someone off,15,Escort,15,Escort,46,6,Escort,46,Drop someone off
+47,"Accompany someone only (e.g., go along for the ride)",16,Escort,16,Escort,47,6,Escort,47,"Accompany someone only (e.g., go along for the ride)"
+48,BOTH pick up AND drop off,17,Escort,17,Escort,48,6,Escort,48,BOTH pick up AND drop off
+5,"Dropped off, picked up, or accompanied another person",18,Escort,18,Escort,5,6,Escort,5,"Dropped off, picked up, or accompanied another person"
+30,Grocery shopping,19,Shop,19,Shop,30,7,Shop,30,Grocery shopping
+31,Got gas,20,Shop,20,Shop,31,7,Shop,31,Got gas
+32,"Other routine shopping (e.g., pharmacy)",21,Shop,21,Shop,32,7,Shop,32,"Other routine shopping (e.g., pharmacy)"
+36,"Shopping for major item (e.g., furniture, car)",22,Shop,22,Shop,36,7,Shop,36,"Shopping for major item (e.g., furniture, car)"
+50,"Dined out, got coffee, or take-out",23,Meal,23,Meal,50,8,Meal,50,"Dined out, got coffee, or take-out"
+51,"Exercise or recreation (e.g., gym, jog, bike, walk dog)",24,Social or recreational,24,Social or recreational,51,9,Social or recreational,51,"Exercise or recreation (e.g., gym, jog, bike, walk dog)"
+52,"Social activity (e.g., visit friends/relatives)",25,Social or recreational,25,Social or recreational,52,9,Social or recreational,52,"Social activity (e.g., visit friends/relatives)"
+53,"Leisure/entertainment/cultural (e.g., cinema, museum, park)",26,Social or recreational,26,Social or recreational,53,9,Social or recreational,53,"Leisure/entertainment/cultural (e.g., cinema, museum, park)"
+54,Religious/civic/volunteer activity,27,Social or recreational,27,Social or recreational,54,9,Social or recreational,54,Religious/civic/volunteer activity
+56,"Family activity (e.g., watch child's game)",28,Social or recreational,28,Social or recreational,56,9,Social or recreational,56,"Family activity (e.g., watch child's game)"
+62,Other social,29,Social or recreational,29,Social or recreational,62,9,Social or recreational,62,Other social
+7,"Social, leisure, religious, entertainment activity",30,Social or recreational,30,Social or recreational,7,9,Social or recreational,7,"Social, leisure, religious, entertainment activity"
+33,"Errand without appointment (e.g., post office)",31,Errand,31,Errand,33,10,Errand,33,"Errand without appointment (e.g., post office)"
+34,"Medical visit (e.g., doctor, dentist)",32,Errand,32,Errand,34,10,Errand,34,"Medical visit (e.g., doctor, dentist)"
+37,"Errand with appointment (e.g., haircut)",33,Errand,33,Errand,37,10,Errand,37,"Errand with appointment (e.g., haircut)"
+4,"Appointment, shopping, or errands (e.g., gas)",34,Errand,34,Errand,4,10,Errand,4,"Appointment, shopping, or errands (e.g., gas)"
+61,Other errand,35,Errand,35,Errand,61,10,Errand,61,Other errand
+1,Went home,36,Home,36,Home,1,1,Home,1,Went home
+150,"Went to another residence (e.g., someone else's home, second home)",37,Overnight,37,Overnight,150,12,Overnight,150,"Went to another residence (e.g., someone else's home, second home)"
+152,"Went to temporary lodging (e.g., hotel, vacation rental)",38,Overnight,38,Overnight,152,12,Overnight,152,"Went to temporary lodging (e.g., hotel, vacation rental)"
+99,Other reason,39,Other,39,Other,99,13,Other,99,Other reason
+995,Missing Response,40,Other,40,Other,995,13,Other,995,Missing Response
+60,"Changed or transferred mode (e.g., waited for bus or exited bus)",41,Change mode,41,Change mode,60,11,Change mode,60,"Changed or transferred mode (e.g., waited for bus or exited bus)"

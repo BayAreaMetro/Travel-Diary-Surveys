@@ -1,0 +1,16 @@
+mode_type,mode_type_des,mode_type_priority,link_mode_type,link_mode_type_des,link_mode_type_priority,mode_type_model,mode_type_model_des
+13,Transit,1,13,Transit,1,6,Transit
+10,School bus,2,10,School bus,2,7,School bus
+11,Shuttle/vanpool,3,11,Shuttle/vanpool,3,3,SR3+/passenger
+5,Taxi,4,5,Taxi,4,2,SR2
+6,TNC,5,6,TNC,5,2,SR2
+9,Carshare,6,9,Carshare,6,2,SR2
+8,Car,7,8,Car,7,1,Drive Alone
+12,Ferry,8,12,Ferry,8,8,Ferry
+2,Bike,9,2,Bike,9,5,Bike
+3,Bikeshare,10,3,Bikeshare,10,5,Bike
+4,Scootershare,11,4,Scootershare,11,4,Walk
+1,Walk,12,1,Walk,12,4,Walk
+7,Other,13,7,Other,13,9,Other
+14,Long distance passenger,14,14,Long distance passenger,14,3,SR3+/passenger
+995,Missing Response,15,995,Missing Response,15,10,Missing Response

@@ -1,0 +1,15 @@
+d_purpose_category,d_purpose_category_num_des,d_purpose_category_des
+-1,-1_Not imputable,Not imputable
+1,1_Home,Home
+2,2_Work,Work
+3,3_Work related,Work related
+4,4_School,School
+5,5_School related,School related
+6,6_Escort,Escort
+7,7_Shop,Shop
+8,8_Meal,Meal
+9,9_Social or recreational,Social or recreational
+10,10_Errand,Errand
+11,11_Change mode,Change mode
+12,12_Overnight,Overnight
+13,13_Other,Other

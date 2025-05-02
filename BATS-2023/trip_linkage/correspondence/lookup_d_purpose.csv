@@ -1,0 +1,42 @@
+d_purpose,d_purpose_des,d_purpose_category,d_purpose_category_des,d_purpose_model,d_purpose_model_des,notes
+1,Went home,1,Home,0,Home,check origin
+10,Went to primary workplace,2,Work,1,work,
+2,"Went to work, work-related, volunteer-related",3,Work related,1,work,
+11,"Went to work-related activity (e.g., meeting, delivery, worksite) ",3,Work related,1,work,
+13,Volunteering,3,Work related,1,work,
+14,Other work-related,3,Work related,1,work,
+30,Grocery shopping,7,Shop,2,shop/other,
+31,Got gas,7,Shop,2,shop/other,
+32,"Other routine shopping (e.g., pharmacy)",7,Shop,2,shop/other,
+36,"Shopping for major item (e.g., furniture, car)",7,Shop,2,shop/other,
+4,"Appointment, shopping, or errands (e.g., gas)",10,Errand,2,shop/other,
+33,"Errand without appointment (e.g., post office)",10,Errand,2,shop/other,
+34,"Medical visit (e.g., doctor, dentist)",10,Errand,2,shop/other,
+37,"Errand with appointment (e.g., haircut)",10,Errand,2,shop/other,
+61,Other errand,10,Errand,2,shop/other,
+-1,Not imputable,-1,Not imputable,2,shop/other,
+50,"Dined out, got coffee, or take-out",8,Meal,3,Soc/Rec,
+7,"Social, leisure, religious, entertainment activity",9,Social or recreational,3,Soc/Rec,
+51,"Exercise or recreation (e.g., gym, jog, bike, walk dog)",9,Social or recreational,3,Soc/Rec,
+52,"Social activity (e.g., visit friends/relatives)",9,Social or recreational,3,Soc/Rec,
+53,"Leisure/entertainment/cultural (e.g., cinema, museum, park)",9,Social or recreational,3,Soc/Rec,
+54,Religious/civic/volunteer activity,9,Social or recreational,3,Soc/Rec,
+56,"Family activity (e.g., watch child's game)",9,Social or recreational,3,Soc/Rec,
+150,"Went to another residence (e.g., someone else's home, second home)",1,Home,0,Home,
+152,"Went to temporary lodging (e.g., hotel, vacation rental)",9,Social or recreational,3,Soc/Rec,
+62,Other social,9,Social or recreational,3,Soc/Rec,
+99,Other reason,13,Other,2,shop/other,
+22,Attend college/university,4,School,4,college,
+23,"Attend other type of class (e.g., cooking class)",4,School,4,college,
+25,Attend vocational education class,4,School,4,college,
+26,Attend daycare or preschool,4,School,6,grade school,
+24,"Attend other education-related activity (e.g., field trip)",5,School related,6,grade school,
+3,Attended school/class,4,School,7,K-12 school to be split,
+21,Attend K-12 school,4,School,7,K-12 school to be split,
+5,"Dropped off, picked up, or accompanied another person",6,Escort,8,shop/other,"if origin school, school"
+44,"Other activity only (e.g., attend meeting, pick-up or drop-off item)",6,Escort,8,shop/other,"if origin school, school"
+45,Pick someone up,6,Escort,8,shop/other,"if origin school, school"
+46,Drop someone off,6,Escort,8,shop/other,"if origin school, school"
+47,"Accompany someone only (e.g., go along for the ride)",6,Escort,8,shop/other,"if origin school, school"
+48,BOTH pick up AND drop off,6,Escort,8,shop/other,"if origin school, school"
+60,"Changed or transferred mode (e.g., waited for bus or exited bus)",11,Change mode,9,N/A,

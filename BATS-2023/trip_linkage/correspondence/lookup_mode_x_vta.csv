@@ -1,0 +1,16 @@
+mode_1_vta,mode_1_vta_des,mode_2_vta,mode_2_vta_des,mode_3_vta,mode_3_vta_des,mode_4_vta,mode_4_vta_des
+1,BART,1,BART,1,BART,1,BART
+2,Commuter Rail,2,Commuter Rail,2,Commuter Rail,2,Commuter Rail
+3,LRT,3,LRT,3,LRT,3,LRT
+4,Express,4,Express,4,Express,4,Express
+5,Local,5,Local,5,Local,5,Local
+6,Ferry,6,Ferry,6,Ferry,6,Ferry
+7,shuttle,7,shuttle,7,shuttle,7,shuttle
+8,school bus,8,school bus,8,school bus,8,school bus
+9,other bus,9,other bus,9,other bus,9,other bus
+10,SR3 + passenger,10,SR3 + passenger,10,SR3 + passenger,10,SR3 + passenger
+11,SR2,11,SR2,11,SR2,11,SR2
+12,Drive Alone,12,Drive Alone,12,Drive Alone,12,Drive Alone
+13,Bike,13,Bike,13,Bike,13,Bike
+14,Walk,14,Walk,14,Walk,14,Walk
+15,other,15,other,15,other,15,other

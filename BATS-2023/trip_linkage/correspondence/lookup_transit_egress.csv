@@ -1,0 +1,13 @@
+transit_egress,transit_egress_des_details,transit_egress_des,transit_egress_vta,transit_egress_vta_des
+7,Drove my own household's vehicle (or motorcycle),Drove my own household's vehicle,1,PNR from
+8,Drove another vehicle (or motorcycle),Drove another vehicle,1,PNR from
+10,Got picked up in another vehicle (or motorcycle),Got picked up in another vehicle,2,KNR from
+6,"Uber/Lyft, taxi, or car service","Uber/Lyft, taxi, or car service",2,KNR from
+9,Got picked up in my own household's vehicle (or motorcycle),Got picked up in my own household's vehicle,2,KNR from
+1,Walked (or jogged/wheelchair),Walked,3,Walk from
+2,Bicycle,Bicycle,3,Walk from
+3,Transferred to another bus,Transferred to another bus,3,Walk from
+4,"Micromobility (e.g., scooter, moped, skateboard)",Micromobility,3,Walk from
+5,"Transferred to other transit (e.g., rail, air)",Transferred to other transit,3,Walk from
+995,Missing Response,Missing Response,4,Other
+997,Other,Other,4,Other

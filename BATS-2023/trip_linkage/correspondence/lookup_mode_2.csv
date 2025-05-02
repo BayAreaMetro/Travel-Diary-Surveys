@@ -1,0 +1,60 @@
+mode_2,mode_2_des,mode_2_vta,mode_2_vta_des
+30,BART,1,BART
+41,"Intercity/Commuter rail (e.g., Altamount ACE, Amtrak, Caltrain)",2,Commuter Rail
+42,Other rail,3,LRT
+68,Cable car or streetcar,3,LRT
+55,Express bus or Transbay bus,4,Express
+61,Rapid transit bus (BRT),4,Express
+23,Local (public) bus,5,Local
+67,"Local (private) bus (e.g., RapidShuttle, SuperShuttle)",5,Local
+78,Public ferry or water taxi,6,Ferry
+53,MUNI Metro,3,LRT
+26,"Other private shuttle/bus (e.g., a hotel's, an airport's)",7,shuttle
+38,University/college shuttle/bus,7,shuttle
+62,Employer-provided shuttle/bus,7,shuttle
+24,School bus,8,school bus
+25,"Intercity bus (e.g., Greyhound, Megabus)",9,other bus
+27,Paratransit/Dial-A-Ride,9,other bus
+28,Other bus,9,other bus
+21,Vanpool,10,SR3 + passenger
+49,"Uber, Lyft, or other smartphone-app ride service",10,SR3 + passenger
+18,"Carshare service (e.g., Zipcar)",11,SR2
+36,"Regular taxi (e.g., Yellow Cab)",11,SR2
+60,"Other hired car service (e.g., black car, limo)",11,SR2
+76,"Carpool match (e.g., Waze Carpool)",11,SR2
+6,Household vehicle 1,12,Drive Alone
+7,Household vehicle 2,12,Drive Alone
+8,Household vehicle 3,12,Drive Alone
+9,Household vehicle 4,12,Drive Alone
+10,Household vehicle 5,12,Drive Alone
+11,Household vehicle 6,12,Drive Alone
+12,Household vehicle 7,12,Drive Alone
+13,Household vehicle 8,12,Drive Alone
+16,Other vehicle in household,12,Drive Alone
+17,Rental car,12,Drive Alone
+22,Other vehicle (not my household's),12,Drive Alone
+33,Car from work,12,Drive Alone
+34,Friend/relative/colleague's car,12,Drive Alone
+43,Skateboard or rollerblade,12,Drive Alone
+45,ATV,12,Drive Alone
+47,Other motorcycle in household,12,Drive Alone
+54,Other motorcycle (not my household's),12,Drive Alone
+59,"Peer-to-peer car rental (e.g., Turo)",12,Drive Alone
+2,Standard bicycle (my household's),13,Bike
+3,"Borrowed bicycle (e.g., a friend's)",13,Bike
+4,Other rented bicycle,13,Bike
+69,Bike-share - standard bicycle,13,Bike
+70,Bike-share - electric bicycle,13,Bike
+82,Electric bicycle (my household's),13,Bike
+1,Walk (or jog/wheelchair),14,Walk
+73,"Moped-share (e.g., Scoot)",14,Walk
+74,Segway,14,Walk
+77,Personal scooter or moped (not shared),14,Walk
+83,"Scooter-share (e.g., Bird, Lime)",14,Walk
+5,Other,15,other
+31,Airplane/helicopter,15,other
+44,Golf cart,15,other
+63,Medical transportation service,15,other
+75,Other,15,other
+80,"Other boat (e.g., kayak)",15,other
+995,Missing Response,15,other

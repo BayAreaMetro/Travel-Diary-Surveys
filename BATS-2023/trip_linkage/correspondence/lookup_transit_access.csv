@@ -1,0 +1,13 @@
+transit_access,transit_access_des_detailed,transit_access_des,transit_access_vta,transit_access_vta_des
+7,Drove and parked my own household's vehicle (or motorcycle),Drove and parked my own household's vehicle,1,PNR to
+8,Drove and parked another vehicle (or motorcycle),Drove and parked another vehicle,1,PNR to
+10,Got dropped off in another vehicle (or motorcycle),Got dropped off in another vehicle,2,KNR to
+9,Got dropped off in my own household's vehicle (or motorcycle),Got dropped off in my own household's vehicle,2,KNR to
+6,"Uber/Lyft, taxi, or car service","Uber/Lyft, taxi, or car service",2,KNR to
+1,Walked (or jogged/wheelchair),Walked,3,Walk to
+4,"Micromobility (e.g., scooter, moped, skateboard)",Micromobility,3,Walk to
+2,Bicycle,Bicycle,3,Walk to
+3,Transferred from another bus,Transferred from another bus,3,Walk to
+5,"Transferred from other transit (e.g., rail, air)",Transferred from other transit,3,Walk to
+997,Other,Other,4,Other
+995,Missing Response,Missing Response,4,Other
