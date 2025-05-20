@@ -8,7 +8,7 @@ suppressMessages(library(tidyverse))
 # Set file directories for input and output
 
 userprofile     <- gsub("\\\\","/", Sys.getenv("USERPROFILE"))
-box_dir         <- file.path(userprofile, "Box", "Modeling and Surveys","Surveys","Travel Diary Survey","Biennial Travel Diary Survey","MTC_RSG_Partner Repository")
+box_dir         <- file.path(userprofile, "Box", "Modeling and Surveys","Surveys","Travel Diary Survey","BATS_2023","MTC_RSG_Partner Repository")
 TDSdata_dir     <- file.path(box_dir,"5.Deliverables","Task 10 - Weighting and Expansion Data Files","WeightedDataset_02212025")
 output_dir      <- file.path(userprofile,"Box","Plan Bay Area 2050+","Performance and Equity","Equity Analysis","Investment Analysis")
 
