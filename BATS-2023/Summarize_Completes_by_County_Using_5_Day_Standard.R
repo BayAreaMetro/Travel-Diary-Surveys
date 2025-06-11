@@ -7,7 +7,7 @@ suppressMessages(library(tidyverse))
 # Set file directories for input and output
 
 userprofile     <- gsub("\\\\","/", Sys.getenv("USERPROFILE"))
-box_dir         <- file.path(userprofile, "Box", "Modeling and Surveys","Surveys","Travel Diary Survey","Biennial Travel Diary Survey","MTC_RSG_Partner Repository")
+box_dir         <- file.path(userprofile, "Box", "Modeling and Surveys","Surveys","Travel Diary Survey","BATS_2023","MTC_RSG_Partner Repository")
 TDSdata_dir     <- file.path(box_dir,"5.Deliverables","Task 10 - Weighting and Expansion Data Files","WeightedDataset_02212025")
 
 
@@ -28,15 +28,22 @@ households   <- read.csv(file=file.path(TDSdata_dir,"hh.csv")) %>%
                               "6097" = "Sonoma")) %>% 
   select(1:9,home_county)
 
-final <- households %>% 
+temp <- households %>% 
   mutate(completion = case_when(
     diary_platform %in% c("browser","call") & num_days_complete>=1   ~ "complete",
     diary_platform == "rmove" & num_days_complete>=5                 ~ "complete",
     TRUE                                                             ~ "incomplete"
-    )) %>% 
+    )) 
+
+final <- temp %>% 
   group_by(home_county,completion) %>% 
   summarize(total=n(),.groups = "drop") %>% 
   pivot_wider(names_from = completion,values_from = total)
 
+incomplete <- temp %>% 
+  filter(completion=="incomplete") %>% 
+  summarize(total=sum(num_days_complete))
 
-Print(final)
+
+print(final)
+print(incomplete)
