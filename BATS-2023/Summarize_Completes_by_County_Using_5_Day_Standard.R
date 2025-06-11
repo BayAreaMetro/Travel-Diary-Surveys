@@ -42,7 +42,7 @@ final <- temp %>%
 
 incomplete <- temp %>% 
   filter(completion=="incomplete") %>% 
-  summarize(total=sum(num_days_complete))
+  summarize(total=sum(num_days_complete),.groups = "drop")
 
 
 print(final)
