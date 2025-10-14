@@ -4,6 +4,7 @@ library(dplyr)
 library(tidyr)
 library(glue)
 library(srvyr)
+library(stringr) # so I can use str_sub()
 
 # -------------------------
 # Read BATS data
@@ -95,9 +96,22 @@ hh2023_df <- hh2023_df %>%
   rename(hhno = hh_id,
          stratification_var = sample_segment)
 
-# Read 2019 household data
+# --- person2023 ---
+person2023_file <- "person.csv"
+person2023_path <- file.path(background_dataset_2023_dir, person2023_file)
+person2023_df <- read_csv(person2023_path)
+
+person2023_df <- person2023_df %>%
+  select(hh_id, person_id, age, employment, telework_freq) %>%
+  mutate(survey_cycle = 2023) %>%
+  rename(hhno = hh_id) %>%
+  mutate(pno = as.numeric(str_sub(person_id, -2, -1)))  
+
+
+# Read 2019 data
 background_dataset_2019_dir <- "M:/Data/HomeInterview/Bay Area Travel Study 2018-2019/Data/Final Version with Imputations/Final Updated Dataset as of 10-18-2021"
 
+# --- hh2019 ---
 hh2019_file <- "hh.tsv"
 hh2019_path <- file.path(background_dataset_2019_dir, hh2019_file)
 hh2019_df <- read_table(hh2019_path)
@@ -108,13 +122,27 @@ hh2019_df <- hh2019_df %>%
   rename(hhno = hh_id,
          stratification_var = sample_stratum)
 
-# Union the two dataframes
+# --- person2019 ---
+person2019_file <- "person.tsv"
+person2019_path <- file.path(background_dataset_2019_dir, person2019_file)
+person2019_df <- read_table(person2019_path)
+
+person2019_df <- person2019_df %>%
+  select(hh_id, person_id, age, employment, telework_freq) %>%
+  mutate(survey_cycle = 2019) %>%
+  rename(hhno = hh_id) %>%
+  mutate(pno = as.numeric(str_sub(person_id, -2, -1)))  
+
+# Union the two cycles
 hh_2019_2023_df <- bind_rows(hh2019_df, hh2023_df)
+person_2019_2023_df <- bind_rows(person2019_df, person2023_df)
 
 # Join to LinkedTrips_2019_2023_df
 LinkedTrips_2019_2023_df <- LinkedTrips_2019_2023_df %>%
   left_join(hh_2019_2023_df, by = c("hhno", "survey_cycle"))
 
+LinkedTrips_2019_2023_df <- LinkedTrips_2019_2023_df %>%
+  left_join(person_2019_2023_df, by = c("hhno", "pno", "survey_cycle"))
 
 # -------------------------
 # Label the data
@@ -171,6 +199,13 @@ LinkedTrips_2019_2023_df <- LinkedTrips_2019_2023_df %>%
     TRUE ~ NA_character_
   ))
 
+# Add Commuted_on_travel_day variable
+# For each hhno, pno, and day: if at least one trip has dpurp == 1 (WORK), 
+# then Commuted_on_travel_day = 1, otherwise 0
+LinkedTrips_2019_2023_df <- LinkedTrips_2019_2023_df %>%
+  group_by(hhno, pno, day) %>%
+  mutate(Commuted_on_travel_day = as.integer(any(dpurp == 1))) %>%
+  ungroup()
 
 # -------------------------
 # Calculate shares
@@ -274,6 +309,7 @@ summarize_for_attr <- function(survey_data, summary_col, strata_vars = c("survey
         summary_level = summary_level,
         summary_col = summary_col_str
       ) %>%
+      # Join with actual unweighted counts
       left_join(
         actual_counts,
         by = setNames(c(summary_level, summary_col_str), c(summary_level, summary_col_str))
@@ -283,7 +319,8 @@ summarize_for_attr <- function(survey_data, summary_col, strata_vars = c("survey
         unweighted_count = unweighted_count_actual
       )
     
-    # Apply estimate reliability criteria (same as transit survey)
+    # Apply criteria for poor estimate reliability 
+    # Same as: https://github.com/BayAreaMetro/transit-passenger-surveys/blob/master/summaries/summarize_snapshot_2023_for_dashboard.R)
     srv_results <- srv_results %>%
       mutate(
         unweighted_count = replace_na(unweighted_count, 0),
@@ -325,16 +362,27 @@ summarize_for_attr <- function(survey_data, summary_col, strata_vars = c("survey
 }
 
 # Summarize mode (as 4 categories)
-mode4cat_summary <- summarize_for_attr(LinkedTrips_2019_2023_df, mode4cat_label)
+mode4cat_summary <- summarize_for_attr(LinkedTrips_2019_2023_df, mode4cat_label) %>%
+  mutate(universe = "All trips")
+
+# Summarize mode (as 4 categories) by those commuted that day
+mode4cat_Commuted_summary <- summarize_for_attr(LinkedTrips_2019_2023_df %>% filter(employment == 1 & Commuted_on_travel_day == 1), mode4cat_label) %>%
+  mutate(universe = "Trips by full-time employed persons who commuted that day")
+
+# Summarize mode (as 4 categories) by those commuted that day
+mode4cat_NotCommuted_summary <- summarize_for_attr(LinkedTrips_2019_2023_df %>% filter(employment == 1 & Commuted_on_travel_day == 0), mode4cat_label) %>%
+  mutate(universe = "Trips by full-time employed persons who did not commute that day")  
 
 # Summarize mode
-mode_summary <- summarize_for_attr(LinkedTrips_2019_2023_df, mode_label)
+mode_summary <- summarize_for_attr(LinkedTrips_2019_2023_df, mode_label) %>%
+  mutate(universe = "All trips")
 
 # Summarize destination purpose
-dpurp_summary <- summarize_for_attr(LinkedTrips_2019_2023_df, dpurp_label)
+dpurp_summary <- summarize_for_attr(LinkedTrips_2019_2023_df, dpurp_label) %>%
+  mutate(universe = "All trips")
 
 # Combine summaries
-full_summary <- bind_rows(mode4cat_summary, mode_summary, dpurp_summary)
+full_summary <- bind_rows(mode4cat_summary, mode4cat_Commuted_summary, mode4cat_NotCommuted_summary, mode_summary, dpurp_summary)
 
 # Add formatted unweighted count string
 full_summary <- full_summary %>% 
@@ -347,6 +395,7 @@ full_summary <- full_summary %>%
   select(
     survey_cycle,
     summary_col,
+    universe, 
     mode4cat_label,
     mode_label,
     dpurp_label,  
@@ -374,38 +423,11 @@ output_csv <- glue("{working_dir}/summarize_BATS_2019_2023_for_dashboard{format(
 write.csv(full_summary, file = output_csv, row.names = FALSE)
 print(glue("Wrote {nrow(full_summary)} rows to {output_csv}"))
 
-# Create pivot tables for easier viewing
-mode4cat_summary_wide <- mode4cat_summary %>%
-  filter(summary_level == "survey_cycle") %>%
-  select(survey_cycle, mode4cat_label, weighted_share, unweighted_count, estimate_reliability) %>%
-  pivot_wider(
-    names_from = survey_cycle,
-    values_from = c(weighted_share, unweighted_count, estimate_reliability),
-    names_sep = "_"
-  )
-
-mode_summary_wide <- mode_summary %>%
-  filter(summary_level == "survey_cycle") %>%
-  select(survey_cycle, mode_label, weighted_share, unweighted_count, estimate_reliability) %>%
-  pivot_wider(
-    names_from = survey_cycle,
-    values_from = c(weighted_share, unweighted_count, estimate_reliability),
-    names_sep = "_"
-  )
-
-dpurp_summary_wide <- dpurp_summary %>%
-  filter(summary_level == "survey_cycle") %>%
-  select(survey_cycle, dpurp_label, weighted_share, unweighted_count, estimate_reliability) %>%
-  pivot_wider(
-    names_from = survey_cycle,
-    values_from = c(weighted_share, unweighted_count, estimate_reliability),
-    names_sep = "_"
-  )
-
-print("Mode summary by survey cycle:")
-print(mode_summary_wide)
-
-print("Destination purpose summary by survey cycle:")
-print(dpurp_summary_wide)
 
 sink() # to close the log file connection
+
+
+# Write LinkedTrips_2019_2023_df to csv for checking
+#output_trips_csv <- glue("{working_dir}/LinkedTrips_2019_2023.csv")
+#write.csv(LinkedTrips_2019_2023_df, file = output_trips_csv, row.names = FALSE)
+#print(glue("Wrote {nrow(LinkedTrips_2019_2023_df)} rows to {output_trips_csv}"))
