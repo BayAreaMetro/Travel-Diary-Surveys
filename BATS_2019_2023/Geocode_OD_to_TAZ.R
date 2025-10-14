@@ -241,6 +241,65 @@ print("check how many trips did not match to any distance")
 print(summary_trip_noDist)
 cat("\n")
 
+
+
+# -----------
+# Calculate crow fly distance using Haversine formula
+# -----------
+print("Calculating crow fly (straight line) distances using Haversine formula...")
+
+# Haversine formula function
+# Inputs: lon1, lat1, lon2, lat2 in decimal degrees
+# Output: distance in miles
+haversine_distance <- function(lon1, lat1, lon2, lat2) {
+  # Earth's radius in miles
+  R <- 3959
+  
+  # Convert degrees to radians
+  lon1_rad <- lon1 * pi / 180
+  lat1_rad <- lat1 * pi / 180
+  lon2_rad <- lon2 * pi / 180
+  lat2_rad <- lat2 * pi / 180
+  
+  # Haversine formula
+  dlon <- lon2_rad - lon1_rad
+  dlat <- lat2_rad - lat1_rad
+  
+  a <- sin(dlat/2)^2 + cos(lat1_rad) * cos(lat2_rad) * sin(dlon/2)^2
+  c <- 2 * atan2(sqrt(a), sqrt(1-a))
+  
+  distance <- R * c
+  return(distance)
+}
+
+# Calculate crow fly distance for all trips
+LinkedTrips_2019_2023_df <- LinkedTrips_2019_2023_df %>%
+  mutate(
+    crow_fly_miles = haversine_distance(oxco_copy, oyco_copy, dxco_copy, dyco_copy)
+  )
+
+# Summary statistics
+summary_crow_fly <- LinkedTrips_2019_2023_df %>%
+  summarise(
+    total_trips = n(),
+    with_crow_fly = sum(!is.na(crow_fly_miles)),
+    missing_crow_fly = sum(is.na(crow_fly_miles)),
+    mean_distance = round(mean(crow_fly_miles, na.rm = TRUE), 2),
+    median_distance = round(median(crow_fly_miles, na.rm = TRUE), 2),
+    max_distance = round(max(crow_fly_miles, na.rm = TRUE), 2)
+  )
+  
+cat("\n")
+print("Crow fly distance summary:")
+print(summary_crow_fly)
+cat("\n")
+
+# add a new var to cap crow fly miles to 200 miles
+LinkedTrips_2019_2023_df <- LinkedTrips_2019_2023_df %>%
+  mutate(
+    crow_fly_miles_cap200 = pmin(crow_fly_miles, 200)
+  )
+
 # Write LinkedTrips_2019_2023_df to csv for subsequent processes
 output_trips_csv <- glue("{working_dir}/LinkedTrips_2019_2023_withDist.csv")
 write.csv(LinkedTrips_2019_2023_df, file = output_trips_csv, row.names = FALSE)
