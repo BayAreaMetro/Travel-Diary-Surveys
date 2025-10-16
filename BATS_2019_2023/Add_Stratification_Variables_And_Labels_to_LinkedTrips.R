@@ -87,6 +87,63 @@ LinkedTrips_2019_2023_df <- LinkedTrips_2019_2023_df %>%
 LinkedTrips_2019_2023_df <- LinkedTrips_2019_2023_df %>%
   left_join(person_2019_2023_df, by = c("hhno", "pno", "survey_cycle"))
 
+
+# -------------------------
+# Label the data
+# -------------------------
+
+# Label the mode variable
+LinkedTrips_2019_2023_df <- LinkedTrips_2019_2023_df %>%
+  mutate(mode_label = case_when(
+    mode == 0 ~ "OTHER",
+    mode == 1 ~ "WALK",
+    mode == 2 ~ "BIKE",
+    mode == 3 ~ "DA",
+    mode == 4 ~ "HOV2",
+    mode == 5 ~ "HOV3",
+    mode == 6 ~ "WALKTRAN",
+    mode == 7 ~ "DRIVETRAN",
+    mode == 8 ~ "SCHBUS",
+    mode == 9 ~ "TNC",
+    TRUE ~ NA_character_
+  ))
+
+
+# Group the mode variable
+LinkedTrips_2019_2023_df <- LinkedTrips_2019_2023_df %>%
+  mutate(mode4cat_label = case_when(
+    mode == 0 ~ "Bike and Other",
+    mode == 1 ~ "Walk",
+    mode == 2 ~ "Bike and Other",
+    mode == 3 ~ "Drive",
+    mode == 4 ~ "Drive",
+    mode == 5 ~ "Drive",
+    mode == 6 ~ "Transit",
+    mode == 7 ~ "Transit",
+    mode == 8 ~ "Transit",
+    mode == 9 ~ "Drive",
+    TRUE ~ NA_character_
+  ))
+
+
+# Label the dpurp variable
+LinkedTrips_2019_2023_df <- LinkedTrips_2019_2023_df %>%
+  mutate(dpurp_label = case_when(
+    dpurp == 0 ~ "HOME",
+    dpurp == 1 ~ "WORK",
+    dpurp == 2 ~ "SCHOOL",
+    dpurp == 3 ~ "ESCORT",
+    dpurp == 4 ~ "PERS_BUS",
+    dpurp == 5 ~ "SHOP",
+    dpurp == 6 ~ "MEAL",
+    dpurp == 7 ~ "SOCREC",
+    dpurp == 10 ~ "CHANGE_MODE",
+    dpurp == 11 ~ "OTHER",
+    dpurp == -1 ~ "MISSING",
+    TRUE ~ NA_character_
+  ))
+
+
 # Write LinkedTrips_2019_2023_df to csv for subsequent processes
 output_trips_csv <- glue("{working_dir}/LinkedTrips_2019_2023_withDist_withStrata.csv")
 write.csv(LinkedTrips_2019_2023_df, file = output_trips_csv, row.names = FALSE)
