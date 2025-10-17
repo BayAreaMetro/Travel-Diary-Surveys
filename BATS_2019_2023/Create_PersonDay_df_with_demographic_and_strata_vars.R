@@ -186,24 +186,53 @@ LinkedTrips_2019_2023_df <- LinkedTrips_2019_2023_df %>%
 # Collapse LinkedTrips_2019_2023_df so it becomes a person day file
 # Group by hhno, pno, day and indicate if the person commuted on that day
 
-# delete
-#PersonDay_2019_2023_commutedflag_df <- LinkedTrips_2019_2023_df %>%
-#  group_by(hhno, pno, day, survey_cycle) %>%
-#  summarise(
-#    commuted_on_travel_day    = as.integer(any(dpurp_label == "WORK", na.rm = TRUE)),
-#  )
+# -------------------------
+# Use a bounding box to clean the distance data
+# -------------------------
+#The northernmost point of Yuba County: 39.639458, -121.009478
+#The southernmost point of Monterey County: 35.795190, -121.347789
+#The easternmost point of El Dorado County: 38.870630, -119.877219
+#The westernmost point of Sonoma County: 38.768395, -123.533743
+
+# Create indicator variables in the data frame
+LinkedTrips_2019_2023_df$OxInMegaRegion <- ifelse(
+  LinkedTrips_2019_2023_df$oxco_copy >= -123.533743 & 
+  LinkedTrips_2019_2023_df$oxco_copy <= -119.877219, 1, 0)
+
+LinkedTrips_2019_2023_df$DxInMegaRegion <- ifelse(
+  LinkedTrips_2019_2023_df$dxco_copy >= -123.533743 & 
+  LinkedTrips_2019_2023_df$dxco_copy <= -119.877219, 1, 0)
+
+LinkedTrips_2019_2023_df$OyInMegaRegion <- ifelse(
+  LinkedTrips_2019_2023_df$oyco_copy >= 35.795190 & 
+  LinkedTrips_2019_2023_df$oyco_copy <= 39.639458, 1, 0)
+
+LinkedTrips_2019_2023_df$DyInMegaRegion <- ifelse(
+  LinkedTrips_2019_2023_df$dyco_copy >= 35.795190 & 
+  LinkedTrips_2019_2023_df$dyco_copy <= 39.639458, 1, 0)
+
+LinkedTrips_2019_2023_df$OD_In_MegaRegion <- ifelse(
+  LinkedTrips_2019_2023_df$OxInMegaRegion == 1 & 
+  LinkedTrips_2019_2023_df$OyInMegaRegion == 1 & 
+  LinkedTrips_2019_2023_df$DxInMegaRegion == 1 & 
+  LinkedTrips_2019_2023_df$DyInMegaRegion == 1, 1, 0)
+
+# -------------------------
 
 # Group by hhno, pno, day and sum distances
 PersonDayFromLinkedTrips_2019_2023_df <- LinkedTrips_2019_2023_df %>%
   group_by(hhno, pno, day, survey_cycle) %>%
   summarise(
+    PersonDay_In_MegaRegion       = ifelse(all(OD_In_MegaRegion == 1), 1, 0),
+ 
     personDay_in_LinkedTripFile   = 1, # for tracking if the PersonDay file includes PersonDay with no travel 
     commuted_on_travel_day        = as.integer(any(dpurp_label == "WORK", na.rm = TRUE)),
 
     personDay_dist_in_miles       = sum(crow_fly_miles_cap200, na.rm = TRUE),
-    personDay_dist_non_work_miles = sum(crow_fly_miles_cap200[dpurp_label %in% c("PERS_BUS", "SHOP", "MEAL", "SOCREC")], na.rm = TRUE),
+    personDay_dist_PbShMeSo_miles = sum(crow_fly_miles_cap200[dpurp_label %in% c("PERS_BUS", "SHOP", "MEAL", "SOCREC")], na.rm = TRUE),
     num_trips                     = n(),
-    num_disc_trips = sum(dpurp_label %in% c("SHOP", "SOCREC"), na.rm = TRUE),
+    num_PbShMeSo_trips = sum(dpurp_label %in% c("PERS_BUS", "SHOP", "MEAL", "SOCREC"), na.rm = TRUE),
+    num_ShMeSo_trips = sum(dpurp_label %in% c("SHOP", "MEAL", "SOCREC"), na.rm = TRUE),
 
     # Number of trips by purpose
     num_trips_HOME                = sum(dpurp_label == "HOME", na.rm = TRUE),
@@ -232,9 +261,10 @@ ProcessedPersonDays_2019_2023_df <- ProcessedPersonDays_2019_2023_df %>%
   mutate(
     commuted_on_travel_day = replace_na(commuted_on_travel_day, 0),
     personDay_dist_in_miles = replace_na(personDay_dist_in_miles, 0),
-    personDay_dist_non_work_miles = replace_na(personDay_dist_non_work_miles, 0),
+    personDay_dist_PbShMeSo_miles = replace_na(personDay_dist_PbShMeSo_miles, 0),
     num_trips = replace_na(num_trips, 0),
-    num_disc_trips = replace_na(num_disc_trips, 0),
+    num_PbShMeSo_trips = replace_na(num_PbShMeSo_trips, 0),
+    num_ShMeSo_trips = replace_na(num_ShMeSo_trips, 0),
     num_trips_HOME = replace_na(num_trips_HOME, 0),
     num_trips_WORK = replace_na(num_trips_WORK, 0),
     num_trips_SCHOOL = replace_na(num_trips_SCHOOL, 0),
@@ -245,6 +275,32 @@ ProcessedPersonDays_2019_2023_df <- ProcessedPersonDays_2019_2023_df %>%
     num_trips_SOCREC = replace_na(num_trips_SOCREC, 0),
     num_trips_OTHER = replace_na(num_trips_OTHER, 0)
   )
+
+# -------------------------------------
+# drop if PersonDay_In_MegaRegion=0
+# --------------------------------------
+
+# Store numbers before filtering
+original_rows <- nrow(ProcessedPersonDays_2019_2023_df)
+original_pdexpfac <- sum(ProcessedPersonDays_2019_2023_df$pdexpfac, na.rm = TRUE)
+
+# Filter to drop only rows where PersonDay_In_MegaRegion = 0 (keeps 1 and NA)
+ProcessedPersonDays_2019_2023_df <- ProcessedPersonDays_2019_2023_df %>%
+  filter(PersonDay_In_MegaRegion != 0 | is.na(PersonDay_In_MegaRegion))
+
+# Calculate numbers after filtering
+new_rows <- nrow(ProcessedPersonDays_2019_2023_df)
+new_pdexpfac <- sum(ProcessedPersonDays_2019_2023_df$pdexpfac, na.rm = TRUE)
+
+# Report results
+cat("Rows dropped:", original_rows - new_rows, "\n")
+cat("Original rows:", original_rows, "\n")
+cat("Remaining rows:", new_rows, "\n\n")
+cat("Original pdexpfac:", format(original_pdexpfac, big.mark = ","), "\n")
+cat("Remaining pdexpfac:", format(new_pdexpfac, big.mark = ","), "\n")
+cat("pdexpfac dropped:", format(original_pdexpfac - new_pdexpfac, big.mark = ","), "\n")
+
+# --------------------------------------
 
 # Write ProcessedPersonDays_2019_2023_df  to csv for subsequent processes
 output_trips_csv <- glue("{working_dir}/ProcessedPersonDays_2019_2023.csv")
