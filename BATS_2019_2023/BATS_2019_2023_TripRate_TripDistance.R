@@ -1,7 +1,6 @@
 # -------------------------
 # This trip rate and trip distance analysis is a person-day level analysis
-# The universe is full-time workers who worked
-# i.e., the person on that they have either made a work trip, or telecommuted from home (for 4+ hours)
+# The universe is full-time workers 
 # -------------------------
 
 
@@ -22,8 +21,7 @@ print(glue("\n=== Log Entry for person-day trip rate and trip distance calculati
 cat("\n") # print a clean blank line
 
 # -------------------------
-# The universe is a person-day level dataset, for full-time workers who worked
-# i.e., the person on that they have either made a work trip, or telecommuted from home (for 4+ hours)
+# The universe is a person-day level dataset, for full-time workers
 # -------------------------
 
 # Run the script that create the person-day level dataset
@@ -32,16 +30,32 @@ source("E:/GitHub/Travel-Diary-Surveys/BATS_2019_2023/Create_PersonDay_df_with_d
 # PersonDays_2019_2023_df <- read_csv("M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Processed/BATS2019_2023/ProcessedPersonDays_2019_2023.csv")
 
 #-----------------------------------------
-# Select only full time workers who worked
-# This excludes people who took a sick day or the day off
+# Create 4 "commute categories" 
+# - full time workers who commuted
+# - full time workers who telecommuted (4+ hours)
+# - full time workers who telecommuted (less than 4 hours)
+# - full time workres who didn't work (took time off or sick day)
+#
+# if someone both commuted and telecommuted, they will be counted as commuted
 #-----------------------------------------
-PersonDays_2019_2023_FTworkersWorked_df <- ProcessedPersonDays_2019_2023_df %>%
-  filter(employment == 1, telecommute_time >= 240 | commuted_on_travel_day)
+ProcessedPersonDays_2019_2023_df <- ProcessedPersonDays_2019_2023_df %>%
+  mutate(
+    commute_cat = case_when(
+      employment == 1 & commuted_on_travel_day == 1 ~ "1. Commuted",
+      employment == 1 & telecommute_time >= 240 & commuted_on_travel_day == 0 ~ "2. Telecommuted 4+ hours",
+      employment == 1 & telecommute_time > 0 & commuted_on_travel_day == 0 ~ "3. Telecommuted <4 hours",
+      employment == 1 & telecommute_time == 0 & commuted_on_travel_day == 0 ~ "4. Did not work",
+      TRUE ~ NA_character_  # All other cases get NA
+    )
+  ) 
+
+PersonDays_2019_2023_FTworkers_df <- ProcessedPersonDays_2019_2023_df %>%
+  filter(!is.na(commute_cat))
 
 # Write PersonDays_2019_2023_df to csv for subsequent processes
-output_trips_csv <- glue("{working_dir}/PersonDays_2019_2023_FTworkersWorked.csv")
-write.csv(PersonDays_2019_2023_FTworkersWorked_df, file = output_trips_csv, row.names = FALSE)
-print(glue("Wrote {nrow(PersonDays_2019_2023_FTworkersWorked_df)} rows to {output_trips_csv}"))
+output_trips_csv <- glue("{working_dir}/PersonDays_2019_2023_FTworkers.csv")
+write.csv(PersonDays_2019_2023_FTworkers_df, file = output_trips_csv, row.names = FALSE)
+print(glue("Wrote {nrow(PersonDays_2019_2023_FTworkers_df)} rows to {output_trips_csv}"))
 
 
 # -------------------------
@@ -50,7 +64,7 @@ print(glue("Wrote {nrow(PersonDays_2019_2023_FTworkersWorked_df)} rows to {outpu
 library(srvyr)
 
 # Create survey design object
-srv_design <- PersonDays_2019_2023_FTworkersWorked_df %>%
+srv_design <- PersonDays_2019_2023_FTworkers_df %>%
   as_survey_design(
     weights = pdexpfac,
     strata = c(survey_cycle, stratification_var)
@@ -59,7 +73,7 @@ srv_design <- PersonDays_2019_2023_FTworkersWorked_df %>%
 
 # Mean distance (and SE/CI/CV) by subgroup
 srv_results_dist <- srv_design %>%
-  group_by(commuted_on_travel_day, survey_cycle) %>%
+  group_by(commute_cat, survey_cycle) %>%
   summarize(
     n_unweighted = unweighted(n()),
     n_weighted = survey_total(),
@@ -67,17 +81,17 @@ srv_results_dist <- srv_design %>%
   )
 
 # Mean non-work distance (and SE/CI/CV) by subgroup
-srv_results_non_work_dist <- srv_design %>%
-  group_by(commuted_on_travel_day, survey_cycle) %>%
+srv_results_PbShMeSo_dist <- srv_design %>%
+  group_by(commute_cat, survey_cycle) %>%
   summarize(
     n_unweighted = unweighted(n()),
     n_weighted = survey_total(),
-    mean_non_work_dist = survey_mean(personDay_dist_non_work_miles, vartype = c("se", "ci", "cv"))
+    mean_PbShMeSo_dist = survey_mean(personDay_dist_PbShMeSo_miles, vartype = c("se", "ci", "cv"))
   )
 
 # Mean number of trips (and SE/CI/CV) by subgroup
 srv_results_trips <- srv_design %>%
-  group_by(commuted_on_travel_day, survey_cycle) %>%
+  group_by(commute_cat, survey_cycle) %>%
   summarize(
     n_unweighted = unweighted(n()),
     n_weighted = survey_total(),
@@ -85,17 +99,26 @@ srv_results_trips <- srv_design %>%
   )
 
 # Mean number of discretionary trips (and SE/CI/CV) by subgroup
-srv_results_disc_trips <- srv_design %>%
-  group_by(commuted_on_travel_day, survey_cycle) %>%
+srv_results_PbShMeSo_trips <- srv_design %>%
+  group_by(commute_cat, survey_cycle) %>%
   summarize(
     n_unweighted = unweighted(n()),
     n_weighted = survey_total(),
-    mean_num_disc_trips = survey_mean(num_disc_trips, vartype = c("se", "ci", "cv"))
+    mean_num_PbShMeSo_trips = survey_mean(num_PbShMeSo_trips, vartype = c("se", "ci", "cv"))
   )
+
+# Mean number of discretionary trips (and SE/CI/CV) by subgroup
+srv_results_ShMeSo_trips <- srv_design %>%
+  group_by(commute_cat, survey_cycle) %>%
+  summarize(
+    n_unweighted = unweighted(n()),
+    n_weighted = survey_total(),
+    mean_num_ShMeSo_trips = survey_mean(num_ShMeSo_trips, vartype = c("se", "ci", "cv"))
+  )  
 
 # Mean number of HOME trips (and SE/CI/CV) by subgroup
 srv_results_trips_HOME <- srv_design %>%
-  group_by(commuted_on_travel_day, survey_cycle) %>%
+  group_by(commute_cat, survey_cycle) %>%
   summarize(
     n_unweighted = unweighted(n()),
     n_weighted = survey_total(),
@@ -104,7 +127,7 @@ srv_results_trips_HOME <- srv_design %>%
 
 # Mean number of WORK trips (and SE/CI/CV) by subgroup
 srv_results_trips_WORK <- srv_design %>%
-  group_by(commuted_on_travel_day, survey_cycle) %>%
+  group_by(commute_cat, survey_cycle) %>%
   summarize(
     n_unweighted = unweighted(n()),
     n_weighted = survey_total(),
@@ -113,7 +136,7 @@ srv_results_trips_WORK <- srv_design %>%
 
 # Mean number of SCHOOL trips (and SE/CI/CV) by subgroup
 srv_results_trips_SCHOOL <- srv_design %>%
-  group_by(commuted_on_travel_day, survey_cycle) %>%
+  group_by(commute_cat, survey_cycle) %>%
   summarize(
     n_unweighted = unweighted(n()),
     n_weighted = survey_total(),
@@ -122,7 +145,7 @@ srv_results_trips_SCHOOL <- srv_design %>%
 
 # Mean number of ESCORT trips (and SE/CI/CV) by subgroup
 srv_results_trips_ESCORT <- srv_design %>%
-  group_by(commuted_on_travel_day, survey_cycle) %>%
+  group_by(commute_cat, survey_cycle) %>%
   summarize(
     n_unweighted = unweighted(n()),
     n_weighted = survey_total(),
@@ -131,7 +154,7 @@ srv_results_trips_ESCORT <- srv_design %>%
 
 # Mean number of PERS_BUS trips (and SE/CI/CV) by subgroup
 srv_results_trips_PERS_BUS <- srv_design %>%
-  group_by(commuted_on_travel_day, survey_cycle) %>%
+  group_by(commute_cat, survey_cycle) %>%
   summarize(
     n_unweighted = unweighted(n()),
     n_weighted = survey_total(),
@@ -140,7 +163,7 @@ srv_results_trips_PERS_BUS <- srv_design %>%
 
 # Mean number of SHOP trips (and SE/CI/CV) by subgroup
 srv_results_trips_SHOP <- srv_design %>%
-  group_by(commuted_on_travel_day, survey_cycle) %>%
+  group_by(commute_cat, survey_cycle) %>%
   summarize(
     n_unweighted = unweighted(n()),
     n_weighted = survey_total(),
@@ -149,7 +172,7 @@ srv_results_trips_SHOP <- srv_design %>%
 
 # Mean number of MEAL trips (and SE/CI/CV) by subgroup
 srv_results_trips_MEAL <- srv_design %>%
-  group_by(commuted_on_travel_day, survey_cycle) %>%
+  group_by(commute_cat, survey_cycle) %>%
   summarize(
     n_unweighted = unweighted(n()),
     n_weighted = survey_total(),
@@ -158,7 +181,7 @@ srv_results_trips_MEAL <- srv_design %>%
 
 # Mean number of SOCREC trips (and SE/CI/CV) by subgroup
 srv_results_trips_SOCREC <- srv_design %>%
-  group_by(commuted_on_travel_day, survey_cycle) %>%
+  group_by(commute_cat, survey_cycle) %>%
   summarize(
     n_unweighted = unweighted(n()),
     n_weighted = survey_total(),
@@ -167,7 +190,7 @@ srv_results_trips_SOCREC <- srv_design %>%
 
 # Mean number of OTHER trips (and SE/CI/CV) by subgroup
 srv_results_trips_OTHER <- srv_design %>%
-  group_by(commuted_on_travel_day, survey_cycle) %>%
+  group_by(commute_cat, survey_cycle) %>%
   summarize(
     n_unweighted = unweighted(n()),
     n_weighted = survey_total(),
@@ -177,9 +200,10 @@ srv_results_trips_OTHER <- srv_design %>%
 
 # Display all results
 srv_results_dist
-srv_results_non_work_dist
+srv_results_PbShMeSo_dist
 srv_results_trips
-srv_results_disc_trips
+srv_results_PbShMeSo_trips
+srv_results_ShMeSo_trips
 srv_results_trips_HOME
 srv_results_trips_WORK
 srv_results_trips_SCHOOL
@@ -199,13 +223,15 @@ process_survey_result <- function(srv_result, summary_col_name) {
   srv_result %>%
     mutate(
       summary_col = summary_col_name,
-      universe = case_when(
-        commuted_on_travel_day == 1 ~ "Trips by full-time employed persons who commuted that day",
-        commuted_on_travel_day == 0 ~ "Trips by full-time employed persons who telecommuted that day",
+      chart_label = paste(survey_cycle, " - ", case_when(
+        commute_cat == "1. Commuted"              ~ "Commuted",
+        commute_cat == "2. Telecommuted 4+ hours" ~ "Telecommuted 4+ hours",
+        commute_cat == "3. Telecommuted <4 hours" ~ "Telecommuted <4 hours",
+        commute_cat == "4. Did not work"          ~ "Did not work",
         TRUE ~ "Unknown"
-      )
+      ))
     ) %>%
-    select(-commuted_on_travel_day)
+    select(-commute_cat)
 }
 
 # Process each result and standardize column names
@@ -214,20 +240,25 @@ summary_list <- list(
     rename(mean = mean_dist, se = mean_dist_se, ci_lower_95 = mean_dist_low, 
            ci_upper_95 = mean_dist_upp, coeff_of_var = mean_dist_cv),
   
-  process_survey_result(srv_results_non_work_dist, "personDay_dist_non_work_miles") %>%
-    rename(mean = mean_non_work_dist, se = mean_non_work_dist_se, 
-           ci_lower_95 = mean_non_work_dist_low, ci_upper_95 = mean_non_work_dist_upp, 
-           coeff_of_var = mean_non_work_dist_cv),
+  process_survey_result(srv_results_PbShMeSo_dist, "personDay_dist_PbShMeSo_miles") %>%
+    rename(mean = mean_PbShMeSo_dist, se = mean_PbShMeSo_dist_se, 
+           ci_lower_95 = mean_PbShMeSo_dist_low, ci_upper_95 = mean_PbShMeSo_dist_upp, 
+           coeff_of_var = mean_PbShMeSo_dist_cv),
   
   process_survey_result(srv_results_trips, "num_trips") %>%
     rename(mean = mean_num_trips, se = mean_num_trips_se, 
            ci_lower_95 = mean_num_trips_low, ci_upper_95 = mean_num_trips_upp, 
            coeff_of_var = mean_num_trips_cv),
   
-  process_survey_result(srv_results_disc_trips, "num_disc_trips") %>%
-    rename(mean = mean_num_disc_trips, se = mean_num_disc_trips_se, 
-           ci_lower_95 = mean_num_disc_trips_low, ci_upper_95 = mean_num_disc_trips_upp, 
-           coeff_of_var = mean_num_disc_trips_cv),
+  process_survey_result(srv_results_PbShMeSo_trips, "num_PbShMeSo_trips") %>%
+    rename(mean = mean_num_PbShMeSo_trips, se = mean_num_PbShMeSo_trips_se, 
+           ci_lower_95 = mean_num_PbShMeSo_trips_low, ci_upper_95 = mean_num_PbShMeSo_trips_upp, 
+           coeff_of_var = mean_num_PbShMeSo_trips_cv),
+
+    process_survey_result(srv_results_ShMeSo_trips, "num_ShMeSo_trips") %>%
+    rename(mean = mean_num_ShMeSo_trips, se = mean_num_ShMeSo_trips_se, 
+           ci_lower_95 = mean_num_ShMeSo_trips_low, ci_upper_95 = mean_num_ShMeSo_trips_upp, 
+           coeff_of_var = mean_num_ShMeSo_trips_cv),         
   
   process_survey_result(srv_results_trips_HOME, "num_trips_HOME") %>%
     rename(mean = mean_num_trips_HOME, se = mean_num_trips_HOME_se, 
@@ -299,12 +330,13 @@ comprehensive_summary <- comprehensive_summary %>%
     weighted_count = round(n_weighted, 0)
   )
 
-# Reorder columns to match requested output
+# Reorder columns 
 comprehensive_summary <- comprehensive_summary %>%
   select(
-    survey_cycle,
     summary_col,
-    universe,
+    survey_cycle,
+    commute_cat,
+    chart_label,
     mean,
     se,
     ci_95,
@@ -315,7 +347,7 @@ comprehensive_summary <- comprehensive_summary %>%
     unweighted_count,
     weighted_count
   ) %>%
-  arrange(survey_cycle, summary_col, universe)
+  arrange(summary_col, survey_cycle, commute_cat)
 
 # Display the comprehensive summary table
 print("\n=== Comprehensive Summary Table ===")
