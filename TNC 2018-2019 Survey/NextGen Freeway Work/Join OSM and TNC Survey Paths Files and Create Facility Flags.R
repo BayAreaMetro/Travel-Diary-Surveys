@@ -8,12 +8,13 @@ library(tidyverse)
 
 # Input segment directory
 
-dir1        <- "M:/Data/HomeInterview/TNC Survey/SFCTA Map Matching/NextGen Freeway Project"
+#dir1        <- "M:/Data/HomeInterview/TNC Survey/SFCTA Map Matching/NextGen Freeway Project"
+dir1        <- "M:/Data/HomeInterview/Bay Area Travel Study 2018-2019/Map Matching/Trip Trace Matching"
 segment_in  <- file.path(dir1,"TNC_Survey_OSM_Network")
 
 # Bring in TNC Survey paths file
 
-paths_in <- "M:/Data/HomeInterview/TNC Survey/SFCTA Map Matching/TNC_Survey_Paths.RData"
+paths_in <- "M:/Data/HomeInterview/Bay Area Travel Study 2018-2019/Map Matching/TNC_Survey_Paths.RData"
 paths <- load(paths_in)
 
 TNC_Survey_Paths <- TNC_Survey_Paths %>% 
@@ -26,6 +27,9 @@ TNC_Survey_Paths <- TNC_Survey_Paths %>%
 
 Al_SF_80_PlazaTo101 <- read.csv(file.path(segment_in,"Al_SF_80_PlazaTo101.csv")) %>% 
   mutate(facility_links="Al_SF_80_PlazaTo101")
+
+Al_SF_80_BayBridge <- read.csv(file.path(segment_in,"Al_SF_80_BayBridge.csv")) %>% 
+  mutate(facility_links="Al_SF_80_BayBridge")
 
 SF_101_80ToSM <- read.csv(file.path(segment_in,"SF_101_80ToSM.csv")) %>% 
   mutate(facility_links="SF_101_80ToSM")
@@ -95,6 +99,7 @@ Mar_Son_101_12To580 <- read.csv(file.path(segment_in,"Mar_Son_101_12To580.csv"))
 
 all_segments <- bind_rows(
   Al_SF_80_PlazaTo101,
+  Al_SF_80_BayBridge,
   SF_101_80ToSM,
   SF_280_StartToSM,
   SM_101_SFToSC,
@@ -122,6 +127,7 @@ all_segments <- bind_rows(
 # Remove individual data frames to clean up workspace
 
 rm(Al_SF_80_PlazaTo101,
+   Al_SF_80_BayBridge,
    SF_101_80ToSM,
    SF_280_StartToSM,
    SM_101_SFToSC,
@@ -162,6 +168,7 @@ sum_links <- joined %>%
   pivot_wider(names_from = facility_links,values_from = total,values_fill = 0) %>% 
   select(hh_id,person_id,trip_id,
          Al_SF_80_PlazaTo101,
+         Al_SF_80_BayBridge,
          SF_101_80ToSM,
          SF_280_StartToSM,
          SM_101_SFToSC,
@@ -190,5 +197,5 @@ final <- sum_links %>%
              ~if_else(.>=1,1,as.double(.)))
 
 # Export CSV of trips
-
-write.csv(final,file.path(segment_in,"TNC Survey Trips Per Facility.csv"),row.names = FALSE)
+output_location <- "E:/Box/Modeling and Surveys/Surveys/Travel Diary Survey/BATS_2023/Analysis/BATS_2019vs2023"
+write.csv(final,file.path(output_location,"TNC Survey Trips Per Facility.csv"),row.names = FALSE)
