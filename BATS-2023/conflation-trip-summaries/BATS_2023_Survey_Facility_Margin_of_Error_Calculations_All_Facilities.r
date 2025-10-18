@@ -15,11 +15,11 @@ library(spatstat)
 
 # Set file directories for input and output
 
-USERPROFILE    <- gsub("\\\\","/", Sys.getenv("USERPROFILE"))
-BOX_dir1       <- file.path(USERPROFILE, "Box", "Modeling and Surveys","Surveys","Travel Diary Survey")
-Box_dir2       <- file.path(BOX_dir1,"Biennial Travel Diary Survey","Data","2023")
+#USERPROFILE    <- gsub("\\\\","/", Sys.getenv("USERPROFILE"))
+BOX_dir1       <- file.path("E:", "Box", "Modeling and Surveys","Surveys","Travel Diary Survey")
+Box_dir2       <- file.path(BOX_dir1,"BATS_2023","Data","2023")
 conflation_loc <- file.path(Box_dir2,"Survey Conflation")
-data_loc       <- "M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Full Weighted 2023 Dataset/WeightedDataset_09112024"
+data_loc       <- "M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Full Weighted 2023 Dataset/WeightedDataset_02212025"
 output         <- file.path(data_loc,"Summaries")
 
 # Bring in BATS 2023 survey files
@@ -84,7 +84,7 @@ load (PERSON_RDATA)
 # Use PUMS 2022 adjustment variable to inflation-correct values for 2022 (data collected over 12 months, so provides a constant dollar value)
 # Remove group quarters and vacant housing
 
-bay_income <- hbayarea22  %>% 
+bay_income <- hbayarea  %>% 
   mutate(adjustment = ADJINC/1000000,                        # Adjustment variable is 7 digits
          income=HINCP*adjustment)  %>%  
   filter(!is.na(income)) %>%                                 # Remove records with no income (vacant houses, group quarters)
@@ -111,7 +111,7 @@ mutate(
   mutate(PUMS_household_share=total/sum(total)) %>% 
   ungroup()
 
-bay_poverty <- pbayarea22 %>% 
+bay_poverty <- pbayarea %>% 
   select(County_Name,POVPIP,PWGTP) %>% 
   filter(!is.na(POVPIP)) %>% 
   mutate(poverty_status=if_else(POVPIP<200,"under_2x_poverty","over_2x_poverty")) %>% 
@@ -122,7 +122,7 @@ bay_poverty <- pbayarea22 %>%
 
 # Get Bay Area race totals from PUMS person file for comparing to freeway facilities/bridges
 
-race22 <- pbayarea22 %>% 
+race22 <- pbayarea %>% 
   mutate(race_recoded=case_when(
     HISP>1               ~"Hispanic",
     HISP==1 & RAC1P==1   ~"White",

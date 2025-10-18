@@ -12,11 +12,10 @@ suppressMessages(library(tidyverse))
 
 # Set file directories for input and output
 
-USERPROFILE    <- gsub("\\\\","/", Sys.getenv("USERPROFILE"))
-BOX_dir1       <- file.path(USERPROFILE, "Box", "Modeling and Surveys","Surveys","Travel Diary Survey")
-Box_dir2       <- file.path(BOX_dir1,"Biennial Travel Diary Survey","Data","2023")
+BOX_dir1       <- file.path("E:", "Box", "Modeling and Surveys","Surveys","Travel Diary Survey")
+Box_dir2       <- file.path(BOX_dir1,"BATS_2023","Data","2023")
 conflation_loc <- file.path(Box_dir2,"Survey Conflation")
-data_loc       <- "M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Full Weighted 2023 Dataset/WeightedDataset_09112024"
+data_loc       <- "M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Full Weighted 2023 Dataset/WeightedDataset_02212025"
 output         <- file.path(data_loc,"Summaries")
 
 # Bring in BATS 2023 survey files
@@ -56,7 +55,9 @@ working <- left_join(facility_flag,trip %>% select(trip_id,hh_id,depart_hour,tri
 # Summarize poverty_status variable
 # Use operating period for express lanes (5a-8p)
 
-exp_operating <- c(05:19)
+AM peak period, 6 am to 10 am; PM peak period - 3 pm to 7 pm 
+exp_operating <- c(05:20)        # All day: 5 AM - 8 PM
+#exp_operating <- c(6:9, 15:18)  # Peak: 6-9 AM and 3-6 PM
 
 # Now create function for iterating by facility analyzed and time of day
 # The variable squared_standard_weights is saved to later calculate standard error of a weighted sample, as referenced above. 
