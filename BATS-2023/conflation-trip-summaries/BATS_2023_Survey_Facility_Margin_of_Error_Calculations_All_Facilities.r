@@ -19,7 +19,7 @@ library(spatstat)
 BOX_dir1       <- file.path("E:", "Box", "Modeling and Surveys","Surveys","Travel Diary Survey")
 Box_dir2       <- file.path(BOX_dir1,"BATS_2023","Data","2023")
 conflation_loc <- file.path(Box_dir2,"Survey Conflation")
-data_loc       <- "M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Full Weighted 2023 Dataset/WeightedDataset_02212025"
+data_loc       <- "X:/survey_repos/ProjRoot_Mon-Thu20251011/WgtRoot_Mon-Thu20251011/output/full_weighted_dataset"
 output         <- file.path(data_loc,"Summaries")
 
 # Bring in BATS 2023 survey files
