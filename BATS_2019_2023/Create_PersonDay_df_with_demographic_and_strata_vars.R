@@ -109,7 +109,7 @@ background_dataset_2019_dir <- "M:/Data/HomeInterview/Bay Area Travel Study 2018
 # --- hh2019 ---
 hh2019_file <- "hh.tsv"
 hh2019_path <- file.path(background_dataset_2019_dir, hh2019_file)
-hh2019_df <- read_table(hh2019_path)
+hh2019_df <- read_tsv(hh2019_path)
 
 hh2019_df <- hh2019_df %>%
   select(hh_id, sample_stratum) %>%
@@ -120,7 +120,7 @@ hh2019_df <- hh2019_df %>%
 # --- person2019 ---
 person2019_file <- "person.tsv"
 person2019_path <- file.path(background_dataset_2019_dir, person2019_file)
-person2019_df <- read_table(person2019_path)
+person2019_df <- read_tsv(person2019_path)
 
 person2019_df <- person2019_df %>%
   select(hh_id, person_id, age, employment, telework_freq) %>%
@@ -132,7 +132,7 @@ person2019_df <- person2019_df %>%
 # --- day2019 ---
 day2019_file <- "day.tsv"
 day2019_path <- file.path(background_dataset_2019_dir, day2019_file)
-day2019_df <- read_table(day2019_path)
+day2019_df <- read_tsv(day2019_path)
 
 day2019_df <- day2019_df %>%
   select(hh_id, person_id, travel_date_dow, telework_time) %>%
