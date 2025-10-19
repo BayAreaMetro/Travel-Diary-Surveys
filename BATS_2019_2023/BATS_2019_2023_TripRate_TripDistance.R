@@ -42,8 +42,8 @@ ProcessedPersonDays_2019_2023_df <- ProcessedPersonDays_2019_2023_df %>%
   mutate(
     commute_cat = case_when(
       employment == 1 & commuted_on_travel_day == 1 ~ "1. Commuted",
-      employment == 1 & telecommute_time >= 240 & commuted_on_travel_day == 0 ~ "2. Telecommuted 4+ hours",
-      employment == 1 & telecommute_time > 0 & commuted_on_travel_day == 0 ~ "3. Telecommuted <4 hours",
+      employment == 1 & telecommute_time >= 420 & commuted_on_travel_day == 0 ~ "2. Telecommuted 7+ hours and not Commuted",
+      employment == 1 & telecommute_time > 0 & commuted_on_travel_day == 0 ~ "3. Telecommuted <7 hours and not Commuted",
       employment == 1 & telecommute_time == 0 & commuted_on_travel_day == 0 ~ "4. Did not work",
       TRUE ~ NA_character_  # All other cases get NA
     )
