@@ -126,6 +126,7 @@ person_2019_2023_ForHWloc_df <- person_2019_2023_ForHWloc_df %>%
 
 # Summary statistics
 summary_home_to_work_miles <- person_2019_2023_ForHWloc_df %>%
+  group_by(survey_cycle) %>%
   summarise(
     mean_distance = round(mean(home_to_work_miles, na.rm = TRUE), 2),
     median_distance = round(median(home_to_work_miles, na.rm = TRUE), 2),
@@ -137,16 +138,39 @@ print("Home-to-work distance summary:")
 print(summary_home_to_work_miles)
 cat("\n")
 
-# Mean and median by survey_cycle and education
-person_2019_2023_ForHWloc_df %>%
+# Mean and median by survey_cycle and employment
+summary_home_to_work_miles_ByEmployment <- person_2019_2023_ForHWloc_df %>%
   group_by(survey_cycle, employment_label) %>%
   summarise(
     n = n(),
     mean_miles = mean(home_to_work_miles, na.rm = TRUE),
     median_miles = median(home_to_work_miles, na.rm = TRUE),
+    max_miles = max(home_to_work_miles, na.rm = TRUE),
     sd_miles = sd(home_to_work_miles, na.rm = TRUE),
     .groups = "drop"
   )
 
+cat("\n")
+print("Home-to-work distance summary, by employment:")
+print(summary_home_to_work_miles_ByEmployment)
+cat("\n")
+
+
+# Mean and median by survey_cycle and income
+summary_home_to_work_miles_ByIncome <- person_2019_2023_ForHWloc_df %>%
+  group_by(survey_cycle, income_label) %>%
+  summarise(
+    n = n(),
+    mean_miles = mean(home_to_work_miles, na.rm = TRUE),
+    median_miles = median(home_to_work_miles, na.rm = TRUE),
+    max_miles = max(home_to_work_miles, na.rm = TRUE),
+    sd_miles = sd(home_to_work_miles, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+cat("\n")
+print("Home-to-work distance summary, by income:")
+print(summary_home_to_work_miles_ByIncome)
+cat("\n")
 
 sink() # to close the log file connection

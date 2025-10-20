@@ -24,7 +24,7 @@ hh2023_path <- file.path(background_dataset_2023_dir, hh2023_file)
 hh2023_df <- read_csv(hh2023_path)
 
 hh2023_df <- hh2023_df %>%
-  select(hh_id, sample_segment, home_lon, home_lat) %>%
+  select(hh_id, sample_segment, home_lon, home_lat, income_broad) %>%
   mutate(survey_cycle = 2023) %>%
   rename(stratification_var = sample_segment)
 
@@ -46,7 +46,7 @@ hh2019_path <- file.path(background_dataset_2019_dir, hh2019_file)
 hh2019_df <- read_tsv(hh2019_path)
 
 hh2019_df <- hh2019_df %>%
-  select(hh_id, sample_stratum, reported_home_lat, reported_home_lon) %>%
+  select(hh_id, sample_stratum, reported_home_lat, reported_home_lon, income_aggregate) %>%
   mutate(survey_cycle = 2019) %>%
   rename(home_lat = reported_home_lat,
          home_lon = reported_home_lon,
@@ -92,3 +92,48 @@ person_2019_2023_df <- person_2019_2023_df %>%
       TRUE ~ "Other"
     )
   )
+
+person_2019_2023_df <- person_2019_2023_df %>%
+  mutate(income2023_label = case_when(
+    survey_cycle == 2023 & income_broad == 1   ~ "Under $25,000",
+    survey_cycle == 2023 & income_broad == 2   ~ "$25,000-$49,999",
+    survey_cycle == 2023 & income_broad == 3   ~ "$50,000-$74,999",
+    survey_cycle == 2023 & income_broad == 4   ~ "$75,000-$99,999",
+    survey_cycle == 2023 & income_broad == 5   ~ "$100,000-$199,999",
+    survey_cycle == 2023 & income_broad == 6   ~ "$200,000 or more",
+    survey_cycle == 2023 & income_broad == 995 ~ "Missing Response",
+    survey_cycle == 2023 & income_broad == 999 ~ "Prefer not to answer",
+    TRUE ~ NA_character_  # For other survey cycles or other values
+  ))
+
+person_2019_2023_df <- person_2019_2023_df %>%
+  mutate(income2019_label = case_when(
+    survey_cycle == 2019 & income_aggregate == 1   ~ "Under $25,000",
+    survey_cycle == 2019 & income_aggregate == 2   ~ "$25,000-$49,999",
+    survey_cycle == 2019 & income_aggregate == 3   ~ "$50,000-$74,999",
+    survey_cycle == 2019 & income_aggregate == 4   ~ "$75,000-$99,999",
+    survey_cycle == 2019 & income_aggregate == 5   ~ "$100,000-$249,999", #not the same band as BATS2023
+    survey_cycle == 2019 & income_aggregate == 6   ~ "$250,000 or more",  #not the same band as BATS2023
+    survey_cycle == 2019 & income_aggregate == 999 ~ "Prefer not to answer",
+    TRUE ~ NA_character_  # For other survey cycles or other values
+  ))
+
+person_2019_2023_df <- person_2019_2023_df %>%
+  mutate(income_label = case_when(
+    survey_cycle == 2019 & income_aggregate == 1   ~ "1. Under $25,000",
+    survey_cycle == 2019 & income_aggregate == 2   ~ "2. $25,000-$49,999",
+    survey_cycle == 2019 & income_aggregate == 3   ~ "3. $50,000-$74,999",
+    survey_cycle == 2019 & income_aggregate == 4   ~ "4. $75,000-$99,999",
+    survey_cycle == 2019 & income_aggregate == 5   ~ "5. $100,000 or more ",
+    survey_cycle == 2019 & income_aggregate == 6   ~ "5. $100,000 or more ",
+    survey_cycle == 2019 & income_aggregate == 999 ~ "Missing",
+    survey_cycle == 2023 & income_broad == 1       ~ "1. Under $25,000",
+    survey_cycle == 2023 & income_broad == 2       ~ "2. $25,000-$49,999",
+    survey_cycle == 2023 & income_broad == 3       ~ "3. $50,000-$74,999",
+    survey_cycle == 2023 & income_broad == 4       ~ "4. $75,000-$99,999",
+    survey_cycle == 2023 & income_broad == 5       ~ "5. $100,000 or more ",
+    survey_cycle == 2023 & income_broad == 6       ~ "5. $100,000 or more ",
+    survey_cycle == 2023 & income_broad == 995     ~ "Missing",
+    survey_cycle == 2023 & income_broad == 999     ~ "Missing",
+    TRUE ~ NA_character_  # For other survey cycles or other values
+  ))
