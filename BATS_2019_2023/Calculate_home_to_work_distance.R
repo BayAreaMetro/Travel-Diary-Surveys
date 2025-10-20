@@ -67,7 +67,7 @@ person_2019_2023_df$WorkLatInMegaRegion <- ifelse(
 person_2019_2023_df$HomeWork_In_MegaRegion <- ifelse(
   person_2019_2023_df$HomeLonInMegaRegion == 1 & 
   person_2019_2023_df$HomeLatInMegaRegion == 1 & 
-  person_2019_2023_df$HomeLatInMegaRegion == 1 & 
+  person_2019_2023_df$WorkLonInMegaRegion == 1 & 
   person_2019_2023_df$WorkLatInMegaRegion == 1, 1, 0)
 
 
@@ -134,7 +134,7 @@ summary_home_to_work_miles <- person_2019_2023_ForHWloc_df %>%
   )
 
 cat("\n")
-print("Home-to-work distance summary:")
+print("Home-to-work distance summary (unweighted):")
 print(summary_home_to_work_miles)
 cat("\n")
 
@@ -151,7 +151,7 @@ summary_home_to_work_miles_ByEmployment <- person_2019_2023_ForHWloc_df %>%
   )
 
 cat("\n")
-print("Home-to-work distance summary, by employment:")
+print("Home-to-work distance summary, by employment (unweighted):")
 print(summary_home_to_work_miles_ByEmployment)
 cat("\n")
 
@@ -169,8 +169,61 @@ summary_home_to_work_miles_ByIncome <- person_2019_2023_ForHWloc_df %>%
   )
 
 cat("\n")
-print("Home-to-work distance summary, by income:")
+print("Home-to-work distance summary, by income (unweighted):")
 print(summary_home_to_work_miles_ByIncome)
 cat("\n")
 
+
+# -------------------------
+# Calculate mean, se, ci, cv etc
+# -------------------------
+library(srvyr)
+
+# Create survey design object
+srv_design <- person_2019_2023_ForHWloc_df %>%
+  as_survey_design(
+    weights = person_weight_rmove_only,
+    strata = c(survey_cycle, stratification_var)
+  )
+
+# -------------------------
+# By survey cycle
+# -------------------------
+
+summary_by_cycle <- srv_design %>%
+  group_by(survey_cycle) %>%
+  summarise(      
+    n_unweighted = unweighted(n()),
+    n_weighted = survey_total(),
+    mean_distance = survey_mean(home_to_work_miles, vartype = c("se", "ci", "cv")),
+    median_distance = survey_median(home_to_work_miles, vartype = c("se", "ci", "cv")),
+  )
+
+cat("\n")
+print("Home-to-work distance summary by survey cycle (from sryvr):")
+print(summary_by_cycle, width = Inf)
+cat("\n")
+
+
+# -------------------------
+# By income
+# -------------------------
+
+summary_by_income <- srv_design %>%
+  group_by(survey_cycle, income_label) %>%
+  summarise(
+    n_unweighted = unweighted(n()),
+    n_weighted = survey_total(),
+    mean_distance = survey_mean(home_to_work_miles, vartype = c("se", "ci", "cv")),
+    median_distance = survey_median(home_to_work_miles, vartype = c("se", "ci", "cv")),
+    .groups = "drop"
+  )
+
+
+cat("\n")
+print("Home-to-work distance summary by survey cycle and income (from sryvr):")
+print(summary_by_income, width = Inf)
+cat("\n")
+
 sink() # to close the log file connection
+
