@@ -50,6 +50,18 @@ person2023_df <- person2023_df %>%
   rename(hhno = hh_id) %>%
   mutate(pno = as.numeric(str_sub(person_id, -2, -1)))  
 
+# --- day2023 ---
+day2023_file <- "day.csv"
+day2023_path <- file.path(background_dataset_2023_dir, day2023_file)
+day2023_df <- read_csv(day2023_path)
+
+day2023_df <- day2023_df %>%
+  select(hh_id, person_id, travel_dow, telecommute_time) %>%
+  mutate(survey_cycle = 2023) %>%
+  rename(hhno = hh_id, day=travel_dow) %>%
+  mutate(pno = as.numeric(str_sub(person_id, -2, -1))) %>%
+  select(-person_id)  
+
 
 # Read 2019 data
 background_dataset_2019_dir <- "M:/Data/HomeInterview/Bay Area Travel Study 2018-2019/Data/Final Version with Imputations/Final Updated Dataset as of 10-18-2021"
@@ -76,9 +88,23 @@ person2019_df <- person2019_df %>%
   rename(hhno = hh_id) %>%
   mutate(pno = as.numeric(str_sub(person_id, -2, -1)))  
 
+# --- day2019 ---
+day2019_file <- "day.tsv"
+day2019_path <- file.path(background_dataset_2019_dir, day2019_file)
+day2019_df <- read_tsv(day2019_path)
+
+day2019_df <- day2019_df %>%
+  select(hh_id, person_id, travel_date_dow, telework_time) %>%
+  mutate(survey_cycle = 2019) %>%
+  rename(hhno = hh_id, day=travel_date_dow) %>%
+  rename(telecommute_time=telework_time) %>%
+  mutate(pno = as.numeric(str_sub(person_id, -2, -1))) %>%
+  select(-person_id)   
+
 # Union the two cycles
 hh_2019_2023_df <- bind_rows(hh2019_df, hh2023_df)
 person_2019_2023_df <- bind_rows(person2019_df, person2023_df)
+day_2019_2023_df <- bind_rows(day2019_df, day2023_df)
 
 # Join to LinkedTrips_2019_2023_df
 LinkedTrips_2019_2023_df <- LinkedTrips_2019_2023_df %>%
@@ -87,6 +113,8 @@ LinkedTrips_2019_2023_df <- LinkedTrips_2019_2023_df %>%
 LinkedTrips_2019_2023_df <- LinkedTrips_2019_2023_df %>%
   left_join(person_2019_2023_df, by = c("hhno", "pno", "survey_cycle"))
 
+LinkedTrips_2019_2023_df <- LinkedTrips_2019_2023_df %>%
+  left_join(day_2019_2023_df, by = c("hhno", "pno", "day", "survey_cycle"))  
 
 # -------------------------
 # Label the data
@@ -112,16 +140,16 @@ LinkedTrips_2019_2023_df <- LinkedTrips_2019_2023_df %>%
 # Group the mode variable
 LinkedTrips_2019_2023_df <- LinkedTrips_2019_2023_df %>%
   mutate(mode4cat_label = case_when(
-    mode == 0 ~ "Bike and Other",
-    mode == 1 ~ "Walk",
-    mode == 2 ~ "Bike and Other",
-    mode == 3 ~ "Drive",
-    mode == 4 ~ "Drive",
-    mode == 5 ~ "Drive",
-    mode == 6 ~ "Transit",
-    mode == 7 ~ "Transit",
-    mode == 8 ~ "Transit",
-    mode == 9 ~ "Drive",
+    mode == 0 ~ "4. Bike and Other",
+    mode == 1 ~ "3. Walk",
+    mode == 2 ~ "4. Bike and Other",
+    mode == 3 ~ "1. Drive",
+    mode == 4 ~ "1. Drive",
+    mode == 5 ~ "1. Drive",
+    mode == 6 ~ "2. Transit",
+    mode == 7 ~ "2. Transit",
+    mode == 8 ~ "2. Transit",
+    mode == 9 ~ "1. Drive",
     TRUE ~ NA_character_
   ))
 
