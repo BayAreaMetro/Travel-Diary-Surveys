@@ -92,15 +92,15 @@ bay_median <- weighted.median(x=bay_income$income,w=bay_income$WGTP)
 
 # Calculate share of PUMS households by percentage AMI
 
-bay_income_med <- bay_income  %>%  
+bay_income_med <- bay_income  %>%
 mutate(
   ami_recoded=case_when(
-    income/bay_median< 0.5                                  ~ "Under 50 percent AMI",
-    income/bay_median>=0.5 & income/bay_median<1            ~ "50 to 100 percent AMI",
-    income/bay_median>=1 & income/bay_median<2              ~ "100 to 200 percent AMI",
+    income/bay_median< 0.8                                  ~ "Under 80 percent AMI",
+    income/bay_median>=0.8 & income/bay_median<1.2          ~ "80 to 120 percent AMI",
+    income/bay_median>=1.2 & income/bay_median<2            ~ "120 to 200 percent AMI",
     income/bay_median>=2                                    ~ "Over 200 percent AMI",
     TRUE                                                    ~ "Miscoded"
-  ))  %>%  
+  ))  %>%    
   group_by(ami_recoded)  %>%  
   summarize(count=n(),total=sum(WGTP))  %>%  
   transmute(ami_recoded,PUMS_household_share=total/sum(total)) %>% 
@@ -165,14 +165,14 @@ person_joiner <- person  %>%
   ) %>%  
   rowwise()  %>%  
   mutate(discrete_income=discrete_income_f(income_detailed,income_imputed)) %>%   # Run discrete income generator function defined above
-  ungroup() %>%  
+  ungroup() %>%
   mutate(
     ami_recoded=case_when(
-      discrete_income/bay_median< 0.5                                  ~ "Under 50 percent AMI",
-      discrete_income/bay_median>=0.5 & discrete_income/bay_median<1   ~ "50 to 100 percent AMI",
-      discrete_income/bay_median>=1 & discrete_income/bay_median<2     ~ "100 to 200 percent AMI",
-      discrete_income/bay_median>=2                                    ~ "Over 200 percent AMI",
-      TRUE                                                             ~ "Miscoded"
+      discrete_income/bay_median< 0.8                                    ~ "Under 80 percent AMI",
+      discrete_income/bay_median>=0.8 & discrete_income/bay_median<1.2   ~ "80 to 120 percent AMI",
+      discrete_income/bay_median>=1.2 & discrete_income/bay_median<2     ~ "120 to 200 percent AMI",
+      discrete_income/bay_median>=2                                      ~ "Over 200 percent AMI",
+      TRUE                                                               ~ "Miscoded"
     ))  %>%  
   select(hh_id,person_id,income_recoded,race_recoded,income_detailed,income_imputed,raceeth_new_imputed,ami_recoded,discrete_income,reported_home_lat,reported_home_lon)
 

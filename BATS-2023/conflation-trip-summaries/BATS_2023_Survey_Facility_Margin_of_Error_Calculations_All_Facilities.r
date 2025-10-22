@@ -31,7 +31,7 @@ person         <- read.csv(file=file.path(data_loc,"person.csv")) %>%
 trip           <- read.csv(file=file.path(data_loc,"trip.csv")) %>%     #Drop hh_id for easier joining later with person file
   select(-hh_id)
 household      <- read.csv(file=file.path(data_loc,"hh.csv"))%>% 
-  select(hh_id,num_people,income_detailed,income_imputed_rmove_only,grep("weight",names(.))) %>% 
+  select(hh_id,num_people,home_county,income_detailed,income_imputed_rmove_only,grep("weight",names(.))) %>% 
   mutate(income_detailed_val=case_when(
     income_detailed==1                   ~ "Less than $15,000",
     income_detailed==2                   ~ "$15,000-$24,999",
@@ -100,9 +100,9 @@ bay_median <- weighted.median(x=bay_income$income,w=bay_income$WGTP)
 bay_income_med <- bay_income  %>%  
 mutate(
   ami_recoded=case_when(
-    income/bay_median< 0.5                                  ~ "Under 50 percent AMI",
-    income/bay_median>=0.5 & income/bay_median<1            ~ "50 to 100 percent AMI",
-    income/bay_median>=1 & income/bay_median<2              ~ "100 to 200 percent AMI",
+    income/bay_median< 0.8                                  ~ "Under 80 percent AMI",
+    income/bay_median>=0.8 & income/bay_median<1.2          ~ "80 to 120 percent AMI",
+    income/bay_median>=1.2 & income/bay_median<2            ~ "120 to 200 percent AMI",
     income/bay_median>=2                                    ~ "Over 200 percent AMI",
     TRUE                                                    ~ "Miscoded"
   ))  %>%  
@@ -191,7 +191,17 @@ person_joiner <- person  %>%
   rowwise()  %>%  
   mutate(discrete_income=discrete_income_f(income_detailed,income_imputed_rmove_only)) %>%   # Run discrete income generator function defined above
   ungroup() %>% 
-  mutate(race_recoded=case_when(
+  mutate(
+    income_recoded=case_when(
+      income_imputed_rmove_only=="Under $25,000"      ~ "Under $50,000",
+      income_imputed_rmove_only=="$25,000-$49,999"    ~ "Under $50,000",
+      income_imputed_rmove_only=="$50,000-$74,999"    ~ "$50,000-$99,999",
+      income_imputed_rmove_only=="$75,000-$99,999"    ~ "$50,000-$99,999",
+      income_imputed_rmove_only=="$100,000-$199,999"  ~ "$100,000-$199,999",
+      income_imputed_rmove_only=="$200,000 or more"   ~ "Over $200,000",
+      TRUE                                            ~ "Miscoded"
+    ), 
+    race_recoded=case_when(
     ethnicity_imputed_rmove_only=="hispanic"           ~ "Hispanic",
     race_imputed_rmove_only=="afam"                    ~ "Black",
     race_imputed_rmove_only=="asian_pacific"           ~ "Asian/Pacific Islander",
@@ -210,12 +220,19 @@ person_joiner <- person  %>%
     num_persons_related>=8 & discrete_income<=105440       ~ "under_2x_poverty",
     TRUE                                                   ~ "over_2x_poverty"
   ),
+  ami_recoded2=case_when(
+    discrete_income/bay_median< 0.8                                    ~ "Under 120 percent AMI",
+    discrete_income/bay_median>=0.8 & discrete_income/bay_median<1.2   ~ "Under 120 percent AMI",
+    discrete_income/bay_median>=1.2 & discrete_income/bay_median<2     ~ "Over 120 percent AMI",
+    discrete_income/bay_median>=2                                      ~ "Over 120 percent AMI",
+    TRUE                                                               ~ "Miscoded"
+  ),  
   ami_recoded=case_when(
-      discrete_income/bay_median< 0.5                                  ~ "Under 50 percent AMI",
-      discrete_income/bay_median>=0.5 & discrete_income/bay_median<1   ~ "50 to 100 percent AMI",
-      discrete_income/bay_median>=1 & discrete_income/bay_median<2     ~ "100 to 200 percent AMI",
-      discrete_income/bay_median>=2                                    ~ "Over 200 percent AMI",
-      TRUE                                                             ~ "Miscoded"
+      discrete_income/bay_median< 0.8                                    ~ "Under 80 percent AMI",
+      discrete_income/bay_median>=0.8 & discrete_income/bay_median<1.2   ~ "80 to 120 percent AMI",
+      discrete_income/bay_median>=1.2 & discrete_income/bay_median<2     ~ "120 to 200 percent AMI",
+      discrete_income/bay_median>=2                                      ~ "Over 200 percent AMI",
+      TRUE                                                               ~ "Miscoded"
     ))  
 
 # Recoding trip purpose from trip file
@@ -318,12 +335,12 @@ if (tod=="off_peak"){
     ungroup()
   
 # Commenting out below paragraph that summarizes output data by income categories (using the poverty thresholds in lieu for this script)
-#  income <- temp_df %>% 
-#    group_by(income_recoded) %>% 
-#    summarize(count=n(),total=sum(trip_weight_rmove_only),share_value=sum(trip_weight_rmove_only)/total_trips) %>% 
-#    mutate(category="income") %>% 
-#    rename(metric=income_recoded) %>% 
-#    ungroup()
+  income <- temp_df %>% 
+    group_by(income_recoded) %>% 
+    summarize(count=n(),total=sum(trip_weight_rmove_only),share_value=sum(trip_weight_rmove_only)/total_trips) %>% 
+    mutate(category="income") %>% 
+    rename(metric=income_recoded) %>% 
+    ungroup()
   
   income_ami <- temp_df %>% 
     group_by(ami_recoded) %>% 
@@ -331,6 +348,13 @@ if (tod=="off_peak"){
     mutate(category="ami_income") %>% 
     rename(metric=ami_recoded) %>% 
     ungroup()
+
+  income_ami2 <- temp_df %>% 
+    group_by(ami_recoded2) %>% 
+    summarize(count=n(),total=sum(trip_weight_rmove_only),share_value=sum(trip_weight_rmove_only)/total_trips) %>% 
+    mutate(category="ami_income2") %>% 
+    rename(metric=ami_recoded2) %>% 
+    ungroup()    
   
   poverty <- temp_df %>% 
     group_by(poverty_status) %>% 
@@ -339,6 +363,14 @@ if (tod=="off_peak"){
     rename(metric=poverty_status) %>% 
     ungroup()
   
+  county <- temp_df %>% 
+  mutate(home_county = as.character(home_county)) %>%  # Convert to character 
+  group_by(home_county) %>% 
+  summarize(count=n(),total=sum(trip_weight_rmove_only),share_value=sum(trip_weight_rmove_only)/total_trips) %>% 
+  mutate(category="home_county") %>% 
+  rename(metric=home_county) %>% 
+  ungroup()
+
 # Calculate standard error, 95 percent confidence interval, lower and upper bound values
 # CV reliability
 # U.S. Census case studies:
@@ -347,7 +379,7 @@ if (tod=="off_peak"){
 # • Low Reliability: CVs over 30% ‐ use with extreme caution  
 # Page 2,http://sites.tufts.edu/gis/files/2013/11/Amercian-Community-Survey_Margin-of-error-tutorial.pdf
   
-  temp_output <- bind_rows(temp_output,race,purpose,income_ami,poverty) %>% 
+  temp_output <- bind_rows(temp_output,race,purpose,income,income_ami,income_ami2, poverty,county) %>% 
     mutate(roadway=facility,
            standard_error=sqrt((share_value*(1-share_value)*error_summation)),
            ci_95=1.96*standard_error,
