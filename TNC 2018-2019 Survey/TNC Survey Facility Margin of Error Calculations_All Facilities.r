@@ -161,6 +161,16 @@ person_joiner <- person  %>%
       raceeth_new_imputed==4                             ~ "White",
       raceeth_new_imputed %in% c(-1,5)                   ~ "Other",
       TRUE                                               ~ "Miscoded"
+    ),
+    education_recoded=case_when(
+      education==1                                       ~ "No Bachelor's",
+      education==2                                       ~ "No Bachelor's",
+      education==3                                       ~ "No Bachelor's",
+      education==4                                       ~ "No Bachelor's",
+      education==5                                       ~ "No Bachelor's",
+      education==6                                       ~ "Bachelor’s or higher",
+      education==7                                       ~ "Bachelor’s or higher",
+      TRUE                                               ~ "Miscoded"
     )
   ) %>%  
   rowwise()  %>%  
@@ -174,7 +184,7 @@ person_joiner <- person  %>%
       discrete_income/bay_median>=2                                      ~ "Over 200 percent AMI",
       TRUE                                                               ~ "Miscoded"
     ))  %>%  
-  select(hh_id,person_id,income_recoded,race_recoded,income_detailed,income_imputed,raceeth_new_imputed,ami_recoded,discrete_income,reported_home_lat,reported_home_lon)
+  select(hh_id,person_id,income_recoded,race_recoded,education_recoded,income_detailed,income_imputed,raceeth_new_imputed,ami_recoded,discrete_income,reported_home_lat,reported_home_lon)
 
 # Get race from PUMS for comparing to freeway facilities
 
@@ -294,6 +304,13 @@ if (tod=="off_peak"){
     rename(metric=race_recoded) %>% 
     ungroup()
   
+  education <- temp_df %>% 
+    group_by(education_recoded) %>% 
+    summarize(count=n(),total=sum(daywt_alladult_wkday),share_value=sum(daywt_alladult_wkday)/total_trips) %>% 
+    mutate(category="education") %>% 
+    rename(metric=education_recoded) %>% 
+    ungroup()
+
   purpose <- temp_df %>% 
     group_by(purpose_recoded) %>% 
     summarize(count=n(),total=sum(daywt_alladult_wkday),share_value=sum(daywt_alladult_wkday)/total_trips) %>% 
@@ -323,7 +340,7 @@ if (tod=="off_peak"){
 # • Low Reliability: CVs over 30% ‐ use with extreme caution  
 # Page 2,http://sites.tufts.edu/gis/files/2013/11/Amercian-Community-Survey_Margin-of-error-tutorial.pdf
   
-  temp_output <- bind_rows(temp_output,race,purpose,income,income_ami) %>% 
+  temp_output <- bind_rows(temp_output,race,education,purpose,income,income_ami) %>% 
     mutate(roadway=facility,
            standard_error=sqrt((share_value*(1-share_value)*error_summation)),
            ci_95=1.96*standard_error,

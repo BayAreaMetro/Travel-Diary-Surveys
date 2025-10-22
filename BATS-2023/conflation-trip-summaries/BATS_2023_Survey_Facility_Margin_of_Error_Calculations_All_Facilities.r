@@ -27,7 +27,7 @@ output         <- file.path(data_loc,"Summaries")
 # Get actual income values from income_detailed variable codes
 
 person         <- read.csv(file=file.path(data_loc,"person.csv")) %>% 
-  select(hh_id,person_id,relationship,grep("race|ethnicity|weight",names(.)))    
+  select(hh_id,person_id,education,relationship,grep("race|ethnicity|weight",names(.)))    
 trip           <- read.csv(file=file.path(data_loc,"trip.csv")) %>%     #Drop hh_id for easier joining later with person file
   select(-hh_id)
 household      <- read.csv(file=file.path(data_loc,"hh.csv"))%>% 
@@ -202,12 +202,22 @@ person_joiner <- person  %>%
       TRUE                                            ~ "Miscoded"
     ), 
     race_recoded=case_when(
-    ethnicity_imputed_rmove_only=="hispanic"           ~ "Hispanic",
-    race_imputed_rmove_only=="afam"                    ~ "Black",
-    race_imputed_rmove_only=="asian_pacific"           ~ "Asian/Pacific Islander",
-    race_imputed_rmove_only=="white"                   ~ "White",
-    race_imputed_rmove_only=="other"                   ~ "Other",
-    TRUE                                               ~ "Miscoded"
+      ethnicity_imputed_rmove_only=="hispanic"           ~ "Hispanic",
+      race_imputed_rmove_only=="afam"                    ~ "Black",
+      race_imputed_rmove_only=="asian_pacific"           ~ "Asian/Pacific Islander",
+      race_imputed_rmove_only=="white"                   ~ "White",
+      race_imputed_rmove_only=="other"                   ~ "Other",
+      TRUE                                               ~ "Miscoded"
+    ),
+    education_recoded=case_when(
+      education==1                                       ~ "No Bachelor's",
+      education==2                                       ~ "No Bachelor's",
+      education==3                                       ~ "No Bachelor's",
+      education==4                                       ~ "No Bachelor's",
+      education==5                                       ~ "No Bachelor's",
+      education==6                                       ~ "Bachelor’s or higher",
+      education==7                                       ~ "Bachelor’s or higher",
+      TRUE                                               ~ "Miscoded"
   ),
   poverty_status=case_when(
     num_persons_related==1 & discrete_income<=30120        ~ "under_2x_poverty",
@@ -327,6 +337,13 @@ if (tod=="off_peak"){
     rename(metric=race_recoded) %>% 
     ungroup()
   
+  education <- temp_df %>% 
+    group_by(education_recoded) %>% 
+    summarize(count=n(),total=sum(trip_weight_rmove_only),share_value=sum(trip_weight_rmove_only)/total_trips) %>% 
+    mutate(category="education") %>% 
+    rename(metric=education_recoded) %>% 
+    ungroup()
+
   purpose <- temp_df %>% 
     group_by(purpose_recoded) %>% 
     summarize(count=n(),total=sum(trip_weight_rmove_only),share_value=sum(trip_weight_rmove_only)/total_trips) %>% 
@@ -379,7 +396,7 @@ if (tod=="off_peak"){
 # • Low Reliability: CVs over 30% ‐ use with extreme caution  
 # Page 2,http://sites.tufts.edu/gis/files/2013/11/Amercian-Community-Survey_Margin-of-error-tutorial.pdf
   
-  temp_output <- bind_rows(temp_output,race,purpose,income,income_ami,income_ami2, poverty,county) %>% 
+  temp_output <- bind_rows(temp_output,race,education,purpose,income,income_ami,income_ami2, poverty,county) %>% 
     mutate(roadway=facility,
            standard_error=sqrt((share_value*(1-share_value)*error_summation)),
            ci_95=1.96*standard_error,
