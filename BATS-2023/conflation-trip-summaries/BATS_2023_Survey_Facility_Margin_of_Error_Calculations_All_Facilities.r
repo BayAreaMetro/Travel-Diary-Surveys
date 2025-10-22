@@ -59,6 +59,22 @@ household      <- read.csv(file=file.path(data_loc,"hh.csv"))%>%
 
 facility_flag <- read.csv(file = file.path(conflation_loc,"BATS 2023 Facility Use Booleans Toll.csv"))
 
+# add "any_freeway" by merging the output from https://github.com/BayAreaMetro/Travel-Diary-Surveys/blob/master/BATS-2023/Requests/Generate_trip_motorway_booleans.ipynb
+trip_motorway_booleans_df <- read.csv(file = "E:/Box/Modeling and Surveys/Surveys/Travel Diary Survey/BATS_2023/Data/2023/Full Weighted 2023 Dataset/WeightedDataset_02212025/derived_variables/trip_motorway_booleans.csv")
+
+# Check for unmatched records from either dataframe
+cat("\nTrip IDs only in trip_motorway_booleans_df (not in facility_flag):\n")
+anti_join(trip_motorway_booleans_df, facility_flag, by = "trip_id") %>% nrow()
+
+cat("\nTrip IDs only in original facility_flag (not in trip_motorway_booleans_df):\n")
+anti_join(facility_flag, trip_motorway_booleans_df, by = "trip_id") %>% nrow()
+
+# add an "any_freeway" column (outer join just to make sure)
+facility_flag <- facility_flag %>%
+  full_join(trip_motorway_booleans_df, by = "trip_id") %>%
+  select(-has_motorway) %>%
+  rename(any_freeway = has_nonBridge_motorway)
+
 full_facilities_list <- c("bay_bridge_toll", "bay_bridge_notoll", "bay_bridge", 
                           "sm_bridge_toll", "sm_bridge_notoll", "sm_bridge", "dum_bridge_toll", 
                           "dum_bridge_notoll", "dum_bridge", "rsr_bridge_toll", "rsr_bridge_notoll", 
@@ -70,7 +86,7 @@ full_facilities_list <- c("bay_bridge_toll", "bay_bridge_notoll", "bay_bridge",
                           "i880_baybridge_to_237", "i680_80_to_580", "i680_580_to_101", 
                           "sr4_80_to_160", "i580_hayward_to_sanjoaquin", "i580_hayward_to_baybridge", 
                           "i80_13_to_580", "i80_580_to_Carquinez", "i80_680_to_505","i880_baybridge_to_237_exp",
-                          "i680_bm_bridge_to_580","i680_bm_bridge_to_580_exp","all_script_facilities")
+                          "i680_bm_bridge_to_580","i680_bm_bridge_to_580_exp","all_script_facilities", "any_freeway")
                           
 
 # Bring in 2022 PUMS data, household and person files for various tasks
