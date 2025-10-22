@@ -138,18 +138,16 @@ LinkedTrips_2019_2023_df <- LinkedTrips_2019_2023_df %>%
 
 
 # Group the mode variable
+# drop TNC, School Bus and Other
 LinkedTrips_2019_2023_df <- LinkedTrips_2019_2023_df %>%
-  mutate(mode4cat_label = case_when(
-    mode == 0 ~ "4. Bike and Other",
-    mode == 1 ~ "3. Walk",
-    mode == 2 ~ "4. Bike and Other",
+  mutate(mode5cat_label = case_when(
+    mode == 1 ~ "4. Walk",
+    mode == 2 ~ "5. Bike",
     mode == 3 ~ "1. Drive",
-    mode == 4 ~ "1. Drive",
-    mode == 5 ~ "1. Drive",
-    mode == 6 ~ "2. Transit",
-    mode == 7 ~ "2. Transit",
-    mode == 8 ~ "2. Transit",
-    mode == 9 ~ "1. Drive",
+    mode == 4 ~ "2. HOV",
+    mode == 5 ~ "2. HOV",
+    mode == 6 ~ "3. Transit",
+    mode == 7 ~ "3. Transit",
     TRUE ~ NA_character_
   ))
 
