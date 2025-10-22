@@ -218,7 +218,8 @@ summarize_for_attr <- function(survey_data, summary_col, strata_vars = c("survey
 mode_summary <- summarize_for_attr(
   LinkedTrips_2019_2023_df, 
   mode_label,
-  summary_levels = c("survey_cycle", "adult_yn", "commute_cat", 
+  summary_levels = c("survey_cycle", "adult_yn", "commute_cat",
+                     "survey_cycle,adult_yn", 
                      "survey_cycle,commute_cat,adult_yn")
 )
 
@@ -226,6 +227,7 @@ mode4cat_summary <- summarize_for_attr(
   LinkedTrips_2019_2023_df, 
   mode4cat_label,
   summary_levels = c("survey_cycle", "adult_yn", "commute_cat",
+                     "survey_cycle,adult_yn", 
                      "survey_cycle,commute_cat,adult_yn")
 )
 
@@ -233,6 +235,7 @@ dpurp_summary <- summarize_for_attr(
   LinkedTrips_2019_2023_df, 
   dpurp_label,
   summary_levels = c("survey_cycle", "adult_yn", "commute_cat",
+                     "survey_cycle,adult_yn", 
                      "survey_cycle,commute_cat,adult_yn")
 )
 
