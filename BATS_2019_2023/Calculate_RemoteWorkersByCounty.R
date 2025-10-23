@@ -1,6 +1,7 @@
 # -------------------------
 # This remote worker distribution analysis is a person-day level analysis
 # The universe is all adults (18+) because the 2019 survey was adult-only
+# updated the unverse to "all workers" or just "full time workers" to make it a bit more comparable to PUMS
 # -------------------------
 
 
@@ -31,8 +32,13 @@ source("E:/GitHub/Travel-Diary-Surveys/BATS_2019_2023/Create_PersonDay_df_with_d
 # PersonDays_2019_2023_df <- read_csv("M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Processed/BATS2019_2023/ProcessedPersonDays_2019_2023.csv")
 
 # The universe is all adults (18+) because the 2019 survey was adult-only
+# updated the unverse to "all workers" or just "full time workers" to make it a bit more comparable to PUMS
 ProcessedPersonDays_2019_2023_df <- ProcessedPersonDays_2019_2023_df %>%
-  filter(age>=4)
+  filter(age>=4) %>%
+  filter(employment==1)
+
+# or should it be all workers?
+# filter(employment %in% c(1, 2, 3, 7, 8))    
 
 # Write PersonDays_2019_2023_df to csv for subsequent processes
 output_csv <- glue("{working_dir}/PersonDays_2019_2023_Adults.csv")
