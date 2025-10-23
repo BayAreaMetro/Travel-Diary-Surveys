@@ -95,10 +95,10 @@ bay_median <- weighted.median(x=bay_income$income,w=bay_income$WGTP)
 bay_income_med <- bay_income  %>%
 mutate(
   ami_recoded=case_when(
-    income/bay_median< 0.8                                  ~ "Under 80 percent AMI",
-    income/bay_median>=0.8 & income/bay_median<1.2          ~ "80 to 120 percent AMI",
-    income/bay_median>=1.2 & income/bay_median<2            ~ "120 to 200 percent AMI",
-    income/bay_median>=2                                    ~ "Over 200 percent AMI",
+    income/bay_median< 0.5                                  ~ "Below median income",
+    income/bay_median>=0.5 & income/bay_median<1            ~ "Below median income",
+    income/bay_median>=1 & income/bay_median<2              ~ "Above median income",
+    income/bay_median>=2                                    ~ "Above median income",
     TRUE                                                    ~ "Miscoded"
   ))  %>%    
   group_by(ami_recoded)  %>%  
@@ -163,14 +163,14 @@ person_joiner <- person  %>%
       TRUE                                               ~ "Miscoded"
     ),
     education_recoded=case_when(
-      education==1                                       ~ "No Bachelor's",
-      education==2                                       ~ "No Bachelor's",
-      education==3                                       ~ "No Bachelor's",
-      education==4                                       ~ "No Bachelor's",
-      education==5                                       ~ "No Bachelor's",
-      education==6                                       ~ "Bachelor’s or higher",
-      education==7                                       ~ "Bachelor’s or higher",
-      TRUE                                               ~ "Miscoded"
+      education==1                                       ~ "High school or less",
+      education==2                                       ~ "High school or less",
+      education==3                                       ~ "Postsecondary (no bachelor's)",
+      education==4                                       ~ "Postsecondary (no bachelor's)",
+      education==5                                       ~ "Postsecondary (no bachelor's)",
+      education==6                                       ~ "Bachelor's or higher",
+      education==7                                       ~ "Bachelor's or higher",
+      TRUE                                               ~ "Miscoded" 
     )
   ) %>%  
   rowwise()  %>%  
@@ -178,10 +178,10 @@ person_joiner <- person  %>%
   ungroup() %>%
   mutate(
     ami_recoded=case_when(
-      discrete_income/bay_median< 0.8                                    ~ "Under 80 percent AMI",
-      discrete_income/bay_median>=0.8 & discrete_income/bay_median<1.2   ~ "80 to 120 percent AMI",
-      discrete_income/bay_median>=1.2 & discrete_income/bay_median<2     ~ "120 to 200 percent AMI",
-      discrete_income/bay_median>=2                                      ~ "Over 200 percent AMI",
+      discrete_income/bay_median< 0.5                                    ~ "Below median",
+      discrete_income/bay_median>=0.5 & discrete_income/bay_median<1     ~ "Below median",
+      discrete_income/bay_median>=1 & discrete_income/bay_median<2       ~ "Above median",
+      discrete_income/bay_median>=2                                      ~ "Above median",
       TRUE                                                               ~ "Miscoded"
     ))  %>%  
   select(hh_id,person_id,income_recoded,race_recoded,education_recoded,income_detailed,income_imputed,raceeth_new_imputed,ami_recoded,discrete_income,reported_home_lat,reported_home_lon)
@@ -306,7 +306,8 @@ if (tod=="off_peak"){
   
   education <- temp_df %>% 
     group_by(education_recoded) %>% 
-    summarize(count=n(),total=sum(daywt_alladult_wkday),share_value=sum(daywt_alladult_wkday)/total_trips) %>% 
+    summarize(count=n(),total=sum(daywt_alladult_wkday),share_value=sum(daywt_alladult_wkday)/total_trips) %>%
+    filter(education_recoded != "Miscoded") %>%   # other categories don't have this 
     mutate(category="education") %>% 
     rename(metric=education_recoded) %>% 
     ungroup()

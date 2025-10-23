@@ -74,9 +74,10 @@ hh2023_path <- file.path(background_dataset_2023_dir, hh2023_file)
 hh2023_df <- read_csv(hh2023_path)
 
 hh2023_df <- hh2023_df %>%
-  select(hh_id, sample_segment) %>%
+  select(hh_id, sample_segment, home_county) %>%
   mutate(survey_cycle = 2023) %>%
-  rename(hhno = hh_id,
+  mutate(home_county = as.character(home_county)) %>%
+  rename(hhno = hh_id, # TODO: switch back to using RSG's convention rather than the trip linking and tour buiding convention
          stratification_var = sample_segment)
 
 # --- person2023 ---
@@ -87,7 +88,7 @@ person2023_df <- read_csv(person2023_path)
 person2023_df <- person2023_df %>%
   select(hh_id, person_id, age, employment, telework_freq) %>%
   mutate(survey_cycle = 2023) %>%
-  rename(hhno = hh_id) %>%
+  rename(hhno = hh_id) %>%     
   mutate(pno = as.numeric(str_sub(person_id, -2, -1))) %>%
   select(-person_id) 
 
@@ -112,10 +113,11 @@ hh2019_path <- file.path(background_dataset_2019_dir, hh2019_file)
 hh2019_df <- read_tsv(hh2019_path)
 
 hh2019_df <- hh2019_df %>%
-  select(hh_id, sample_stratum) %>%
+  select(hh_id, sample_stratum, home_county_fips) %>%
   mutate(survey_cycle = 2019) %>%
   rename(hhno = hh_id,
-         stratification_var = sample_stratum)
+         stratification_var = sample_stratum) %>%
+  mutate(home_county_fips = as.character(home_county_fips)) # note that the 2023 dataset uses all five digits but the 2019 dataset uses only the last three digits 001, 003
 
 # --- person2019 ---
 person2019_file <- "person.tsv"
@@ -142,6 +144,43 @@ day2019_df <- day2019_df %>%
   mutate(pno = as.numeric(str_sub(person_id, -2, -1))) %>%
   select(-person_id)   
 
+
+#-----------------------------------------
+# Handle home_county code inconsistencies
+#-----------------------------------------
+
+hh2023_df <- hh2023_df %>%
+  mutate(home_county_label = case_when(
+    home_county == "06001" ~ "Alameda County",
+    home_county == "06013" ~ "Contra Costa County",
+    home_county == "06041" ~ "Marin County",
+    home_county == "06055" ~ "Napa County",
+    home_county == "06075" ~ "San Francisco County",
+    home_county == "06081" ~ "San Mateo County",
+    home_county == "06085" ~ "Santa Clara County",
+    home_county == "06095" ~ "Solano County",
+    home_county == "06097" ~ "Sonoma County",
+    TRUE ~ NA_character_  
+  ))
+
+
+hh2019_df <- hh2019_df %>%
+  mutate(home_county_label = case_when(
+    home_county_fips == "1" ~ "Alameda County",
+    home_county_fips == "13" ~ "Contra Costa County",
+    home_county_fips == "41" ~ "Marin County",
+    home_county_fips == "55" ~ "Napa County",
+    home_county_fips == "75" ~ "San Francisco County",
+    home_county_fips == "81" ~ "San Mateo County",
+    home_county_fips == "85" ~ "Santa Clara County",
+    home_county_fips == "95" ~ "Solano County",
+    home_county_fips == "97" ~ "Sonoma County",
+    TRUE ~ NA_character_  
+  ))
+
+
+
+#-----------------------------------------
 # Union the two cycles
 hh_2019_2023_df <- bind_rows(hh2019_df, hh2023_df)
 person_2019_2023_df <- bind_rows(person2019_df, person2023_df)
@@ -156,6 +195,7 @@ ProcessedPersonDays_2019_2023_df <- ProcessedPersonDays_2019_2023_df %>%
 
 ProcessedPersonDays_2019_2023_df <- ProcessedPersonDays_2019_2023_df %>%
   left_join(day_2019_2023_df, by = c("hhno", "pno", "day", "survey_cycle"))  
+
 
 
 #-----------------------------------------
