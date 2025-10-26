@@ -8,10 +8,20 @@ p_load (tidyverse,sf)
 
 # Input segment equivalency directory and read file
 
-USERPROFILE       <- gsub("\\\\","/", Sys.getenv("USERPROFILE"))
-BOX_dir           <- file.path(USERPROFILE, "Box", "Modeling and Surveys","Surveys","Travel Diary Survey","Biennial Travel Diary Survey")
+#USERPROFILE       <- gsub("\\\\","/", Sys.getenv("USERPROFILE"))
+BOX_dir           <- file.path("E:", "Box", "Modeling and Surveys","Surveys","Travel Diary Survey","BATS_2023")
 segments_in       <- file.path(BOX_dir,"Data","2023","Survey Conflation","osmid_facility_equivalence_lookup_direction.csv")
 facility_segments <- read.csv(segments_in)
+
+# ---------------------------------
+# append i880 between 101 to 238
+# note osmid_Facilityi880_101to238.csv is the output of 
+append_file      <- file.path(BOX_dir,"Data","2023","Survey Conflation","osmid_Facilityi880_101to238.csv")
+append_segments  <- read.csv(append_file)
+
+# Append (row bind) the new file to the existing dataset
+facility_segments <- rbind(facility_segments, append_segments)
+# ---------------------------------
 
 # Keep only records with non-empty facility name (>0 works to filter this expression)
 # De-dupe records to get unique segments for error-free later matching
