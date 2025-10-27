@@ -36,8 +36,9 @@ household      <- read.csv(file=file.path(data_loc,"hh.csv"))%>%
 
 facility_flag <- read.csv(file = file.path(conflation_loc,"BATS 2023 Facility Use Booleans Toll.csv"))
 
-full_facilities_list <- c("i880_baybridge_to_237", "i880_baybridge_to_237_exp","i680_bm_bridge_to_580", 
-                          "i680_bm_bridge_to_580_exp","i80_680_to_505")
+full_facilities_list <- c("i880_101to238", "i880_101to238_exp",
+                          "i680_bm_bridge_to_580", "i680_bm_bridge_to_580_exp",
+                          "i80_680_to_505")
 
 # Join trip file with facility flag file 
 # Retain only important variables
@@ -55,9 +56,9 @@ working <- left_join(facility_flag,trip %>% select(trip_id,hh_id,depart_hour,tri
 # Summarize poverty_status variable
 # Use operating period for express lanes (5a-8p)
 
-AM peak period, 6 am to 10 am; PM peak period - 3 pm to 7 pm 
+#AM peak period, 6 am to 10 am; PM peak period - 3 pm to 7 pm 
 exp_operating <- c(05:20)        # All day: 5 AM - 8 PM
-#exp_operating <- c(6:9, 15:18)  # Peak: 6-9 AM and 3-6 PM
+#exp_operating <- c(6:9, 15:18)    # Peak: 6-9 AM and 3-6 PM
 
 # Now create function for iterating by facility analyzed and time of day
 # The variable squared_standard_weights is saved to later calculate standard error of a weighted sample, as referenced above. 

@@ -15,12 +15,12 @@ facility_segments <- read.csv(segments_in)
 
 # ---------------------------------
 # append i880 between 101 to 238
-# note osmid_Facilityi880_101to238.csv is the output of 
+# note osmid_Facilityi880_101to238.csv is the output of https://github.com/BayAreaMetro/Travel-Diary-Surveys/blob/master/BATS-2023/Requests/SelectI880_between101and238.ipynb
 append_file      <- file.path(BOX_dir,"Data","2023","Survey Conflation","osmid_Facilityi880_101to238.csv")
 append_segments  <- read.csv(append_file)
 
-# Append (row bind) the new file to the existing dataset
-facility_segments <- rbind(facility_segments, append_segments)
+# Append the new file to the existing dataset
+facility_segments <- bind_rows(facility_segments, append_segments)
 # ---------------------------------
 
 # Keep only records with non-empty facility name (>0 works to filter this expression)
@@ -133,6 +133,7 @@ final <- sum_links %>%
                                        carq_bridge,bm_bridge,ant_bridge), ~ .x==1),1,0)) %>% 
   left_join(.,trip %>% select(trip_id,express_lane_use),by="trip_id") %>% 
   mutate(i880_baybridge_to_237_exp=if_else((i880_baybridge_to_237==1 & express_lane_use==1),1,0),
+         i880_101to238_exp=if_else((i880_101to238==1 & express_lane_use==1),1,0),
          i680_bm_bridge_to_580_exp=if_else((i680_bm_bridge_to_580==1 & express_lane_use==1),1,0)) %>% 
  select(trip_id,
         bay_bridge_toll,
@@ -168,6 +169,8 @@ final <- sum_links %>%
         sr37_80_to_101,
         i880_baybridge_to_237,
         i880_baybridge_to_237_exp,
+        i880_101to238,
+        i880_101to238_exp,
         i680_80_to_580,
         i680_bm_bridge_to_580,
         i680_bm_bridge_to_580_exp,
