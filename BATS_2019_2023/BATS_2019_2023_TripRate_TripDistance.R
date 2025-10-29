@@ -34,6 +34,10 @@ source("E:/GitHub/Travel-Diary-Surveys/BATS_2019_2023/Create_PersonDay_df_with_d
 ProcessedPersonDays_2019_2023_df <- ProcessedPersonDays_2019_2023_df %>%
   filter(age>=4)
 
+# Drop if weight is 0 (to get correct unweighted count), although only have negligible impacts on the weighted shares, se, ci, cv calc (4 or 5 digits after the decimal)
+ProcessedPersonDays_2019_2023_df <- ProcessedPersonDays_2019_2023_df %>%
+  filter(pdexpfac>0)
+
 # Write PersonDays_2019_2023_df to csv for subsequent processes
 output_trips_csv <- glue("{working_dir}/PersonDays_2019_2023_Adults.csv")
 write.csv(ProcessedPersonDays_2019_2023_df, file = output_trips_csv, row.names = FALSE)
@@ -200,6 +204,34 @@ srv_results_trips_OTHER <- srv_design %>%
   )
 
 
+#---------------------------------------------------------------------------------------------
+
+# --- Average trip length (total miles / total trips) by subgroup ---
+srv_results_avg_triplen <- srv_design %>%
+  group_by(commute_cat, survey_cycle) %>%
+  summarize(
+    n_unweighted = unweighted(n()),
+    n_weighted   = survey_total(),
+    avg_trip_length = survey_ratio(
+      numerator   = personDay_dist_in_miles,
+      denominator = num_trips,
+      vartype = c("se","ci","cv")
+    )
+  )
+
+# --- Average trip length - ALL ADULTS ---
+srv_results_avg_triplen_AllAdults <- srv_design %>%
+  group_by(survey_cycle) %>%
+  summarize(
+    n_unweighted = unweighted(n()),
+    n_weighted   = survey_total(),
+    avg_trip_length = survey_ratio(
+      numerator   = personDay_dist_in_miles,
+      denominator = num_trips,
+      vartype = c("se","ci","cv")
+    )
+  )
+
 # -------------------------
 # Calculate mean, se, ci, cv etc - ALL ADULTS (not by commute_cat)
 # -------------------------
@@ -330,6 +362,277 @@ srv_results_trips_OTHER_AllAdults <- srv_design %>%
     mean_num_trips_OTHER = survey_mean(num_trips_OTHER, vartype = c("se", "ci", "cv"))
   )
 
+
+# -------------------------
+# Calculate mean, se, ci, cv etc - BY COUNTY (all adults by home county)
+# -------------------------
+
+# Mean distance - BY COUNTY
+srv_results_dist_ByCounty <- srv_design %>%
+  group_by(home_county_label, survey_cycle) %>%
+  summarize(
+    n_unweighted = unweighted(n()),
+    n_weighted = survey_total(),
+    mean_dist = survey_mean(personDay_dist_in_miles, vartype = c("se", "ci", "cv"))
+  )
+
+# Mean non-work distance - BY COUNTY
+srv_results_PbShMeSo_dist_ByCounty <- srv_design %>%
+  group_by(home_county_label, survey_cycle) %>%
+  summarize(
+    n_unweighted = unweighted(n()),
+    n_weighted = survey_total(),
+    mean_PbShMeSo_dist = survey_mean(personDay_dist_PbShMeSo_miles, vartype = c("se", "ci", "cv"))
+  )
+
+# Mean number of trips - BY COUNTY
+srv_results_trips_ByCounty <- srv_design %>%
+  group_by(home_county_label, survey_cycle) %>%
+  summarize(
+    n_unweighted = unweighted(n()),
+    n_weighted = survey_total(),
+    mean_num_trips = survey_mean(num_trips, vartype = c("se", "ci", "cv"))
+  )
+
+# Mean number of discretionary trips - BY COUNTY
+srv_results_PbShMeSo_trips_ByCounty <- srv_design %>%
+  group_by(home_county_label, survey_cycle) %>%
+  summarize(
+    n_unweighted = unweighted(n()),
+    n_weighted = survey_total(),
+    mean_num_PbShMeSo_trips = survey_mean(num_PbShMeSo_trips, vartype = c("se", "ci", "cv"))
+  )
+
+# Mean number of ShMeSo trips - BY COUNTY
+srv_results_ShMeSo_trips_ByCounty <- srv_design %>%
+  group_by(home_county_label, survey_cycle) %>%
+  summarize(
+    n_unweighted = unweighted(n()),
+    n_weighted = survey_total(),
+    mean_num_ShMeSo_trips = survey_mean(num_ShMeSo_trips, vartype = c("se", "ci", "cv"))
+  )
+
+# Continue for all trip purposes by county...
+srv_results_trips_HOME_ByCounty <- srv_design %>%
+  group_by(home_county_label, survey_cycle) %>%
+  summarize(
+    n_unweighted = unweighted(n()),
+    n_weighted = survey_total(),
+    mean_num_trips_HOME = survey_mean(num_trips_HOME, vartype = c("se", "ci", "cv"))
+  )
+
+srv_results_trips_WORK_ByCounty <- srv_design %>%
+  group_by(home_county_label, survey_cycle) %>%
+  summarize(
+    n_unweighted = unweighted(n()),
+    n_weighted = survey_total(),
+    mean_num_trips_WORK = survey_mean(num_trips_WORK, vartype = c("se", "ci", "cv"))
+  )
+
+srv_results_trips_SCHOOL_ByCounty <- srv_design %>%
+  group_by(home_county_label, survey_cycle) %>%
+  summarize(
+    n_unweighted = unweighted(n()),
+    n_weighted = survey_total(),
+    mean_num_trips_SCHOOL = survey_mean(num_trips_SCHOOL, vartype = c("se", "ci", "cv"))
+  )
+
+srv_results_trips_ESCORT_ByCounty <- srv_design %>%
+  group_by(home_county_label, survey_cycle) %>%
+  summarize(
+    n_unweighted = unweighted(n()),
+    n_weighted = survey_total(),
+    mean_num_trips_ESCORT = survey_mean(num_trips_ESCORT, vartype = c("se", "ci", "cv"))
+  )
+
+srv_results_trips_PERS_BUS_ByCounty <- srv_design %>%
+  group_by(home_county_label, survey_cycle) %>%
+  summarize(
+    n_unweighted = unweighted(n()),
+    n_weighted = survey_total(),
+    mean_num_trips_PERS_BUS = survey_mean(num_trips_PERS_BUS, vartype = c("se", "ci", "cv"))
+  )
+
+srv_results_trips_SHOP_ByCounty <- srv_design %>%
+  group_by(home_county_label, survey_cycle) %>%
+  summarize(
+    n_unweighted = unweighted(n()),
+    n_weighted = survey_total(),
+    mean_num_trips_SHOP = survey_mean(num_trips_SHOP, vartype = c("se", "ci", "cv"))
+  )
+
+srv_results_trips_MEAL_ByCounty <- srv_design %>%
+  group_by(home_county_label, survey_cycle) %>%
+  summarize(
+    n_unweighted = unweighted(n()),
+    n_weighted = survey_total(),
+    mean_num_trips_MEAL = survey_mean(num_trips_MEAL, vartype = c("se", "ci", "cv"))
+  )
+
+srv_results_trips_SOCREC_ByCounty <- srv_design %>%
+  group_by(home_county_label, survey_cycle) %>%
+  summarize(
+    n_unweighted = unweighted(n()),
+    n_weighted = survey_total(),
+    mean_num_trips_SOCREC = survey_mean(num_trips_SOCREC, vartype = c("se", "ci", "cv"))
+  )
+
+srv_results_trips_OTHER_ByCounty <- srv_design %>%
+  group_by(home_county_label, survey_cycle) %>%
+  summarize(
+    n_unweighted = unweighted(n()),
+    n_weighted = survey_total(),
+    mean_num_trips_OTHER = survey_mean(num_trips_OTHER, vartype = c("se", "ci", "cv"))
+  )
+
+# Average trip length - BY COUNTY
+srv_results_avg_triplen_ByCounty <- srv_design %>%
+  group_by(home_county_label, survey_cycle) %>%
+  summarize(
+    n_unweighted = unweighted(n()),
+    n_weighted   = survey_total(),
+    avg_trip_length = survey_ratio(
+      numerator   = personDay_dist_in_miles,
+      denominator = num_trips,
+      vartype = c("se","ci","cv")
+    )
+  )
+
+# -------------------------
+# Calculate mean, se, ci, cv etc - BY COMMUTE CATEGORY AND COUNTY
+# -------------------------
+
+# Mean distance - BY COMMUTE CATEGORY AND COUNTY
+srv_results_dist_ByCommuteCatCounty <- srv_design %>%
+  group_by(commute_cat, home_county_label, survey_cycle) %>%
+  summarize(
+    n_unweighted = unweighted(n()),
+    n_weighted = survey_total(),
+    mean_dist = survey_mean(personDay_dist_in_miles, vartype = c("se", "ci", "cv"))
+  )
+
+# Mean non-work distance - BY COMMUTE CATEGORY AND COUNTY
+srv_results_PbShMeSo_dist_ByCommuteCatCounty <- srv_design %>%
+  group_by(commute_cat, home_county_label, survey_cycle) %>%
+  summarize(
+    n_unweighted = unweighted(n()),
+    n_weighted = survey_total(),
+    mean_PbShMeSo_dist = survey_mean(personDay_dist_PbShMeSo_miles, vartype = c("se", "ci", "cv"))
+  )
+
+# Mean number of trips - BY COMMUTE CATEGORY AND COUNTY
+srv_results_trips_ByCommuteCatCounty <- srv_design %>%
+  group_by(commute_cat, home_county_label, survey_cycle) %>%
+  summarize(
+    n_unweighted = unweighted(n()),
+    n_weighted = survey_total(),
+    mean_num_trips = survey_mean(num_trips, vartype = c("se", "ci", "cv"))
+  )
+
+# Mean number of discretionary trips - BY COMMUTE CATEGORY AND COUNTY
+srv_results_PbShMeSo_trips_ByCommuteCatCounty <- srv_design %>%
+  group_by(commute_cat, home_county_label, survey_cycle) %>%
+  summarize(
+    n_unweighted = unweighted(n()),
+    n_weighted = survey_total(),
+    mean_num_PbShMeSo_trips = survey_mean(num_PbShMeSo_trips, vartype = c("se", "ci", "cv"))
+  )
+
+# Mean number of ShMeSo trips - BY COMMUTE CATEGORY AND COUNTY
+srv_results_ShMeSo_trips_ByCommuteCatCounty <- srv_design %>%
+  group_by(commute_cat, home_county_label, survey_cycle) %>%
+  summarize(
+    n_unweighted = unweighted(n()),
+    n_weighted = survey_total(),
+    mean_num_ShMeSo_trips = survey_mean(num_ShMeSo_trips, vartype = c("se", "ci", "cv"))
+  )
+
+# Continue for all trip purposes by commute category and county...
+srv_results_trips_HOME_ByCommuteCatCounty <- srv_design %>%
+  group_by(commute_cat, home_county_label, survey_cycle) %>%
+  summarize(
+    n_unweighted = unweighted(n()),
+    n_weighted = survey_total(),
+    mean_num_trips_HOME = survey_mean(num_trips_HOME, vartype = c("se", "ci", "cv"))
+  )
+
+srv_results_trips_WORK_ByCommuteCatCounty <- srv_design %>%
+  group_by(commute_cat, home_county_label, survey_cycle) %>%
+  summarize(
+    n_unweighted = unweighted(n()),
+    n_weighted = survey_total(),
+    mean_num_trips_WORK = survey_mean(num_trips_WORK, vartype = c("se", "ci", "cv"))
+  )
+
+srv_results_trips_SCHOOL_ByCommuteCatCounty <- srv_design %>%
+  group_by(commute_cat, home_county_label, survey_cycle) %>%
+  summarize(
+    n_unweighted = unweighted(n()),
+    n_weighted = survey_total(),
+    mean_num_trips_SCHOOL = survey_mean(num_trips_SCHOOL, vartype = c("se", "ci", "cv"))
+  )
+
+srv_results_trips_ESCORT_ByCommuteCatCounty <- srv_design %>%
+  group_by(commute_cat, home_county_label, survey_cycle) %>%
+  summarize(
+    n_unweighted = unweighted(n()),
+    n_weighted = survey_total(),
+    mean_num_trips_ESCORT = survey_mean(num_trips_ESCORT, vartype = c("se", "ci", "cv"))
+  )
+
+srv_results_trips_PERS_BUS_ByCommuteCatCounty <- srv_design %>%
+  group_by(commute_cat, home_county_label, survey_cycle) %>%
+  summarize(
+    n_unweighted = unweighted(n()),
+    n_weighted = survey_total(),
+    mean_num_trips_PERS_BUS = survey_mean(num_trips_PERS_BUS, vartype = c("se", "ci", "cv"))
+  )
+
+srv_results_trips_SHOP_ByCommuteCatCounty <- srv_design %>%
+  group_by(commute_cat, home_county_label, survey_cycle) %>%
+  summarize(
+    n_unweighted = unweighted(n()),
+    n_weighted = survey_total(),
+    mean_num_trips_SHOP = survey_mean(num_trips_SHOP, vartype = c("se", "ci", "cv"))
+  )
+
+srv_results_trips_MEAL_ByCommuteCatCounty <- srv_design %>%
+  group_by(commute_cat, home_county_label, survey_cycle) %>%
+  summarize(
+    n_unweighted = unweighted(n()),
+    n_weighted = survey_total(),
+    mean_num_trips_MEAL = survey_mean(num_trips_MEAL, vartype = c("se", "ci", "cv"))
+  )
+
+srv_results_trips_SOCREC_ByCommuteCatCounty <- srv_design %>%
+  group_by(commute_cat, home_county_label, survey_cycle) %>%
+  summarize(
+    n_unweighted = unweighted(n()),
+    n_weighted = survey_total(),
+    mean_num_trips_SOCREC = survey_mean(num_trips_SOCREC, vartype = c("se", "ci", "cv"))
+  )
+
+srv_results_trips_OTHER_ByCommuteCatCounty <- srv_design %>%
+  group_by(commute_cat, home_county_label, survey_cycle) %>%
+  summarize(
+    n_unweighted = unweighted(n()),
+    n_weighted = survey_total(),
+    mean_num_trips_OTHER = survey_mean(num_trips_OTHER, vartype = c("se", "ci", "cv"))
+  )
+
+# Average trip length - BY COMMUTE CATEGORY AND COUNTY
+srv_results_avg_triplen_ByCommuteCatCounty <- srv_design %>%
+  group_by(commute_cat, home_county_label, survey_cycle) %>%
+  summarize(
+    n_unweighted = unweighted(n()),
+    n_weighted   = survey_total(),
+    avg_trip_length = survey_ratio(
+      numerator   = personDay_dist_in_miles,
+      denominator = num_trips,
+      vartype = c("se","ci","cv")
+    )
+  )
+
 # Display all results
 srv_results_dist
 srv_results_PbShMeSo_dist
@@ -367,6 +670,30 @@ process_survey_result <- function(srv_result, summary_col_name, summary_level) {
           TRUE ~ "Unknown"
         ))
       )
+  } else if (summary_level == "By County") {
+  # For county-level summaries (all adults by county)
+   srv_result %>%
+      mutate(
+        summary_col = summary_col_name,
+        summary_level = summary_level,
+        commute_cat = NA_character_,
+        chart_label = paste(survey_cycle, " - ", home_county_label)
+      )
+  } else if (summary_level == "By Commute Category and County") {
+    # For commute category and county summaries
+    srv_result %>%
+      mutate(
+        summary_col = summary_col_name,
+        summary_level = summary_level,
+        chart_label = paste(survey_cycle, " - ", case_when(
+          commute_cat == "1. Commuted"              ~ "Commuted",
+          commute_cat == "2. Telecommuted 7+ hours and not Commuted" ~ "Telecommuted 7+ hours",
+          commute_cat == "3. Telecommuted <7 hours and not Commuted" ~ "Telecommuted <7 hours",
+          commute_cat == "4. Did not work"          ~ "Did not work",
+          commute_cat == "5. Not full-time worker"  ~ "Not full-time worker",
+          TRUE ~ "Unknown"
+        ), " - ", home_county_label)
+      )
   } else {
     # For all adults summaries
     srv_result %>%
@@ -380,7 +707,6 @@ process_survey_result <- function(srv_result, summary_col_name, summary_level) {
 }
 
 
-# Process each result and standardize column names
 # Process each result and standardize column names
 summary_list <- list(
   # Distance - by commute category
@@ -547,8 +873,220 @@ summary_list <- list(
   process_survey_result(srv_results_trips_OTHER_AllAdults, "num_trips_OTHER", "All adults") %>%
     rename(mean = mean_num_trips_OTHER, se = mean_num_trips_OTHER_se, 
            ci_lower_95 = mean_num_trips_OTHER_low, ci_upper_95 = mean_num_trips_OTHER_upp, 
-           coeff_of_var = mean_num_trips_OTHER_cv)
+           coeff_of_var = mean_num_trips_OTHER_cv),
+
+  # Average trip length - by commute category
+  process_survey_result(srv_results_avg_triplen, "avg_trip_length_miles", "By Commute Category") %>%
+    rename(
+      mean         = avg_trip_length,
+      se           = avg_trip_length_se,
+      ci_lower_95  = avg_trip_length_low,
+      ci_upper_95  = avg_trip_length_upp,
+      coeff_of_var = avg_trip_length_cv
+    ),
+
+  # Average trip length - all adults
+  process_survey_result(srv_results_avg_triplen_AllAdults, "avg_trip_length_miles", "All adults") %>%
+    rename(
+      mean         = avg_trip_length,
+      se           = avg_trip_length_se,
+      ci_lower_95  = avg_trip_length_low,
+      ci_upper_95  = avg_trip_length_upp,
+      coeff_of_var = avg_trip_length_cv
+    ),
+  
+  # ===== BY COUNTY (All adults by county) =====
+  
+  # Distance - by county
+  process_survey_result(srv_results_dist_ByCounty, "personDay_dist_in_miles", "By County") %>%
+    rename(mean = mean_dist, se = mean_dist_se, ci_lower_95 = mean_dist_low, 
+           ci_upper_95 = mean_dist_upp, coeff_of_var = mean_dist_cv),
+  
+  # PbShMeSo distance - by county
+  process_survey_result(srv_results_PbShMeSo_dist_ByCounty, "personDay_dist_PbShMeSo_miles", "By County") %>%
+    rename(mean = mean_PbShMeSo_dist, se = mean_PbShMeSo_dist_se, 
+           ci_lower_95 = mean_PbShMeSo_dist_low, ci_upper_95 = mean_PbShMeSo_dist_upp, 
+           coeff_of_var = mean_PbShMeSo_dist_cv),
+  
+  # Trips - by county
+  process_survey_result(srv_results_trips_ByCounty, "num_trips", "By County") %>%
+    rename(mean = mean_num_trips, se = mean_num_trips_se, 
+           ci_lower_95 = mean_num_trips_low, ci_upper_95 = mean_num_trips_upp, 
+           coeff_of_var = mean_num_trips_cv),
+  
+  # PbShMeSo trips - by county
+  process_survey_result(srv_results_PbShMeSo_trips_ByCounty, "num_PbShMeSo_trips", "By County") %>%
+    rename(mean = mean_num_PbShMeSo_trips, se = mean_num_PbShMeSo_trips_se, 
+           ci_lower_95 = mean_num_PbShMeSo_trips_low, ci_upper_95 = mean_num_PbShMeSo_trips_upp, 
+           coeff_of_var = mean_num_PbShMeSo_trips_cv),
+  
+  # ShMeSo trips - by county
+  process_survey_result(srv_results_ShMeSo_trips_ByCounty, "num_ShMeSo_trips", "By County") %>%
+    rename(mean = mean_num_ShMeSo_trips, se = mean_num_ShMeSo_trips_se, 
+           ci_lower_95 = mean_num_ShMeSo_trips_low, ci_upper_95 = mean_num_ShMeSo_trips_upp, 
+           coeff_of_var = mean_num_ShMeSo_trips_cv),
+  
+  # HOME trips - by county
+  process_survey_result(srv_results_trips_HOME_ByCounty, "num_trips_HOME", "By County") %>%
+    rename(mean = mean_num_trips_HOME, se = mean_num_trips_HOME_se, 
+           ci_lower_95 = mean_num_trips_HOME_low, ci_upper_95 = mean_num_trips_HOME_upp, 
+           coeff_of_var = mean_num_trips_HOME_cv),
+  
+  # WORK trips - by county
+  process_survey_result(srv_results_trips_WORK_ByCounty, "num_trips_WORK", "By County") %>%
+    rename(mean = mean_num_trips_WORK, se = mean_num_trips_WORK_se, 
+           ci_lower_95 = mean_num_trips_WORK_low, ci_upper_95 = mean_num_trips_WORK_upp, 
+           coeff_of_var = mean_num_trips_WORK_cv),
+  
+  # SCHOOL trips - by county
+  process_survey_result(srv_results_trips_SCHOOL_ByCounty, "num_trips_SCHOOL", "By County") %>%
+    rename(mean = mean_num_trips_SCHOOL, se = mean_num_trips_SCHOOL_se, 
+           ci_lower_95 = mean_num_trips_SCHOOL_low, ci_upper_95 = mean_num_trips_SCHOOL_upp, 
+           coeff_of_var = mean_num_trips_SCHOOL_cv),
+  
+  # ESCORT trips - by county
+  process_survey_result(srv_results_trips_ESCORT_ByCounty, "num_trips_ESCORT", "By County") %>%
+    rename(mean = mean_num_trips_ESCORT, se = mean_num_trips_ESCORT_se, 
+           ci_lower_95 = mean_num_trips_ESCORT_low, ci_upper_95 = mean_num_trips_ESCORT_upp, 
+           coeff_of_var = mean_num_trips_ESCORT_cv),
+  
+  # PERS_BUS trips - by county
+  process_survey_result(srv_results_trips_PERS_BUS_ByCounty, "num_trips_PERS_BUS", "By County") %>%
+    rename(mean = mean_num_trips_PERS_BUS, se = mean_num_trips_PERS_BUS_se, 
+           ci_lower_95 = mean_num_trips_PERS_BUS_low, ci_upper_95 = mean_num_trips_PERS_BUS_upp, 
+           coeff_of_var = mean_num_trips_PERS_BUS_cv),
+  
+  # SHOP trips - by county
+  process_survey_result(srv_results_trips_SHOP_ByCounty, "num_trips_SHOP", "By County") %>%
+    rename(mean = mean_num_trips_SHOP, se = mean_num_trips_SHOP_se, 
+           ci_lower_95 = mean_num_trips_SHOP_low, ci_upper_95 = mean_num_trips_SHOP_upp, 
+           coeff_of_var = mean_num_trips_SHOP_cv),
+  
+  # MEAL trips - by county
+  process_survey_result(srv_results_trips_MEAL_ByCounty, "num_trips_MEAL", "By County") %>%
+    rename(mean = mean_num_trips_MEAL, se = mean_num_trips_MEAL_se, 
+           ci_lower_95 = mean_num_trips_MEAL_low, ci_upper_95 = mean_num_trips_MEAL_upp, 
+           coeff_of_var = mean_num_trips_MEAL_cv),
+  
+  # SOCREC trips - by county
+  process_survey_result(srv_results_trips_SOCREC_ByCounty, "num_trips_SOCREC", "By County") %>%
+    rename(mean = mean_num_trips_SOCREC, se = mean_num_trips_SOCREC_se, 
+           ci_lower_95 = mean_num_trips_SOCREC_low, ci_upper_95 = mean_num_trips_SOCREC_upp, 
+           coeff_of_var = mean_num_trips_SOCREC_cv),
+  
+  # OTHER trips - by county
+  process_survey_result(srv_results_trips_OTHER_ByCounty, "num_trips_OTHER", "By County") %>%
+    rename(mean = mean_num_trips_OTHER, se = mean_num_trips_OTHER_se, 
+           ci_lower_95 = mean_num_trips_OTHER_low, ci_upper_95 = mean_num_trips_OTHER_upp, 
+           coeff_of_var = mean_num_trips_OTHER_cv),
+  
+  # Average trip length - by county
+  process_survey_result(srv_results_avg_triplen_ByCounty, "avg_trip_length_miles", "By County") %>%
+    rename(
+      mean         = avg_trip_length,
+      se           = avg_trip_length_se,
+      ci_lower_95  = avg_trip_length_low,
+      ci_upper_95  = avg_trip_length_upp,
+      coeff_of_var = avg_trip_length_cv
+    ),
+  
+  # ===== BY COMMUTE CATEGORY AND COUNTY =====
+  
+  # Distance - by commute category and county
+  process_survey_result(srv_results_dist_ByCommuteCatCounty, "personDay_dist_in_miles", "By Commute Category and County") %>%
+    rename(mean = mean_dist, se = mean_dist_se, ci_lower_95 = mean_dist_low, 
+           ci_upper_95 = mean_dist_upp, coeff_of_var = mean_dist_cv),
+  
+  # PbShMeSo distance - by commute category and county
+  process_survey_result(srv_results_PbShMeSo_dist_ByCommuteCatCounty, "personDay_dist_PbShMeSo_miles", "By Commute Category and County") %>%
+    rename(mean = mean_PbShMeSo_dist, se = mean_PbShMeSo_dist_se, 
+           ci_lower_95 = mean_PbShMeSo_dist_low, ci_upper_95 = mean_PbShMeSo_dist_upp, 
+           coeff_of_var = mean_PbShMeSo_dist_cv),
+  
+  # Trips - by commute category and county
+  process_survey_result(srv_results_trips_ByCommuteCatCounty, "num_trips", "By Commute Category and County") %>%
+    rename(mean = mean_num_trips, se = mean_num_trips_se, 
+           ci_lower_95 = mean_num_trips_low, ci_upper_95 = mean_num_trips_upp, 
+           coeff_of_var = mean_num_trips_cv),
+  
+  # PbShMeSo trips - by commute category and county
+  process_survey_result(srv_results_PbShMeSo_trips_ByCommuteCatCounty, "num_PbShMeSo_trips", "By Commute Category and County") %>%
+    rename(mean = mean_num_PbShMeSo_trips, se = mean_num_PbShMeSo_trips_se, 
+           ci_lower_95 = mean_num_PbShMeSo_trips_low, ci_upper_95 = mean_num_PbShMeSo_trips_upp, 
+           coeff_of_var = mean_num_PbShMeSo_trips_cv),
+  
+  # ShMeSo trips - by commute category and county
+  process_survey_result(srv_results_ShMeSo_trips_ByCommuteCatCounty, "num_ShMeSo_trips", "By Commute Category and County") %>%
+    rename(mean = mean_num_ShMeSo_trips, se = mean_num_ShMeSo_trips_se, 
+           ci_lower_95 = mean_num_ShMeSo_trips_low, ci_upper_95 = mean_num_ShMeSo_trips_upp, 
+           coeff_of_var = mean_num_ShMeSo_trips_cv),
+  
+  # HOME trips - by commute category and county
+  process_survey_result(srv_results_trips_HOME_ByCommuteCatCounty, "num_trips_HOME", "By Commute Category and County") %>%
+    rename(mean = mean_num_trips_HOME, se = mean_num_trips_HOME_se, 
+           ci_lower_95 = mean_num_trips_HOME_low, ci_upper_95 = mean_num_trips_HOME_upp, 
+           coeff_of_var = mean_num_trips_HOME_cv),
+  
+  # WORK trips - by commute category and county
+  process_survey_result(srv_results_trips_WORK_ByCommuteCatCounty, "num_trips_WORK", "By Commute Category and County") %>%
+    rename(mean = mean_num_trips_WORK, se = mean_num_trips_WORK_se, 
+           ci_lower_95 = mean_num_trips_WORK_low, ci_upper_95 = mean_num_trips_WORK_upp, 
+           coeff_of_var = mean_num_trips_WORK_cv),
+  
+  # SCHOOL trips - by commute category and county
+  process_survey_result(srv_results_trips_SCHOOL_ByCommuteCatCounty, "num_trips_SCHOOL", "By Commute Category and County") %>%
+    rename(mean = mean_num_trips_SCHOOL, se = mean_num_trips_SCHOOL_se, 
+           ci_lower_95 = mean_num_trips_SCHOOL_low, ci_upper_95 = mean_num_trips_SCHOOL_upp, 
+           coeff_of_var = mean_num_trips_SCHOOL_cv),
+  
+  # ESCORT trips - by commute category and county
+  process_survey_result(srv_results_trips_ESCORT_ByCommuteCatCounty, "num_trips_ESCORT", "By Commute Category and County") %>%
+    rename(mean = mean_num_trips_ESCORT, se = mean_num_trips_ESCORT_se, 
+           ci_lower_95 = mean_num_trips_ESCORT_low, ci_upper_95 = mean_num_trips_ESCORT_upp, 
+           coeff_of_var = mean_num_trips_ESCORT_cv),
+  
+  # PERS_BUS trips - by commute category and county
+  process_survey_result(srv_results_trips_PERS_BUS_ByCommuteCatCounty, "num_trips_PERS_BUS", "By Commute Category and County") %>%
+    rename(mean = mean_num_trips_PERS_BUS, se = mean_num_trips_PERS_BUS_se, 
+           ci_lower_95 = mean_num_trips_PERS_BUS_low, ci_upper_95 = mean_num_trips_PERS_BUS_upp, 
+           coeff_of_var = mean_num_trips_PERS_BUS_cv),
+  
+  # SHOP trips - by commute category and county
+  process_survey_result(srv_results_trips_SHOP_ByCommuteCatCounty, "num_trips_SHOP", "By Commute Category and County") %>%
+    rename(mean = mean_num_trips_SHOP, se = mean_num_trips_SHOP_se, 
+           ci_lower_95 = mean_num_trips_SHOP_low, ci_upper_95 = mean_num_trips_SHOP_upp, 
+           coeff_of_var = mean_num_trips_SHOP_cv),
+  
+  # MEAL trips - by commute category and county
+  process_survey_result(srv_results_trips_MEAL_ByCommuteCatCounty, "num_trips_MEAL", "By Commute Category and County") %>%
+    rename(mean = mean_num_trips_MEAL, se = mean_num_trips_MEAL_se, 
+           ci_lower_95 = mean_num_trips_MEAL_low, ci_upper_95 = mean_num_trips_MEAL_upp, 
+           coeff_of_var = mean_num_trips_MEAL_cv),
+  
+  # SOCREC trips - by commute category and county
+  process_survey_result(srv_results_trips_SOCREC_ByCommuteCatCounty, "num_trips_SOCREC", "By Commute Category and County") %>%
+    rename(mean = mean_num_trips_SOCREC, se = mean_num_trips_SOCREC_se, 
+           ci_lower_95 = mean_num_trips_SOCREC_low, ci_upper_95 = mean_num_trips_SOCREC_upp, 
+           coeff_of_var = mean_num_trips_SOCREC_cv),
+  
+  # OTHER trips - by commute category and county
+  process_survey_result(srv_results_trips_OTHER_ByCommuteCatCounty, "num_trips_OTHER", "By Commute Category and County") %>%
+    rename(mean = mean_num_trips_OTHER, se = mean_num_trips_OTHER_se, 
+           ci_lower_95 = mean_num_trips_OTHER_low, ci_upper_95 = mean_num_trips_OTHER_upp, 
+           coeff_of_var = mean_num_trips_OTHER_cv),
+  
+  # Average trip length - by commute category and county
+  process_survey_result(srv_results_avg_triplen_ByCommuteCatCounty, "avg_trip_length_miles", "By Commute Category and County") %>%
+    rename(
+      mean         = avg_trip_length,
+      se           = avg_trip_length_se,
+      ci_lower_95  = avg_trip_length_low,
+      ci_upper_95  = avg_trip_length_upp,
+      coeff_of_var = avg_trip_length_cv
+    )
 )
+
+
 
 # Combine all results into one table
 comprehensive_summary <- bind_rows(summary_list)
@@ -595,6 +1133,7 @@ comprehensive_summary <- comprehensive_summary %>%
     summary_level,
     survey_cycle,
     commute_cat,
+    home_county_label, 
     chart_label,
     mean,
     se,
@@ -606,7 +1145,7 @@ comprehensive_summary <- comprehensive_summary %>%
     unweighted_count,
     weighted_count
   ) %>%
-  arrange(summary_col, summary_level, survey_cycle, commute_cat)
+  arrange(summary_col, summary_level, survey_cycle, commute_cat, home_county_label)
 
 # Display the comprehensive summary table
 print("\n=== Comprehensive Summary Table ===")
