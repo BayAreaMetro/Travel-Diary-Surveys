@@ -32,7 +32,7 @@ data <- data %>%
 # write the file out
 data <- data %>%
   filter(age >= 4) %>%
-  filter(trexpfac != 0)
+  filter(trexpfac > 0)
 
 write_csv(data, 
           "M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Processed/BATS2019_2023/LinkedTrips_2019_2023_withDist_withStrata_AdultOnly_No0trexpfac.csv")
