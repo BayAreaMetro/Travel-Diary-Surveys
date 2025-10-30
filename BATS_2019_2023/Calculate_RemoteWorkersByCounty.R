@@ -35,7 +35,8 @@ source("E:/GitHub/Travel-Diary-Surveys/BATS_2019_2023/Create_PersonDay_df_with_d
 # updated the unverse to "all workers" or just "full time workers" to make it a bit more comparable to PUMS
 ProcessedPersonDays_2019_2023_df <- ProcessedPersonDays_2019_2023_df %>%
   filter(age>=4) %>%
-  filter(employment==1)
+  filter(employment==1)  %>%
+  filter(pdexpfac>0)
 
 # or should it be all workers?
 # filter(employment %in% c(1, 2, 3, 7, 8))    
@@ -74,13 +75,13 @@ ProcessedPersonDays_2019_2023_df <- ProcessedPersonDays_2019_2023_df %>%
   mutate(home_county_label_grouped = case_when(
     home_county_label == "Alameda County"       ~ "Alameda",
     home_county_label == "Contra Costa County"  ~ "Contra Costa",
-    home_county_label == "Marin County"         ~ "Marin",
-    home_county_label == "Napa County"          ~ "Napa and Sonoma",
+    home_county_label == "Marin County"         ~ "Marin, Sonoma, Napa, Solano",
+    home_county_label == "Napa County"          ~ "Marin, Sonoma, Napa, Solano",
     home_county_label == "San Francisco County" ~ "San Francisco",
     home_county_label == "San Mateo County"     ~ "San Mateo",
     home_county_label == "Santa Clara County"   ~ "Santa Clara",
-    home_county_label == "Solano County"        ~ "Solano",
-    home_county_label == "Sonoma County"        ~ "Napa and Sonoma",
+    home_county_label == "Solano County"        ~ "Marin, Sonoma, Napa, Solano",
+    home_county_label == "Sonoma County"        ~ "Marin, Sonoma, Napa, Solano",
     TRUE ~ NA_character_  
   ))
 
@@ -96,35 +97,75 @@ ProcessedPersonDays_2019_2023_df %>%
     ) * 100
   )
 
+
 #-----------------------------------------
 # Add srvyr and build a survey design
 #-----------------------------------------
 library(srvyr)
 
-# Create survey design object
-srv_design <- ProcessedPersonDays_2019_2023_df %>%
-  as_survey_design(
-    ids     = hhno,
-    weights = pdexpfac,
-    strata = c(survey_cycle, stratification_var)
-  )
+# Get unique survey cycles
+survey_cycles <- unique(ProcessedPersonDays_2019_2023_df$survey_cycle)
 
+# Initialize empty list to store results
+results_list <- list()
 
-
-# ---- Proportion of "2. Telecommuted 7+ hours and not Commuted" with SE/CI/CV ----
-results_commute_cat2 <- srv_design %>%
-  group_by(survey_cycle, home_county_label_grouped) %>%
-  summarize(
-    pct_commute_cat_2 = survey_mean(
-      commute_cat == "2. Telecommuted 7+ hours and not Commuted",
-      vartype = c("se", "ci", "cv"),
-      level   = 0.95,
-      na_rm   = TRUE
+# Loop through each survey cycle
+for(cycle in survey_cycles) {
+  
+  print(glue("\n--- Processing Survey Cycle: {cycle} ---"))
+  
+  # Filter data for current cycle
+  cycle_data <- ProcessedPersonDays_2019_2023_df %>%
+    filter(survey_cycle == cycle)
+  
+  # Create survey design object
+  srv_design <- cycle_data %>%
+    as_survey_design(
+      ids     = hhno,
+      weights = pdexpfac,
+      strata  = stratification_var 
     )
-  )
+  
+  # Calculate results for this cycle
+  results_cycle <- srv_design %>%
+    group_by(home_county_label_grouped) %>%
+    summarize(
+      # Weighted count of total observations
+      weighted_n_total = survey_total(
+        vartype = "se"
+      ),
+      # Weighted count of telecommuters
+      weighted_n_telecommute = survey_total(
+        commute_cat == "2. Telecommuted 7+ hours and not Commuted",
+        vartype = "se",
+        na.rm = TRUE
+      ),
+      # Percentage with SE/CI/CV
+      pct_commute_cat_2 = survey_mean(
+        commute_cat == "2. Telecommuted 7+ hours and not Commuted",
+        vartype = c("se", "ci", "cv"),
+        deff = TRUE,
+        level   = 0.95,
+        na.rm   = TRUE
+      ),
+      # Unweighted counts
+      unweighted_n_total = unweighted(n()),
+      unweighted_n_telecommute = unweighted(sum(commute_cat == "2. Telecommuted 7+ hours and not Commuted", na.rm = TRUE))
+    ) %>%
+    mutate(survey_cycle = cycle)  # Add cycle identifier
+  
+  # Store results
+  results_list[[cycle]] <- results_cycle
+}
+
+# Combine all results
+results_commute_cat2 <- bind_rows(results_list)
+
+# Reorder columns to put survey_cycle first
+results_commute_cat2 <- results_commute_cat2 %>%
+  select(survey_cycle, everything())
 
 print(results_commute_cat2, width = Inf)
-
 
 # Write to CSV
 output_summary_csv <- glue("{working_dir}/Summary_PctRemoteWorkerByCounty_{format(Sys.time(), '%Y%m%d_%H%M%S')}.csv")
