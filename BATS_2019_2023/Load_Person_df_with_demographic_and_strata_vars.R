@@ -24,8 +24,9 @@ hh2023_path <- file.path(background_dataset_2023_dir, hh2023_file)
 hh2023_df <- read_csv(hh2023_path)
 
 hh2023_df <- hh2023_df %>%
-  select(hh_id, sample_segment, home_lon, home_lat, income_broad) %>%
+  select(hh_id, sample_segment, home_lon, home_lat, income_broad, home_county) %>%
   mutate(survey_cycle = 2023) %>%
+  mutate(home_county = as.character(home_county)) %>%
   rename(stratification_var = sample_segment)
 
 # --- person2023 ---
@@ -35,6 +36,7 @@ person2023_df <- read_csv(person2023_path)
 
 person2023_df <- person2023_df %>%
   select(hh_id, person_id, person_weight_rmove_only, age, employment, telework_freq, work_lat, work_lon) %>%
+  rename(telework_freq2023=telework_freq) %>% # the 2023 coding has more categories than the 2019 coding
   mutate(survey_cycle = 2023)
 
   # Read 2019 data
@@ -46,8 +48,9 @@ hh2019_path <- file.path(background_dataset_2019_dir, hh2019_file)
 hh2019_df <- read_tsv(hh2019_path)
 
 hh2019_df <- hh2019_df %>%
-  select(hh_id, sample_stratum, reported_home_lat, reported_home_lon, income_aggregate) %>%
+  select(hh_id, sample_stratum, reported_home_lat, reported_home_lon, income_aggregate, home_county_fips) %>%
   mutate(survey_cycle = 2019) %>%
+  mutate(home_county_fips = as.character(home_county_fips)) %>% # note that the 2023 dataset uses all five digits but the 2019 dataset uses only the last three digits 001, 003
   rename(home_lat = reported_home_lat,
          home_lon = reported_home_lon,
          stratification_var = sample_stratum)
@@ -64,6 +67,7 @@ person2019_df <- read_tsv(person2019_path)
 person2019_df <- person2019_df %>%
   select(hh_id, person_id, wt_sphone_wkday, age, employment, telework_freq, work_lat, work_lon) %>%
   mutate(survey_cycle = 2019) %>%
+  rename(telework_freq2019=telework_freq) %>%
   rename(person_weight_rmove_only = wt_sphone_wkday)
 
 # Union the two cycles
@@ -136,4 +140,150 @@ person_2019_2023_df <- person_2019_2023_df %>%
     survey_cycle == 2023 & income_broad == 995     ~ "Missing",
     survey_cycle == 2023 & income_broad == 999     ~ "Missing",
     TRUE ~ NA_character_  # For other survey cycles or other values
+  ))
+
+  # label telework_freq based on codebook
+  person_2019_2023_df <- person_2019_2023_df %>%
+  mutate(telework_freq_temp_label = case_when(
+    survey_cycle == 2019 & telework_freq2019 == 1   ~ "1. 6-7 days a week",
+    survey_cycle == 2019 & telework_freq2019 == 2   ~ "2. 5 days a week",
+    survey_cycle == 2019 & telework_freq2019 == 3   ~ "3. 4 days a week",
+    survey_cycle == 2019 & telework_freq2019 == 4   ~ "4. 2-3 days a week", # ths category is different across cycle
+    survey_cycle == 2019 & telework_freq2019 == 5   ~ "5. 1 day a week",
+    survey_cycle == 2019 & telework_freq2019 == 6   ~ "6. 1-3 days a month",
+    survey_cycle == 2019 & telework_freq2019 == 7   ~ "7. Less than monthly",
+    survey_cycle == 2019 & telework_freq2019 == 8   ~ "8. Never",
+    survey_cycle == 2023 & telework_freq2023 == 1       ~ "1. 6-7 days a week",
+    survey_cycle == 2023 & telework_freq2023 == 2       ~ "2. 5 days a week",
+    survey_cycle == 2023 & telework_freq2023 == 3       ~ "3. 4 days a week",
+    survey_cycle == 2023 & telework_freq2023 == 4       ~ "4. 3 days a week",
+    survey_cycle == 2023 & telework_freq2023 == 5       ~ "5. 2 days a week ",
+    survey_cycle == 2023 & telework_freq2023 == 6       ~ "6. 1 day a week ",
+    survey_cycle == 2023 & telework_freq2023 == 7       ~ "7. 1-3 days a month",
+    survey_cycle == 2023 & telework_freq2023 == 8       ~ "8. Less than monthly",
+    survey_cycle == 2023 & telework_freq2023 == 995     ~ "Missing",
+    survey_cycle == 2023 & telework_freq2023 == 996     ~ "Never",
+    TRUE ~ NA_character_  # For other survey cycles or other values
+  ))
+
+
+  person_2019_2023_df <- person_2019_2023_df %>%
+  mutate(telework_freq_grouped_label = case_when(
+    survey_cycle == 2019 & telework_freq2019 == 1   ~ "1. Fully remote",
+    survey_cycle == 2019 & telework_freq2019 == 2   ~ "1. Fully remote",
+    survey_cycle == 2019 & telework_freq2019 == 3   ~ "2. 4 days a week",
+    survey_cycle == 2019 & telework_freq2019 == 4   ~ "3. 2-3 days a week", # ths category is different across cycle
+    survey_cycle == 2019 & telework_freq2019 == 5   ~ "4. 1 day a week",
+    survey_cycle == 2019 & telework_freq2019 == 6   ~ "5. Fully on-site",
+    survey_cycle == 2019 & telework_freq2019 == 7   ~ "5. Fully on-site",
+    survey_cycle == 2019 & telework_freq2019 == 8   ~ "5. Fully on-site",
+    survey_cycle == 2023 & telework_freq2023 == 1       ~ "1. Fully remote",
+    survey_cycle == 2023 & telework_freq2023 == 2       ~ "1. Fully remote",
+    survey_cycle == 2023 & telework_freq2023 == 3       ~ "2. 4 days a week",
+    survey_cycle == 2023 & telework_freq2023 == 4       ~ "3. 2-3 days a week",
+    survey_cycle == 2023 & telework_freq2023 == 5       ~ "3. 2-3 days a week",
+    survey_cycle == 2023 & telework_freq2023 == 6       ~ "4. 1 day a week",
+    survey_cycle == 2023 & telework_freq2023 == 7       ~ "5. Fully on-site",
+    survey_cycle == 2023 & telework_freq2023 == 8       ~ "5. Fully on-site",
+    survey_cycle == 2023 & telework_freq2023 == 996     ~ "5. Fully on-site",
+    TRUE ~ NA_character_  # For other survey cycles or other values
+  ))
+
+ person_2019_2023_df <- person_2019_2023_df %>%
+    mutate(telework_freq_3cat_label = case_when(
+    survey_cycle == 2019 & telework_freq2019 == 1   ~ "1. Fully remote",
+    survey_cycle == 2019 & telework_freq2019 == 2   ~ "1. Fully remote",
+    survey_cycle == 2019 & telework_freq2019 == 3   ~ "2. Hybrid",
+    survey_cycle == 2019 & telework_freq2019 == 4   ~ "2. Hybrid",
+    survey_cycle == 2019 & telework_freq2019 == 5   ~ "2. Hybrid",
+    survey_cycle == 2019 & telework_freq2019 == 6   ~ "3. Fully on-site",
+    survey_cycle == 2019 & telework_freq2019 == 7   ~ "3. Fully on-site",
+    survey_cycle == 2019 & telework_freq2019 == 8   ~ "3. Fully on-site",
+    survey_cycle == 2023 & telework_freq2023 == 1       ~ "1. Fully remote",
+    survey_cycle == 2023 & telework_freq2023 == 2       ~ "1. Fully remote",
+    survey_cycle == 2023 & telework_freq2023 == 3       ~ "2. Hybrid",
+    survey_cycle == 2023 & telework_freq2023 == 4       ~ "2. Hybrid",
+    survey_cycle == 2023 & telework_freq2023 == 5       ~ "2. Hybrid",
+    survey_cycle == 2023 & telework_freq2023 == 6       ~ "2. Hybrid",
+    survey_cycle == 2023 & telework_freq2023 == 7       ~ "3. Fully on-site",
+    survey_cycle == 2023 & telework_freq2023 == 8       ~ "3. Fully on-site",
+    survey_cycle == 2023 & telework_freq2023 == 996     ~ "3. Fully on-site",
+    TRUE ~ NA_character_  # For other survey cycles or other values
+  ))
+
+
+ person_2019_2023_df <- person_2019_2023_df %>%
+    mutate(telework_freq_3cat_label2 = case_when(
+    survey_cycle == 2019 & telework_freq2019 == 1   ~ "1. Work from home 2 or more days a week",
+    survey_cycle == 2019 & telework_freq2019 == 2   ~ "1. Work from home 2 or more days a week",
+    survey_cycle == 2019 & telework_freq2019 == 3   ~ "1. Work from home 2 or more days a week",
+    survey_cycle == 2019 & telework_freq2019 == 4   ~ "1. Work from home 2 or more days a week",
+    survey_cycle == 2019 & telework_freq2019 == 5   ~ "2. 1 day a week",
+    survey_cycle == 2019 & telework_freq2019 == 6   ~ "3. Work from home infrequently (less than 1 day a week) or fully on-site",
+    survey_cycle == 2019 & telework_freq2019 == 7   ~ "3. Work from home infrequently (less than 1 day a week) or fully on-site",
+    survey_cycle == 2019 & telework_freq2019 == 8   ~ "3. Work from home infrequently (less than 1 day a week) or fully on-site",
+    survey_cycle == 2023 & telework_freq2023 == 1       ~ "1. Work from home 2 or more days a week",
+    survey_cycle == 2023 & telework_freq2023 == 2       ~ "1. Work from home 2 or more days a week",
+    survey_cycle == 2023 & telework_freq2023 == 3       ~ "1. Work from home 2 or more days a week",
+    survey_cycle == 2023 & telework_freq2023 == 4       ~ "1. Work from home 2 or more days a week",
+    survey_cycle == 2023 & telework_freq2023 == 5       ~ "1. Work from home 2 or more days a week",
+    survey_cycle == 2023 & telework_freq2023 == 6       ~ "2. 1 day a week",
+    survey_cycle == 2023 & telework_freq2023 == 7       ~ "3. Work from home infrequently (less than 1 day a week) or fully on-site",
+    survey_cycle == 2023 & telework_freq2023 == 8       ~ "3. Work from home infrequently (less than 1 day a week) or fully on-site",
+    survey_cycle == 2023 & telework_freq2023 == 996     ~ "3. Work from home infrequently (less than 1 day a week) or fully on-site",
+    TRUE ~ NA_character_  # For other survey cycles or other values
+  ))
+
+#-----------------------------------------
+# Handle home_county code inconsistencies
+#-----------------------------------------
+
+person_2019_2023_df <- person_2019_2023_df %>%
+  mutate(home_county_label = case_when(
+    # 2023
+    survey_cycle == 2023 & home_county == "06001" ~ "Alameda County",
+    survey_cycle == 2023 & home_county == "06013" ~ "Contra Costa County",
+    survey_cycle == 2023 & home_county == "06041" ~ "Marin County",
+    survey_cycle == 2023 & home_county == "06055" ~ "Napa County",
+    survey_cycle == 2023 & home_county == "06075" ~ "San Francisco County",
+    survey_cycle == 2023 & home_county == "06081" ~ "San Mateo County",
+    survey_cycle == 2023 & home_county == "06085" ~ "Santa Clara County",
+    survey_cycle == 2023 & home_county == "06095" ~ "Solano County",
+    survey_cycle == 2023 & home_county == "06097" ~ "Sonoma County",
+    # 2019
+    survey_cycle == 2019 & home_county_fips == "1" ~ "Alameda County",
+    survey_cycle == 2019 & home_county_fips == "13" ~ "Contra Costa County",
+    survey_cycle == 2019 & home_county_fips == "41" ~ "Marin County",
+    survey_cycle == 2019 & home_county_fips == "55" ~ "Napa County",
+    survey_cycle == 2019 & home_county_fips == "75" ~ "San Francisco County",
+    survey_cycle == 2019 & home_county_fips == "81" ~ "San Mateo County",
+    survey_cycle == 2019 & home_county_fips == "85" ~ "Santa Clara County",
+    survey_cycle == 2019 & home_county_fips == "95" ~ "Solano County",
+    survey_cycle == 2019 & home_county_fips == "97" ~ "Sonoma County",
+    TRUE ~ NA_character_  
+  ))
+
+person_2019_2023_df <- person_2019_2023_df %>%
+  mutate(home_county_grouped_label = case_when(
+    # 2023
+    survey_cycle == 2023 & home_county == "06001" ~ "Alameda",
+    survey_cycle == 2023 & home_county == "06013" ~ "Contra Costa",
+    survey_cycle == 2023 & home_county == "06041" ~ "Marin, Napa, Sonoma, Solano",
+    survey_cycle == 2023 & home_county == "06055" ~ "Marin, Napa, Sonoma, Solano",
+    survey_cycle == 2023 & home_county == "06075" ~ "San Francisco",
+    survey_cycle == 2023 & home_county == "06081" ~ "San Mateo",
+    survey_cycle == 2023 & home_county == "06085" ~ "Santa Clara",
+    survey_cycle == 2023 & home_county == "06095" ~ "Marin, Napa, Sonoma, Solano",
+    survey_cycle == 2023 & home_county == "06097" ~ "Marin, Napa, Sonoma, Solano",
+    # 2019
+    survey_cycle == 2019 & home_county_fips == "1" ~ "Alameda",
+    survey_cycle == 2019 & home_county_fips == "13" ~ "Contra Costa",
+    survey_cycle == 2019 & home_county_fips == "41" ~ "Marin, Napa, Sonoma, Solano",
+    survey_cycle == 2019 & home_county_fips == "55" ~ "Marin, Napa, Sonoma, Solano",
+    survey_cycle == 2019 & home_county_fips == "75" ~ "San Francisco",
+    survey_cycle == 2019 & home_county_fips == "81" ~ "San Mateo",
+    survey_cycle == 2019 & home_county_fips == "85" ~ "Santa Clara",
+    survey_cycle == 2019 & home_county_fips == "95" ~ "Marin, Napa, Sonoma, Solano",
+    survey_cycle == 2019 & home_county_fips == "97" ~ "Marin, Napa, Sonoma, Solano",
+    TRUE ~ NA_character_  
   ))
