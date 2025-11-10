@@ -1,0 +1,4 @@
+day_id,household_id,day_of_week,weather,day_weight
+1,1,1,1,1.2
+2,2,2,2,1.0
+3,3,3,3,1.5

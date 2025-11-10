@@ -1,0 +1,98 @@
+Metadata-Version: 2.4
+Name: survey_model_tool
+Version: 0.1.0
+Summary: A tool to read and summarize survey and model data, format for estimation, and create visualizations
+Home-page: https://github.com/vta/Modeling_Warehouse/tree/main/BATS%20Analysis/Pipeline/pipeline
+Author: Your Name
+Author-email: hannah.carson@vta.org
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.6
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: pandas
+Requires-Dist: openmatrix
+Requires-Dist: scipy
+Requires-Dist: statsmodels
+Requires-Dist: scikit-learn
+Requires-Dist: matplotlib
+Requires-Dist: seaborn
+Requires-Dist: folium
+Requires-Dist: geopandas
+Requires-Dist: larch
+Requires-Dist: pyyaml
+Requires-Dist: numpy
+Requires-Dist: matplotlib
+Dynamic: author
+Dynamic: author-email
+Dynamic: classifier
+Dynamic: description
+Dynamic: description-content-type
+Dynamic: home-page
+Dynamic: license-file
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary
+
+# Modeling_Warehouse
+
+## Setup Instructions
+
+### 0. Clone the GitHub Repository
+
+First, clone the repository to your local machine:
+
+```sh
+git clone https://github.com/vta/Modeling_Warehouse.git
+cd Modeling_Warehouse
+```
+
+### 1. Create and Activate Conda Environment
+
+Create the environment using the provided `pipeline_env.yml` file:
+
+```sh
+conda env create -f pipeline_env.yml
+conda activate pipeline
+```
+
+### 2. Install the Pipeline Tool
+
+Navigate to the `SurveyTools/Tools` directory and install the pipeline tool in editable mode:
+
+```sh
+pip install -e .
+```
+
+### 3. Example Usage
+
+You can use the pipeline tool in your Python scripts or notebooks. 
+
+```python
+import sys
+import os
+from survey_model_tool.survey_reader import SurveyReader
+
+# Initialize SurveyReader with config file
+survey = SurveyReader(config=r'SurveyTools/Notebooks/config/config.yml')
+survey.load()
+
+
+# Example: Show a sample of person data
+print(survey.person[["ptype", "age", "employment", "student"]].sample(15))
+```
+### merged data
+```python
+data = survey.trips.merge(survey.hh, how='left', on=['hh_id']).merge(survey.person, how='left', on=['hh_id', 'person_id'])
+```
+#### plot data
+
+Import the plotter to create visualizations:
+
+```python
+from survey_model_tool.plotter import Plotter
+plotter = Plotter(data_source = data)
+plotter.plot_share(df = data, x_label = 'Trip Mode', weight_col = 'trip_weight',plt_title = 'Mode Share', group_cols = 'mode_type')
+```
+

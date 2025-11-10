@@ -1,0 +1,7 @@
+action,target,source,condition,value,merge_on,merge_how,merge_columns,rename_columns,description
+assign,income_bin,,,0,,,,,
+conditional_assign,income_bin,,df.income < 100000, 1,,,,,
+conditional_assign,income_bin,,df.income >= 100000, 2,,,,,
+assign,income_label,,,df['income_bin'].map(config['income_label']),,,,,
+assign,zero_auto,,,'1+ Autos',,,,,
+conditional_assign,zero_auto,,df.vehicles ==0,'0 Autos',,,,,
