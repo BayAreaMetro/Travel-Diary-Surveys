@@ -14,4 +14,3 @@ survey_model_tool.egg-info/SOURCES.txt
 survey_model_tool.egg-info/dependency_links.txt
 survey_model_tool.egg-info/requires.txt
 survey_model_tool.egg-info/top_level.txt
-tests/test_transformations.py

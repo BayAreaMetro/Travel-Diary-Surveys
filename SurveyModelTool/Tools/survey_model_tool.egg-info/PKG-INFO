@@ -35,64 +35,19 @@ Dynamic: requires-dist
 Dynamic: requires-python
 Dynamic: summary
 
-# Modeling_Warehouse
+# SurveyModelTool
 
-## Setup Instructions
+This is the README for the SurveyModelTool package.
 
-### 0. Clone the GitHub Repository
+## Description
+SurveyModelTool is a Python package designed to process and analyze travel diary survey data. It provides tools for reading, preprocessing, and visualizing survey data.
 
-First, clone the repository to your local machine:
+## Installation
+To install the package in editable mode, use the following command:
 
-```sh
-git clone https://github.com/vta/Modeling_Warehouse.git
-cd Modeling_Warehouse
-```
-
-### 1. Create and Activate Conda Environment
-
-Create the environment using the provided `pipeline_env.yml` file:
-
-```sh
-conda env create -f pipeline_env.yml
-conda activate pipeline
-```
-
-### 2. Install the Pipeline Tool
-
-Navigate to the `SurveyTools/Tools` directory and install the pipeline tool in editable mode:
-
-```sh
+```bash
 pip install -e .
 ```
 
-### 3. Example Usage
-
-You can use the pipeline tool in your Python scripts or notebooks. 
-
-```python
-import sys
-import os
-from survey_model_tool.survey_reader import SurveyReader
-
-# Initialize SurveyReader with config file
-survey = SurveyReader(config=r'SurveyTools/Notebooks/config/config.yml')
-survey.load()
-
-
-# Example: Show a sample of person data
-print(survey.person[["ptype", "age", "employment", "student"]].sample(15))
-```
-### merged data
-```python
-data = survey.trips.merge(survey.hh, how='left', on=['hh_id']).merge(survey.person, how='left', on=['hh_id', 'person_id'])
-```
-#### plot data
-
-Import the plotter to create visualizations:
-
-```python
-from survey_model_tool.plotter import Plotter
-plotter = Plotter(data_source = data)
-plotter.plot_share(df = data, x_label = 'Trip Mode', weight_col = 'trip_weight',plt_title = 'Mode Share', group_cols = 'mode_type')
-```
-
+## Usage
+Refer to the documentation and examples for detailed usage instructions.

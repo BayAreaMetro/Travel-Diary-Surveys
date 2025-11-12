@@ -37,7 +37,8 @@ class SurveyReader:
         self.trips = pd.read_csv(_join(self.config['survey_dir'], self.config['trip_file']))
         self.person = person = pd.read_csv(_join(self.config['survey_dir'], self.config['person_file']))
         self.hh = pd.read_csv(_join(self.config['survey_dir'], self.config['household_file']))
-        self.day = pd.read_csv(_join(self.config['survey_dir'], self.config['day_file']))
+        if 'day_file' in self.config:
+            self.day = pd.read_csv(_join(self.config['survey_dir'], self.config['day_file']))
         if 'tours_file' in self.config:
             self.tours = tours = pd.read_csv(_join(self.config['survey_dir'], self.config['tours_file']))
         return
