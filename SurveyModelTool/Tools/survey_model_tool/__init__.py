@@ -1,6 +1,7 @@
 from .survey_reader import SurveyReader
 from .model_reader import ModelReader
 from .summarizers import SurveyModelSummarizer
+from .plotter import Plotter
 from .mode_choice_estimator import ModeChoiceEstimator
 from . import survey_reader
 from . import utilities
