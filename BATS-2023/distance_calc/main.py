@@ -11,6 +11,7 @@
 # E:\Box\Modeling and Surveys\Surveys\Travel Diary Survey\BATS_2023\MTC_RSG_Partner Repository\5.Deliverables\Task 10 - Weighting and Expansion Data Files\UnweightedDataset\trip.csv
 
 # Load in data
+import math
 from pathlib import Path
 
 import polars as pl
@@ -121,10 +122,69 @@ linked_trips = (
             survey_trips_joined
             .group_by("ltrip_id")
             .agg(
-                pl.sum("distance_meters").alias("distance_meters")
+                pl.sum("distance_meters").alias("sum_distance_meters")
             )
         ),
         on="ltrip_id",
         how="left"
     )
 )
+
+
+# Calculate distances for each trip using location points
+
+def haversine_expr(lat1, lon1, lat2, lon2):
+    R = 6371000.0
+    RAD = math.pi / 180
+
+    """Return a Polars expression computing haversine distance in meters."""
+    lat1r = (pl.col(lat1) * RAD)
+    lon1r = (pl.col(lon1) * RAD)
+    lat2r = (pl.col(lat2) * RAD)
+    lon2r = (pl.col(lon2) * RAD)
+
+    dlat = lat2r - lat1r
+    dlon = lon2r - lon1r
+
+    return 2 * R * (
+        (
+            (dlat / 2).sin().pow(2)
+            + lat1r.cos() * lat2r.cos()
+            * (dlon / 2).sin().pow(2)
+        ).sqrt().arcsin()
+    )
+
+path_distance = (
+    survey_locations
+    .sort(["trip_id"])      # or ["trip_id", "timestamp"]
+    .with_columns([
+        pl.col("lat").shift().over("trip_id").alias("lat_prev"),
+        pl.col("lon").shift().over("trip_id").alias("lon_prev"),
+    ])
+    .with_columns([
+        haversine_expr("lat_prev", "lon_prev", "lat", "lon")
+        .alias("segment_distance_m")
+    ])
+    .join(
+        survey_trips_joined.select(["trip_id", "ltrip_id"]),
+        on="trip_id",
+        how="left"
+    )
+    .group_by("ltrip_id")
+    .agg(
+        pl.col("segment_distance_m")
+            .fill_null(0)
+            .sum()
+            .alias("path_distance_meters")
+    )
+)
+
+# Join path_distance back onto linked_trips to compare
+linked_trips = (
+    linked_trips.join(
+        path_distance,
+        on="ltrip_id",
+        how="left"
+    )
+)
+
