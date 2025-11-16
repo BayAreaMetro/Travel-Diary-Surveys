@@ -223,6 +223,24 @@ LinkedTrips_2019_2023_df <- LinkedTrips_2019_2023_df %>%
     TRUE ~ NA_character_
   ))
 
+# Label the opurp variable
+LinkedTrips_2019_2023_df <- LinkedTrips_2019_2023_df %>%
+  mutate(opurp_label = case_when(
+    opurp == 0 ~ "HOME",
+    opurp == 1 ~ "WORK",
+    opurp == 2 ~ "SCHOOL",
+    opurp == 3 ~ "ESCORT",
+    opurp == 4 ~ "PERS_BUS",
+    opurp == 5 ~ "SHOP",
+    opurp == 6 ~ "MEAL",
+    opurp == 7 ~ "SOCREC",
+    opurp == 10 ~ "CHANGE_MODE",
+    opurp == 11 ~ "OTHER",
+    opurp == -1 ~ "MISSING",
+    TRUE ~ NA_character_
+  ))
+
+
 # Collapse LinkedTrips_2019_2023_df so it becomes a person day file
 # Group by hhno, pno, day and indicate if the person commuted on that day
 
@@ -284,6 +302,15 @@ PersonDayFromLinkedTrips_2019_2023_df <- LinkedTrips_2019_2023_df %>%
     num_trips_MEAL                = sum(dpurp_label == "MEAL", na.rm = TRUE),
     num_trips_SOCREC              = sum(dpurp_label == "SOCREC", na.rm = TRUE),
     num_trips_OTHER               = sum(dpurp_label == "OTHER", na.rm = TRUE),
+   
+    # Home->Work trip mode
+    HtoW_trip_mode                 = ifelse(any(opurp_label == "HOME" & dpurp_label == "WORK"), 
+                                           first(mode[opurp_label == "HOME" & dpurp_label == "WORK"]), 
+                                           NA_integer_),
+
+    WtoH_trip_mode                 = ifelse(any(opurp_label == "WORK" & dpurp_label == "HOME"), 
+                                           last(mode[opurp_label == "WORK" & dpurp_label == "HOME"]), 
+                                           NA_integer_),
 
     .groups = "drop"
   )
@@ -340,7 +367,24 @@ cat("Original pdexpfac:", format(original_pdexpfac, big.mark = ","), "\n")
 cat("Remaining pdexpfac:", format(new_pdexpfac, big.mark = ","), "\n")
 cat("pdexpfac dropped:", format(original_pdexpfac - new_pdexpfac, big.mark = ","), "\n")
 
-# --------------------------------------
+
+# ------------------
+# Add labels
+# ------------------
+ProcessedPersonDays_2019_2023_df <- ProcessedPersonDays_2019_2023_df %>%
+  mutate(
+    employment_label = case_when(
+      employment == 1 ~ "1. Employed full-time (paid)",
+      employment == 2 ~ "2. Employed part-time (paid)",
+      employment == 3 ~ "3. Self-employed",
+      employment == 5 ~ "4. Not employed and not looking for work",
+      employment == 6 ~ "5. Unemployed and looking for work",
+      employment == 7 ~ "6. Unpaid volunteer or intern",
+      employment == 8 ~ "7. Employed, but not currently working",
+      employment == 995 ~ "Missing Response",
+      TRUE ~ "Other"
+    )
+  )
 
 # Write ProcessedPersonDays_2019_2023_df  to csv for subsequent processes
 output_trips_csv <- glue("{working_dir}/ProcessedPersonDays_2019_2023.csv")
