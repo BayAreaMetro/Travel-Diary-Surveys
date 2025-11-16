@@ -1,0 +1,32 @@
+survey_dir: example_survey
+trip_file: trip.csv
+person_file: person.csv
+household_file: household.csv
+day_file: day.csv
+codebook: codebook.xlsx
+codebook_sheet: codebook
+taz_shapefile: "path/to/shapefile/taz.shp"
+
+read_processed_data: True  #True to read cached processed data, False if using new dataset (data that hasn't already gone through dataprep)
+
+#if true, survey will be geocoded to TAZ file, requires trip table to have [o_lat, o_lon, d_lat, d_lon] columns, household table needs [home_lat, home_lon],
+#person table needs [work_lat, work_lon, school_lat, school_lon]
+geocode: False
+
+#custom data variables for each table in preprocessor
+# trip_data_xform: config/preprocessor/trip_data_xform.csv
+hh_data_xform: config/preprocessor/hh_data_xform.csv
+# person_data_xform: config/preprocessor/person_data_xform.csv
+# day_data_xform: config/preprocessor/day_data_xform.csv
+
+
+income_label:
+   1: "< $100K"
+   2: "> $100K"
+
+
+
+  
+
+
+

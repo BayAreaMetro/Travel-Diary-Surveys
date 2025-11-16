@@ -1,0 +1,13 @@
+pandas
+openmatrix
+scipy
+statsmodels
+scikit-learn
+matplotlib
+seaborn
+folium
+geopandas
+larch
+pyyaml
+numpy
+matplotlib

@@ -1,0 +1,53 @@
+Metadata-Version: 2.4
+Name: survey_model_tool
+Version: 0.1.0
+Summary: A tool to read and summarize survey and model data, format for estimation, and create visualizations
+Home-page: https://github.com/vta/Modeling_Warehouse/tree/main/BATS%20Analysis/Pipeline/pipeline
+Author: Your Name
+Author-email: hannah.carson@vta.org
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.6
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: pandas
+Requires-Dist: openmatrix
+Requires-Dist: scipy
+Requires-Dist: statsmodels
+Requires-Dist: scikit-learn
+Requires-Dist: matplotlib
+Requires-Dist: seaborn
+Requires-Dist: folium
+Requires-Dist: geopandas
+Requires-Dist: larch
+Requires-Dist: pyyaml
+Requires-Dist: numpy
+Requires-Dist: matplotlib
+Dynamic: author
+Dynamic: author-email
+Dynamic: classifier
+Dynamic: description
+Dynamic: description-content-type
+Dynamic: home-page
+Dynamic: license-file
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary
+
+# SurveyModelTool
+
+This is the README for the SurveyModelTool package.
+
+## Description
+SurveyModelTool is a Python package designed to process and analyze travel diary survey data. It provides tools for reading, preprocessing, and visualizing survey data.
+
+## Installation
+To install the package in editable mode, use the following command:
+
+```bash
+pip install -e .
+```
+
+## Usage
+Refer to the documentation and examples for detailed usage instructions.

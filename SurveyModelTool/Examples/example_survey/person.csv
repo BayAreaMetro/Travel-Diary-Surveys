@@ -1,0 +1,5 @@
+person_id,household_id,age,gender,employment_status,person_weight
+1,1,35,1,1,1.1
+2,1,33,2,1,1.0
+3,2,40,2,2,1.3
+4,3,25,1,3,1.2
