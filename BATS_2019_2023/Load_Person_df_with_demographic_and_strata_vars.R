@@ -35,7 +35,7 @@ person2023_path <- file.path(background_dataset_2023_dir, person2023_file)
 person2023_df <- read_csv(person2023_path)
 
 person2023_df <- person2023_df %>%
-  select(hh_id, person_id, person_weight_rmove_only, age, employment, telework_freq, work_lat, work_lon) %>%
+  select(hh_id, person_id, person_weight_rmove_only, age, employment, telework_freq, job_type, work_lat, work_lon) %>%
   rename(telework_freq2023=telework_freq) %>% # the 2023 coding has more categories than the 2019 coding
   mutate(survey_cycle = 2023)
 
@@ -65,7 +65,7 @@ person2019_df <- read_tsv(person2019_path)
 # because Wkday weights are zeroed where travel_date_dow > 4
 # based on this: https://github.com/BayAreaMetro/tnc_california_studies/blob/6486dffc1ca9c42e9ec682d054ce56ccff9bf370/8.1_PopSim_weighting/02_join_weights.R#L229
 person2019_df <- person2019_df %>%
-  select(hh_id, person_id, wt_sphone_wkday, age, employment, telework_freq, work_lat, work_lon) %>%
+  select(hh_id, person_id, wt_sphone_wkday, age, employment, telework_freq, job_type, work_lat, work_lon) %>%
   mutate(survey_cycle = 2019) %>%
   rename(telework_freq2019=telework_freq) %>%
   rename(person_weight_rmove_only = wt_sphone_wkday)
@@ -287,3 +287,4 @@ person_2019_2023_df <- person_2019_2023_df %>%
     survey_cycle == 2019 & home_county_fips == "97" ~ "Marin, Napa, Sonoma, Solano",
     TRUE ~ NA_character_  
   ))
+
