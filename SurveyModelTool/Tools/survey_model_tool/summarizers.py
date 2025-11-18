@@ -356,7 +356,7 @@ class SurveyModelSummarizer:
         folium.LayerControl(collapsed=False).add_to(fmap)
         return fmap
 
-    def trip_rates( self,trips=None, pop = None, person_group_col=None, trip_group_col=None, trip_weight_col='trip_weight'):
+    def trip_rates( self,trips=None, pop = None, person_group_col=None, trip_group_col=None, person_weight_col = 'person_weight', trip_weight_col='trip_weight'):
         """Calculate trip rates based on specified grouping columns and trip weight column."""
         if trips is None:
             trip_data = self.trips.merge(self.person, on='person_id', how='left').merge(self.hh, on='hh_id', how='left')
@@ -374,9 +374,9 @@ class SurveyModelSummarizer:
             group_list = person_group_col + [trip_group_col]
         print(group_list)
         trip_data = trip_data.groupby(group_list,as_index = False)[[trip_weight_col]].sum()
-        pop = pop.groupby(person_group_col,as_index = False)[['person_weight']].sum()
+        pop = pop.groupby(person_group_col,as_index = False)[[person_weight_col]].sum()
         trip_summary = trip_data.merge(pop, left_on=person_group_col, right_on=person_group_col, how='left')
-        trip_summary['trip_rate'] = trip_summary[trip_weight_col] / trip_summary['person_weight']
+        trip_summary['trip_rate'] = trip_summary[trip_weight_col] / trip_summary[person_weight_col]
         trip_summary['trip_rate'] = trip_summary['trip_rate'].fillna(0)
 
         return trip_summary

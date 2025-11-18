@@ -71,6 +71,7 @@ class SurveyReader:
         apply data transformation as specified in preprocessor configurations."""
         #add descriptive labels to categorical variables
         labels = pd.read_excel(_join(self.config['survey_dir'],self.config['codebook']),sheet_name = self.config['codebook_sheet'])
+        #FIXME: hardcoded column names in codebook; make them configurable?
         grouped_labels = labels.groupby('variable')
         value_maps ={var: dict(zip(group['value'], group['label']))
             for var, group in grouped_labels}
@@ -82,8 +83,9 @@ class SurveyReader:
                 self.person[col] = self.person[col].map(value_map)
             if col in self.hh.columns:
                 self.hh[col] = self.hh[col].map(value_map)
-        
-        
+            if col in self.day.columns:
+                self.day[col] = self.day[col].map(value_map)
+
         #map survey locations to model TAZs
         trip_len = len(self.trips)
         if self.config['geocode'] == True:
@@ -126,10 +128,7 @@ class SurveyReader:
              
         
         
-        # geo_xwalk = pd.read_csv(self.config['geo_crosswalk'])
-        # self.trips = self.trips.merge(geo_xwalk.rename(columns = {'ZONE':'DTAZ'}), how = 'left', on = 'DTAZ')
-        if len(self.trips) != trip_len:
-            raise ValueError(f"Geocoding special zone loc failed: expected {trip_len} rows, got {len(self.trips)}")
+        
         if self.config['geocode'] == True:
             #geocode home locations
             self.hh = map_point_to_reference(self.hh, point_field_name='HHTAZ', point_lat_col='home_lat', point_lon_col='home_lon',reference_field = 'TAZ', reference_gdf = taz)
@@ -148,7 +147,7 @@ class SurveyReader:
                 raise ValueError(f"Geocoding school loc failed: expected {trip_len} rows, got {len(self.trips)}")
         return
 
-    def link_trips(self):
+    def link_trips(self, weight_cols=['trip_weight','trip_weight_rmove_only']):
         print("Entered link_trips()")
         """Link trips based on the logic provided in the original notebook create by Yun Ma https://github.com/vta/BATS-2023/blob/main/trip_linkage/0608/script/build_linked_trips_main_type_weight_version_vta_yma_060825.ipynb.
         # approach:
@@ -211,7 +210,8 @@ class SurveyReader:
         C_mode = ['mode_type_priority','mode_1_priority','mode_2_priority','mode_3_priority','mode_4_priority']
         C_access = ['transit_access_priority','transit_egress_priority']
         C_od =   ['o_lat','o_lon','d_lat','d_lon','o_county', 'd_county','o_state', 'd_state','o_puma_2022', 'd_puma_2022']
-        C_wt =   ['trip_weight','trip_weight_rmove_only','num_travelers','managed_lane_use','driver']
+        C_wt = weight_cols + ['num_travelers','managed_lane_use','driver']
+        # C_wt =   ['trip_weight','trip_weight_rmove_only','num_travelers','managed_lane_use','driver']
         C_other =  ['distance_miles','duration_minutes','dwell_mins']
         C_last = ['d_purpose_category','d_purpose','arrive_datetime','d_lat','d_lon','d_county','d_state','d_puma_2022']
         C_ppr =  ['o_purpose_reported_priority','d_purpose_reported_priority']
@@ -431,7 +431,7 @@ class SurveyReader:
         self.trips = trip_s01
         return  # Return the processed trips for further use or testing
 
-    def summarize_trip_modes(self):
+    def summarize_trip_modes(self, weight_cols=['trip_weight','trip_weight_rmove_only']):
         """ logic to summarize linked trips by mode for model calibration/estimation. Originally created by Yun Ma. https://github.com/vta/BATS-2023/blob/main/trip_convert/script/convert_n_sum_bats_trips_for_model_mode_choice_calibration_yma_0608.ipynb"""
         trip = self.trips
         pp = self.person
@@ -457,7 +457,7 @@ class SurveyReader:
         C_md = ['mode_type', 'mode_1', 'mode_2', 'mode_3', 'mode_4']
         C_ac = ['transit_access']
         C_num= ['num_travelers','managed_lane_use']
-        C_wt = ['trip_weight', 'trip_weight_rmove_only']
+        C_wt = weight_cols #['trip_weight', 'trip_weight_rmove_only']
         C_sel = C_id + C_pp + C_md + C_ac + C_num + C_wt
         C_int = C_md + C_ac + C_num 
         # trip = trip.filter(items=C_sel)
