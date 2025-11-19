@@ -609,7 +609,8 @@ class SurveyReader:
         self.trips.to_csv(_join(self.config['survey_dir'], 'processed', 'linked_trips.csv'), index=False)
         self.person.to_csv(_join(self.config['survey_dir'], 'processed', 'person.csv'), index=False)
         self.hh.to_csv(_join(self.config['survey_dir'], 'processed', 'households.csv'), index=False)
-        self.day.to_csv(_join(self.config['survey_dir'], 'processed', 'day.csv'), index=False)
+        if self.day is not None:
+            self.day.to_csv(_join(self.config['survey_dir'], 'processed', 'day.csv'), index=False)
         if self.tours is not None:
             self.tours.to_csv(_join(self.config['survey_dir'], 'processed', 'tours.csv'), index=False)
     
@@ -619,6 +620,9 @@ class SurveyReader:
         self.trips = pd.read_csv(_join(self.config['survey_dir'], 'processed', 'linked_trips.csv'))
         self.person = pd.read_csv(_join(self.config['survey_dir'], 'processed', 'person.csv'))
         self.hh = pd.read_csv(_join(self.config['survey_dir'], 'processed', 'households.csv'))
-        self.day = pd.read_csv(_join(self.config['survey_dir'], 'processed', 'day.csv'))
+        if os.path.exists(_join(self.config['survey_dir'], 'processed', 'tours.csv')):
+            self.tours = pd.read_csv(_join(self.config['survey_dir'], 'processed', 'tours.csv'))
+        if os.path.exists(_join(self.config['survey_dir'], 'processed', 'day.csv')):
+            self.day = pd.read_csv(_join(self.config['survey_dir'], 'processed', 'day.csv'))
 
     
