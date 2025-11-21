@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 setup(
     name='survey_model_tool',
     version='0.1.0',
-    author='Your Name',
+    author='Hannah Carson',
     author_email='hannah.carson@vta.org',
     description='A tool to read and summarize survey and model data, format for estimation, and create visualizations',
     long_description=open('README.md').read(),

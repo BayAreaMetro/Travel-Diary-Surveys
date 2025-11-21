@@ -3,6 +3,7 @@ README.md
 pyproject.toml
 setup.py
 survey_model_tool/__init__.py
+survey_model_tool/geo_crosswalker.py
 survey_model_tool/mode_choice_estimator.py
 survey_model_tool/model_reader.py
 survey_model_tool/plotter.py
