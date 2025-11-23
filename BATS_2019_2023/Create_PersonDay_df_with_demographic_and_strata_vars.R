@@ -74,7 +74,7 @@ hh2023_path <- file.path(background_dataset_2023_dir, hh2023_file)
 hh2023_df <- read_csv(hh2023_path)
 
 hh2023_df <- hh2023_df %>%
-  select(hh_id, sample_segment, home_county) %>%
+  select(hh_id, sample_segment, home_county, income_detailed) %>%
   mutate(survey_cycle = 2023) %>%
   mutate(home_county = as.character(home_county)) %>%
   rename(hhno = hh_id, # TODO: switch back to using RSG's convention rather than the trip linking and tour buiding convention
@@ -113,7 +113,7 @@ hh2019_path <- file.path(background_dataset_2019_dir, hh2019_file)
 hh2019_df <- read_tsv(hh2019_path)
 
 hh2019_df <- hh2019_df %>%
-  select(hh_id, sample_stratum, home_county_fips) %>%
+  select(hh_id, sample_stratum, home_county_fips, income_detailed) %>%
   mutate(survey_cycle = 2019) %>%
   rename(hhno = hh_id,
          stratification_var = sample_stratum) %>%
@@ -385,6 +385,44 @@ ProcessedPersonDays_2019_2023_df <- ProcessedPersonDays_2019_2023_df %>%
       TRUE ~ "Other"
     )
   )
+
+ProcessedPersonDays_2019_2023_df <- ProcessedPersonDays_2019_2023_df %>%
+  mutate(
+    income_detailed_label = case_when(
+      income_detailed == 1  ~ "1. Less than $15,000",
+      income_detailed == 2  ~ "2. $15,000-$24,999",
+      income_detailed == 3  ~ "3. $25,000-$34,999",
+      income_detailed == 4  ~ "4. $35,000-$49,999",
+      income_detailed == 5  ~ "5. $50,000-$74,999",
+      income_detailed == 6  ~ "6. $75,000-$99,999",
+      income_detailed == 7  ~ "7. $100,000-$149,999",
+      income_detailed == 8  ~ "8. $150,000-$199,999",
+      income_detailed == 9  ~ "9. $200,000-$249,999",
+      income_detailed == 10 ~ "10.$250,000 or more",
+      income_detailed == 999 ~ "999. Prefer not to answer",
+      TRUE ~ "Other"
+    )
+  )
+
+
+ProcessedPersonDays_2019_2023_df <- ProcessedPersonDays_2019_2023_df %>%
+  mutate(
+    income_detailed_grouped = case_when(
+      income_detailed == 1  ~ "1. Less than $50,000",
+      income_detailed == 2  ~ "1. Less than $50,000",
+      income_detailed == 3  ~ "1. Less than $50,000",
+      income_detailed == 4  ~ "1. Less than $50,000",
+      income_detailed == 5  ~ "2. $50,000-$99,999",
+      income_detailed == 6  ~ "2. $50,000-$99,999",
+      income_detailed == 7  ~ "3. $100,000-$199,999",
+      income_detailed == 8  ~ "3. $150,000-$199,999",
+      income_detailed == 9  ~ "4. $200,000 or more",
+      income_detailed == 10 ~ "4. $200,000 or more",
+      income_detailed == 999 ~ "999. Prefer not to answer",
+      TRUE ~ "Other"
+    )
+  )
+
 
 # Write ProcessedPersonDays_2019_2023_df  to csv for subsequent processes
 output_trips_csv <- glue("{working_dir}/ProcessedPersonDays_2019_2023.csv")

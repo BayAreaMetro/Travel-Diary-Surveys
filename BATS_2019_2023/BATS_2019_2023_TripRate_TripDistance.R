@@ -325,18 +325,32 @@ summary_by_employment <- standardize_results(results_by_employment, "By Employme
    add_reliability_flags() %>%
    create_chart_labels(group_vars = "employment_label")
 
+# 6. By income (detailed)
+print("Calculating metrics by income (detailed)...")
+results_by_income_detailed <- calculate_trip_metrics(
+   srv_design,
+   group_vars = "income_detailed_label",
+   summary_level_name = "By Income (detailed)"
+ )
+ summary_by_income_detailed <- standardize_results(results_by_income_detailed, "By Income (detailed)") %>%
+   add_reliability_flags() %>%
+   create_chart_labels(group_vars = "income_detailed_label")
+
+# 6. By income (detailed, then grouped)
+print("Calculating metrics by income...")
+results_by_income3cat <- calculate_trip_metrics(
+   srv_design,
+   group_vars = "income_detailed_grouped",
+   summary_level_name = "By Income"
+ )
+ summary_by_income3cat <- standardize_results(results_by_income3cat, "By Income") %>%
+   add_reliability_flags() %>%
+   create_chart_labels(group_vars = "income_detailed_grouped")
+
+
 
 # ADD NEW ANALYSES HERE
-# Example: By income (uncomment and modify if you have income_cat variable)
-# print("Calculating metrics by income...")
-# results_by_income <- calculate_trip_metrics(
-#   srv_design,
-#   group_vars = "income_cat",
-#   summary_level_name = "By Income"
-# )
-# summary_by_income <- standardize_results(results_by_income, "By Income") %>%
-#   add_reliability_flags() %>%
-#   create_chart_labels(group_vars = "income_cat")
+
 
 # Example: By age group (if you create age_group variable)
 # print("Calculating metrics by age group...")
@@ -358,9 +372,9 @@ comprehensive_summary <- bind_rows(
   summary_by_commute,
   summary_by_county,
   summary_commute_county,
-  summary_by_employment
-  # Add new summaries here:
-  # summary_by_income,
+  summary_by_employment,
+  summary_by_income_detailed,
+  summary_by_income3cat
   # summary_by_age
 )
 
