@@ -371,6 +371,7 @@ cat("pdexpfac dropped:", format(original_pdexpfac - new_pdexpfac, big.mark = ","
 # ------------------
 # Add labels
 # ------------------
+# employment status
 ProcessedPersonDays_2019_2023_df <- ProcessedPersonDays_2019_2023_df %>%
   mutate(
     employment_label = case_when(
@@ -386,6 +387,7 @@ ProcessedPersonDays_2019_2023_df <- ProcessedPersonDays_2019_2023_df %>%
     )
   )
 
+# income_detailed
 ProcessedPersonDays_2019_2023_df <- ProcessedPersonDays_2019_2023_df %>%
   mutate(
     income_detailed_label = case_when(
@@ -405,6 +407,8 @@ ProcessedPersonDays_2019_2023_df <- ProcessedPersonDays_2019_2023_df %>%
   )
 
 
+# income detailed (and then grouped)
+# grouping informed by the fact that median household income in 2023 is $128K in the Bay Area
 ProcessedPersonDays_2019_2023_df <- ProcessedPersonDays_2019_2023_df %>%
   mutate(
     income_detailed_grouped = case_when(
@@ -415,7 +419,7 @@ ProcessedPersonDays_2019_2023_df <- ProcessedPersonDays_2019_2023_df %>%
       income_detailed == 5  ~ "2. $50,000-$99,999",
       income_detailed == 6  ~ "2. $50,000-$99,999",
       income_detailed == 7  ~ "3. $100,000-$199,999",
-      income_detailed == 8  ~ "3. $150,000-$199,999",
+      income_detailed == 8  ~ "3. $100,000-$199,999",
       income_detailed == 9  ~ "4. $200,000 or more",
       income_detailed == 10 ~ "4. $200,000 or more",
       income_detailed == 999 ~ "999. Prefer not to answer",
@@ -423,6 +427,16 @@ ProcessedPersonDays_2019_2023_df <- ProcessedPersonDays_2019_2023_df %>%
     )
   )
 
+# The variable income_broad is not as helpful in the comparison between 2019 and 2023 as top categories were banded differently.
+# If we use income_broad, the top category would have to be "$100,000 or more"
+# This is why income_detailed is used here.
+# The trade-off is that income_broad had more complete records than income_detailed 
+# In 2023, the variable income_broad
+#    survey_cycle == 2023 & income_broad == 5   ~ "$100,000-$199,999",
+#    survey_cycle == 2023 & income_broad == 6   ~ "$200,000 or more",
+# In 2019, the variable income_aggregate
+#     survey_cycle == 2019 & income_aggregate == 5   ~ "$100,000-$249,999", #not the same band as BATS2023
+#     survey_cycle == 2019 & income_aggregate == 6   ~ "$250,000 or more",  #not the same band as BATS2023
 
 # Write ProcessedPersonDays_2019_2023_df  to csv for subsequent processes
 output_trips_csv <- glue("{working_dir}/ProcessedPersonDays_2019_2023.csv")

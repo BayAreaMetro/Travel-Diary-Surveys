@@ -338,12 +338,12 @@ results_by_income_detailed <- calculate_trip_metrics(
 
 # 6. By income (detailed, then grouped)
 print("Calculating metrics by income...")
-results_by_income3cat <- calculate_trip_metrics(
+results_by_income4cat <- calculate_trip_metrics(
    srv_design,
    group_vars = "income_detailed_grouped",
    summary_level_name = "By Income"
  )
- summary_by_income3cat <- standardize_results(results_by_income3cat, "By Income") %>%
+ summary_by_income4cat <- standardize_results(results_by_income4cat, "By Income") %>%
    add_reliability_flags() %>%
    create_chart_labels(group_vars = "income_detailed_grouped")
 
@@ -374,7 +374,7 @@ comprehensive_summary <- bind_rows(
   summary_commute_county,
   summary_by_employment,
   summary_by_income_detailed,
-  summary_by_income3cat
+  summary_by_income4cat
   # summary_by_age
 )
 
