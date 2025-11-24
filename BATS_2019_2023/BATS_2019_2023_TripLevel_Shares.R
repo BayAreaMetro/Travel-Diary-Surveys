@@ -225,6 +225,7 @@ mode_summary <- summarize_for_attr(
   summary_levels = c("survey_cycle", "adult_yn", "commute_cat",
                      "survey_cycle,adult_yn", 
                      "survey_cycle,income_detailed_grouped,adult_yn",
+                     "survey_cycle,race_eth,adult_yn",
                      "survey_cycle,commute_cat,adult_yn")
 )
 
@@ -234,6 +235,7 @@ mode5cat_summary <- summarize_for_attr(
   summary_levels = c("survey_cycle", "adult_yn", "commute_cat",
                      "survey_cycle,adult_yn", 
                     "survey_cycle,income_detailed_grouped,adult_yn",
+                    "survey_cycle,race_eth,adult_yn",
                      "survey_cycle,commute_cat,adult_yn")
 )
 
@@ -260,7 +262,8 @@ full_summary <- full_summary %>%
     survey_cycle,
     adult_yn,       
     commute_cat,
-    income_detailed_grouped,      
+    income_detailed_grouped,  
+    race_eth,    
     summary_col,
     mode5cat_label,
     mode_label,
@@ -287,6 +290,7 @@ full_summary <- full_summary %>%
     adult_yn,
     commute_cat,
     income_detailed_grouped, 
+    race_eth,
     summary_col,
     mode5cat_label,
     mode_label,
