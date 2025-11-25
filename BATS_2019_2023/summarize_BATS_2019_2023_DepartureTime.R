@@ -57,7 +57,8 @@ nrows_by_cycle <- data %>%
 nrows_by_cycle
 
 # Function to calculate weighted statistics for a given survey cycle
-analyze_departure_by_hour <- function(df, cycle_year, HomeToWork_filter = NULL) {
+analyze_departure_by_hour <- function(df, cycle_year, group_vars = NULL, 
+                                      HomeToWork_filter = NULL) {
   
   # Filter for specific survey cycle
   df_filtered <- df %>%
@@ -66,7 +67,7 @@ analyze_departure_by_hour <- function(df, cycle_year, HomeToWork_filter = NULL) 
   # Apply purpose filter if specified
   if (!is.null(HomeToWork_filter)) {
     df_filtered <- df_filtered %>%
-      filter(opurp_label== "HOME" & dpurp_label == "WORK")
+      filter(opurp_label == "HOME" & dpurp_label == "WORK")
   }
 
   # Create survey design object
@@ -76,64 +77,100 @@ analyze_departure_by_hour <- function(df, cycle_year, HomeToWork_filter = NULL) 
       weights = trexpfac
     )  
 
+  # Build grouping variables dynamically
+  if (!is.null(group_vars)) {
+    group_syms <- syms(c("departure_hour", "hour_bin", group_vars))
+  } else {
+    group_syms <- syms(c("departure_hour", "hour_bin"))
+  }
+
   # Calculate weighted statistics by hour
   results <- svy_design %>%
-    group_by(departure_hour, hour_bin) %>%
+    group_by(!!!group_syms) %>%
     summarise(
       # Unweighted count
       n_unweighted = unweighted(n()),
       # Weighted count
       n_weighted = survey_total(vartype = c("se", "ci", "cv")),
       .groups = "drop"
-    ) %>%
+    )
+  
+  # Calculate shares within each subgroup
+  if (!is.null(group_vars)) {
+    results <- results %>%
+      group_by(across(all_of(group_vars))) %>%
+      mutate(
+        weighted_share = n_weighted / sum(n_weighted),
+        share_se = n_weighted_se / sum(n_weighted),
+        share_cv = share_se / weighted_share,
+        share_ci_lower = weighted_share - 1.96 * share_se,
+        share_ci_upper = weighted_share + 1.96 * share_se
+      ) %>%
+      ungroup()
+  } else {
+    results <- results %>%
+      mutate(
+        weighted_share = n_weighted / sum(n_weighted),
+        share_se = n_weighted_se / sum(n_weighted),
+        share_cv = share_se / weighted_share,
+        share_ci_lower = weighted_share - 1.96 * share_se,
+        share_ci_upper = weighted_share + 1.96 * share_se
+      )
+  }
+
+  # Add identifiers
+  results <- results %>%
     mutate(
-      # Calculate weighted share (proportion)
-      weighted_share = n_weighted / sum(n_weighted),
-      # Calculate SE, CI, and CV for the share
-      share_se = n_weighted_se / sum(n_weighted),
-      share_cv = share_se / weighted_share,
-      share_ci_lower = weighted_share - 1.96 * share_se,
-      share_ci_upper = weighted_share + 1.96 * share_se,
       # Add survey cycle identifier
       survey_cycle = cycle_year,
       # Add trip purpose identifier
-      trip_purpose = ifelse(is.null(HomeToWork_filter), "All Trips", HomeToWork_filter)
+      trip_purpose = ifelse(is.null(HomeToWork_filter), "All Trips", HomeToWork_filter),
+      # Add grouping variable indicator
+      grouping_vars = ifelse(is.null(group_vars), "None", paste(group_vars, collapse = ", "))
     ) %>%
     select(
       survey_cycle,
       trip_purpose,
+      grouping_vars,
       departure_hour,
       hour_bin,
-      n_unweighted,
-      weighted_share,
-      share_se,
-      share_ci_lower,
-      share_ci_upper,
-      share_cv,
-      n_weighted,
-      n_weighted_se,
-      n_weighted_cv
+      everything()
     ) %>%
-    arrange(departure_hour)
+    arrange(departure_hour)  
   
   return(results)
 }
 
-# Analyze both survey cycles - ALL TRIPS
+# Analyze both survey cycles - ALL TRIPS (Overall)
 results_2019_all <- analyze_departure_by_hour(data, 2019)
 results_2023_all <- analyze_departure_by_hour(data, 2023)
 
-# Analyze both survey cycles - WORK TRIPS ONLY
+# Analyze both survey cycles - WORK TRIPS ONLY (Overall)
 results_2019_work <- analyze_departure_by_hour(data, 2019, HomeToWork_filter = "Home To Work")
 results_2023_work <- analyze_departure_by_hour(data, 2023, HomeToWork_filter = "Home To Work")
+
+# Analyze by income group - ALL TRIPS
+results_2019_all_income <- analyze_departure_by_hour(data, 2019, group_vars = "income_detailed_grouped")
+results_2023_all_income <- analyze_departure_by_hour(data, 2023, group_vars = "income_detailed_grouped")
+
+# Analyze by income group - WORK TRIPS
+results_2019_work_income <- analyze_departure_by_hour(data, 2019, group_vars = "income_detailed_grouped",
+                                                       HomeToWork_filter = "Home To Work")
+results_2023_work_income <- analyze_departure_by_hour(data, 2023, group_vars = "income_detailed_grouped",
+                                                       HomeToWork_filter = "Home To Work")
 
 # Combine results
 all_results <- bind_rows(
   results_2019_all, 
   results_2023_all,
   results_2019_work,
-  results_2023_work
+  results_2023_work,
+  results_2019_all_income,
+  results_2023_all_income,
+  results_2019_work_income,
+  results_2023_work_income
 )
+
 
 # Print results
 cat("\n=== Departure Time Analysis - ALL TRIPS ===\n")
@@ -148,8 +185,25 @@ print(results_2019_work, n = Inf)
 cat("\n2023 - Work Trips:\n")
 print(results_2023_work, n = Inf)
 
+cat("\n\n=== Departure Time Analysis - ALL TRIPS BY INCOME ===\n")
+cat("\n2019 - All Trips by Income:\n")
+print(results_2019_all_income, n = Inf)
+cat("\n2023 - All Trips by Income:\n")
+print(results_2023_all_income, n = Inf)
+
+cat("\n\n=== Departure Time Analysis - WORK TRIPS BY INCOME ===\n")
+cat("\n2019 - Work Trips by Income:\n")
+print(results_2019_work_income, n = Inf)
+cat("\n2023 - Work Trips by Income:\n")
+print(results_2023_work_income, n = Inf)
+
+
+
 # Save combined results to CSV
-write_csv(all_results, "M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Processed/BATS2019_2023/departure_time_analysis_by_cycle_and_purpose.csv")
+output_filename <- sprintf("M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Processed/BATS2019_2023/departure_time_analysis_by_cycle_and_purpose_%s.csv",
+                          format(Sys.time(), "%Y%m%d_%H%M%S"))
+write_csv(all_results, output_filename)
+cat("\nResults saved to:", output_filename, "\n")
 
 # Create summary comparison
 cat("\n\n=== Summary Statistics ===\n")
