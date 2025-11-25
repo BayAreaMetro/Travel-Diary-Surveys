@@ -171,7 +171,7 @@ create_chart_labels <- function(df, group_vars = NULL) {
   if (is.null(group_vars)) {
     # All adults - no grouping
     df <- df %>%
-      mutate(chart_label = paste(survey_cycle, "- All"))
+      mutate(chart_label = "All")
   } else if ("commute_cat" %in% group_vars && "home_county_label" %in% group_vars) {
     # Commute category and county
     df <- df %>%
@@ -184,37 +184,36 @@ create_chart_labels <- function(df, group_vars = NULL) {
           commute_cat == "5. Not full-time worker" ~ "Not full-time worker",
           TRUE ~ as.character(commute_cat)
         ),
-        chart_label = paste(survey_cycle, "-", commute_cat_short, "-", home_county_label)
+        chart_label = paste(commute_cat_short, "-", home_county_label)
       ) %>%
       select(-commute_cat_short)
   } else if ("commute_cat" %in% group_vars) {
     # Commute category only
     df <- df %>%
       mutate(
-        chart_label = paste(survey_cycle, "-", case_when(
+        chart_label = case_when(
           commute_cat == "1. Commuted" ~ "Commuted",
           commute_cat == "2. Telecommuted 7+ hours and not Commuted" ~ "Telecommuted 7+ hours",
           commute_cat == "3. Telecommuted <7 hours and not Commuted" ~ "Telecommuted <7 hours",
           commute_cat == "4. Did not work" ~ "Did not work",
           commute_cat == "5. Not full-time worker" ~ "Not full-time worker",
           TRUE ~ as.character(commute_cat)
-        ))
+        )
       )
   } else if ("home_county_label" %in% group_vars) {
     # County only
     df <- df %>%
-      mutate(chart_label = paste(survey_cycle, "-", home_county_label))
+      mutate(chart_label = home_county_label)
   } else {
     # Generic handling for other grouping variables
     # Create label from first non-survey_cycle grouping variable
     group_var <- setdiff(group_vars, "survey_cycle")[1]
     df <- df %>%
-      mutate(chart_label = paste(survey_cycle, "-", .data[[group_var]]))
+      mutate(chart_label = as.character(.data[[group_var]]))
   }
   
   return(df)
 }
-
 # -------------------------
 # DATA PREPARATION
 # -------------------------
@@ -347,6 +346,16 @@ results_by_income4cat <- calculate_trip_metrics(
    add_reliability_flags() %>%
    create_chart_labels(group_vars = "income_detailed_grouped")
 
+# 7. By race and ethnicity
+print("Calculating metrics by race and ethnicity...")
+results_by_race_eth <- calculate_trip_metrics(
+   srv_design,
+   group_vars = "race_eth",
+   summary_level_name = "By Race and Ethnicity"
+ )
+ summary_by_race_eth <- standardize_results(results_by_race_eth, "By Race and Ethnicity") %>%
+   add_reliability_flags() %>%
+   create_chart_labels(group_vars = "race_eth")
 
 
 # ADD NEW ANALYSES HERE
@@ -373,6 +382,7 @@ comprehensive_summary <- bind_rows(
   summary_by_county,
   summary_commute_county,
   summary_by_employment,
+  summary_by_race_eth,
   summary_by_income_detailed,
   summary_by_income4cat
   # summary_by_age
