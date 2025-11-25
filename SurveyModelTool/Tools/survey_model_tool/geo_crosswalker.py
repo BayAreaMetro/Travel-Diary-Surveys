@@ -185,6 +185,67 @@ class GeoCrosswalker:
         
         return gdf
 
+    def _resolve_geometry_overlap(self, original_geom, reference_geoms):
+        """
+        Resolves overlaps of an original geometry with multiple reference geometries.
+        
+        Parameters:
+        - original_geom: Shapely geometry to check for overlaps.
+        - reference_geoms: GeoSeries of reference geometries.
+        
+        Returns:
+        - Shapely geometry with minor overlaps removed.
+        """
+        # Find intersections with reference geometries
+        overlaps = reference_geoms[reference_geoms.intersects(original_geom)]
+        
+        if len(overlaps) <= 1:
+            # If no or only one intersection, return the original geometry
+            return original_geom
+        
+        # Calculate the area of overlap for each intersecting geometry
+        overlap_areas = overlaps.apply(lambda ref_geom: original_geom.intersection(ref_geom).area)
+        
+        # Identify the reference geometry with the largest overlap
+        max_overlap_geom = overlaps.loc[overlap_areas.idxmax()]
+        
+        # Remove overlaps with other reference geometries
+        for ref_geom in overlaps:
+            if ref_geom != max_overlap_geom:
+                original_geom = original_geom.difference(ref_geom)
+        
+        return original_geom
+
+    def clip_geometry(self, gdf_to_clip, reference_gdf):
+        """
+        Clips the geometries in gdf_to_clip to the boundaries of reference_gdf.
+        """
+        # Ensure gdf_to_clip is a GeoDataFrame
+        if not isinstance(gdf_to_clip, gpd.GeoDataFrame):
+            raise ValueError("gdf_to_clip must be a GeoDataFrame")
+        
+        # Ensure the geometry column exists
+        if 'geometry' not in gdf_to_clip.columns:
+            raise KeyError("gdf_to_clip is missing the 'geometry' column")
+        
+        gdf_to_clip = gdf_to_clip.to_crs(reference_gdf.crs)
+
+        # Ensure CRS alignment
+        if gdf_to_clip.crs != reference_gdf.crs:
+            raise ValueError("CRS mismatch between gdf_to_clip and reference_gdf")
+        
+        # Debugging: Print the first few rows of the GeoDataFrames
+        # print("gdf_to_clip:")
+        # print(gdf_to_clip.head())
+        # print("reference_gdf:")
+        # print(reference_gdf.head())
+        
+        # Apply the overlap resolution
+        gdf_to_clip['geometry'] = gdf_to_clip.apply(
+            lambda row: self._resolve_geometry_overlap(row['geometry'], reference_gdf['geometry']),
+            axis=1
+        )
+        return gdf_to_clip
 
 # Example usage:
 # crosswalker = GeoCrosswalker('path_to_config.yml')
