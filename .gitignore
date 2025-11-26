@@ -1,4 +1,5 @@
 renv
+.RProfile
 .DS_Store
 __pycache__
 cache
