@@ -66,6 +66,7 @@ survey_cycle mode_label weighted_share            se        ci_95 ci_lower_95
 ## BATS_2019_2023_TripLevel_Shares.R
 * line 68: Why only consider full-time workers? Is it because it's ambiguous to gauge hybrid-ness? If so, you could try normalizing using a ratio of telework_freq / commute_freq to get a sense of telework intensity for part-time workers too. Narrowing to full-time makes sense, but it does leave out a big chunk of the workforce. The problem is the 2-3 days a week is ambiguous.
 
+(Unweighted)
 | employment | label                          | n     | %       | Cumulative % |
 |------------|--------------------------------|-------| --------| -------------|
 | 7          | Unpaid volunteer or intern     | 369   | 0.48%   | 0.48%        |
