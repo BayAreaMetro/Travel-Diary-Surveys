@@ -73,6 +73,7 @@ analyze_departure_by_hour <- function(df, cycle_year, group_vars = NULL,
   # Create survey design object
   svy_design <- df_filtered %>%
     as_survey_design(
+      ids    = c(hhno, pno),      
       strata = stratification_var,
       weights = trexpfac
     )  
