@@ -221,7 +221,7 @@ cat("\n")
 # Read the skims
 distance_skim_df <- read.csv("\\\\model3-b\\Model3B-Share\\Projects\\2023_TM161_IPA_35\\database\\DistanceSkimsDatabaseAM.csv") %>%
   select(orig, dest, daToll) %>%
-  rename(dist_in_miles = daToll)
+  rename(skim_dist_in_miles = daToll)
 
 # Left join LinkedTrips_2019_2023_df to distance_skim_df
 LinkedTrips_2019_2023_df <- LinkedTrips_2019_2023_df %>%
@@ -232,7 +232,7 @@ LinkedTrips_2019_2023_df <- LinkedTrips_2019_2023_df %>%
 summary_trip_noDist <- LinkedTrips_2019_2023_df %>%
   summarise(
     total_trips = n(),
-    missing_dist = sum(is.na(dist_in_miles)),
+    missing_dist = sum(is.na(skim_dist_in_miles)),
     pct_missing = round(100 * missing_dist / total_trips, 2)
   )
 
