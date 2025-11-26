@@ -259,6 +259,7 @@ ProcessedPersonDays_2019_2023_df <- ProcessedPersonDays_2019_2023_df %>%
 
 srv_design <- ProcessedPersonDays_2019_2023_df %>%
   as_survey_design(
+    ids     = hhno, 
     weights = pdexpfac,
     strata = c(survey_cycle, stratification_var)
   )
