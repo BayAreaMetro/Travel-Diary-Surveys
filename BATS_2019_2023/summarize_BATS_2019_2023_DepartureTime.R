@@ -8,7 +8,6 @@ library(srvyr)
 # Read the data
 data <- read_csv("M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Processed/BATS2019_2023/LinkedTrips_2019_2023_withDist_withStrata.csv")
 
-
 # Label the variable opurp
 # labelling should belong to an upstream script but just to be fast...
 data <- data %>%
@@ -72,6 +71,7 @@ analyze_departure_by_hour <- function(df, cycle_year, HomeToWork_filter = NULL) 
   # Create survey design object
   svy_design <- df_filtered %>%
     as_survey_design(
+      ids = c("hhno", "pno"),  # Specify sampling units
       strata = stratification_var,
       weights = trexpfac
     )  

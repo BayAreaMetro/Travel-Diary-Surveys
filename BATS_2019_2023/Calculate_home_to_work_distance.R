@@ -94,6 +94,12 @@ cat("\n")
 # -----------
 print("Calculating crow fly (straight line) distances using Haversine formula...")
 
+
+
+
+
+
+
 # Haversine formula function
 # Inputs: lon1, lat1, lon2, lat2 in decimal degrees
 # Output: distance in miles
