@@ -38,13 +38,13 @@ person_2019_2023_df <- person_2019_2023_df %>%
 # explicitly drop all 0 weight records
 person_2019_2023_df <- person_2019_2023_df %>% 
    filter(person_weight_rmove_only>0) %>%
-   filter(!is.na(telework_freq_grouped_label)) 
+   filter(!is.na(telework_jobtype3_label)) 
 
 # -------------------------
 # simple tabulation
 # -------------------------
 simple_table <- person_2019_2023_df %>%
-  group_by(survey_cycle, telework_freq_grouped_label) %>%
+  group_by(survey_cycle, telework_jobtype3_label) %>%
   summarise(
     count = n(),
     total_weight = sum(person_weight_rmove_only, na.rm = TRUE)
@@ -65,21 +65,91 @@ srv_design <- person_2019_2023_df %>%
   )
 
 
+# -------------------------
+# FUNCTION: Calculate telework shares by demographic segment
+# -------------------------
+calculate_telework_by_segment <- function(srv_design, segment_var, segment_label) {
+  
+  cat("\n")
+  print(glue("=== Processing segmentation by: {segment_label} ==="))
+
 # Table 1: Shares by telework freq categories (proportions)
 srv_results_telework_freq1 <- srv_design %>%
-  group_by(survey_cycle, telework_freq_grouped_label) %>%
+  group_by(survey_cycle, telework_jobtype3_label) %>%
   summarize(
     n_unweighted = unweighted(n()),
     n_weighted = survey_total(vartype = NULL),
     proportion = survey_prop(vartype = c("se", "ci", "cv"))
   )
 
+  # Table 1: Detailed telework frequency by segment
+  results_detailed <- srv_design %>%
+    group_by(survey_cycle, {{segment_var}}, telework_jobtype3_label) %>%
+    summarize(
+      n_unweighted = unweighted(n()),
+      n_weighted = survey_total(vartype = NULL),
+      proportion = survey_prop(vartype = c("se", "ci", "cv"))
+    )
 
-# Display results
-print("\n=== Telecommute Frequency Shares ===")
+  # Table 2: 3-category telework frequency by segment
+  results_3cat <- srv_design %>%
+    group_by(survey_cycle, {{segment_var}}, telework_freq_3cat_label) %>%
+    summarize(
+      n_unweighted = unweighted(n()),
+      n_weighted = survey_total(vartype = NULL),
+      proportion = survey_prop(vartype = c("se", "ci", "cv"))
+    )
+
+  # Table 3: WFH 2+ days share by segment
+  results_wfh2plus <- srv_design %>%
+    group_by(survey_cycle, {{segment_var}}) %>%
+    summarize(
+      n_total_unweighted = unweighted(n()),
+      total_weighted = survey_total(vartype = NULL),
+      n_WFH2OrMoreDays_unweighted = unweighted(sum(telework_freq_3cat_label2 == "1. Work from home 2 or more days a week")),
+      WFH2OrMoreDays_weighted = survey_total(telework_freq_3cat_label2 == "1. Work from home 2 or more days a week", vartype = NULL),
+      WFH2OrMoreDays_share = survey_mean(telework_freq_3cat_label2 == "1. Work from home 2 or more days a week", 
+                                         vartype = c("se", "ci", "cv"))
+    )
+  
+  # Print results
+  print(glue("\n=== Telework Frequency Shares (Detailed) by {segment_label} ==="))
+  print(results_detailed, n = Inf)
+  
+  print(glue("\n=== Telework Frequency Shares (3-Category) by {segment_label} ==="))
+  print(results_3cat, n = Inf)
+  
+  print(glue("\n=== WFH 2+ Days Share by {segment_label} ==="))
+  print(results_wfh2plus, n = Inf)
+  
+  # Save results with timestamp
+  timestamp <- format(Sys.time(), '%Y%m%d_%H%M%S')
+  write_csv(results_detailed, glue("{working_dir}/telework_freq_detailed_by_{segment_label}_{timestamp}.csv"))
+  write_csv(results_3cat, glue("{working_dir}/telework_freq_3cat_by_{segment_label}_{timestamp}.csv"))
+  write_csv(results_wfh2plus, glue("{working_dir}/WFH2OrMoreDays_by_{segment_label}_{timestamp}.csv"))
+  
+  return(list(detailed = results_detailed, 
+              three_cat = results_3cat,
+              wfh2plus = results_wfh2plus))
+}
+
+# -------------------------
+# OVERALL ANALYSIS (no segmentation)
+# -------------------------
+
+# Table 1: Shares by telework freq categories (detailed proportions)
+srv_results_telework_freq1 <- srv_design %>%
+  group_by(survey_cycle, telework_jobtype3_label) %>%
+  summarize(
+    n_unweighted = unweighted(n()),
+    n_weighted = survey_total(vartype = NULL),
+    proportion = survey_prop(vartype = c("se", "ci", "cv"))
+  )
+
+print("\n=== Telework Frequency Shares (Overall - Detailed) ===")
 print(srv_results_telework_freq1, n = Inf)
 
-# Table 2: Shares by telework freq categories (proportions)
+# Table 2: Shares by telework freq categories (3-category)
 srv_results_telework_freq2 <- srv_design %>%
   group_by(survey_cycle, telework_freq_3cat_label) %>%
   summarize(
@@ -88,13 +158,34 @@ srv_results_telework_freq2 <- srv_design %>%
     proportion = survey_prop(vartype = c("se", "ci", "cv"))
   )
 
-
-# Display results
-print("\n=== Telecommute Frequency Shares ===")
+print("\n=== Telework Frequency Shares (Overall - 3 Category) ===")
 print(srv_results_telework_freq2, n = Inf)
 
+# Table 3: Remote or Hybrid share (overall)
+srv_results_WFH2OrMoreDays_share <- srv_design %>%
+  group_by(survey_cycle) %>%
+  summarize(
+    n_total_unweighted = unweighted(n()),
+    total_weighted = survey_total(vartype = NULL),
+    n_WFH2OrMoreDays_unweighted = unweighted(sum(telework_freq_3cat_label2 == "1. Work from home 2 or more days a week")),
+    WFH2OrMoreDays_weighted = survey_total(telework_freq_3cat_label2 == "1. Work from home 2 or more days a week", vartype = NULL),
+    WFH2OrMoreDays_share = survey_mean(telework_freq_3cat_label2 == "1. Work from home 2 or more days a week", 
+                                       vartype = c("se", "ci", "cv"))
+  )
 
-# Table 3: Shares by telework freq categories -- BY HOME COUNTY
+print("\n=== Remote or Hybrid Worker Share (Overall) ===")
+print(srv_results_WFH2OrMoreDays_share, n = Inf)
+
+# Save overall results
+timestamp <- format(Sys.time(), '%Y%m%d_%H%M%S')
+write_csv(srv_results_telework_freq1, glue("{working_dir}/telework_freq_shares_overall_{timestamp}.csv"))
+write_csv(srv_results_WFH2OrMoreDays_share, glue("{working_dir}/WFH2OrMoreDays_share_overall_{timestamp}.csv"))
+
+# -------------------------
+# SEGMENTED ANALYSIS - BY COUNTY
+# -------------------------
+
+# By home county (detailed)
 srv_results_telework_freq_COUNTY <- srv_design %>%
   group_by(survey_cycle, telework_freq_3cat_label2, home_county_grouped_label) %>%
   summarize(
@@ -103,42 +194,10 @@ srv_results_telework_freq_COUNTY <- srv_design %>%
     proportion = survey_prop(vartype = c("se", "ci", "cv"))
   )
 
-
-# Display results
-print("\n=== Telecommute Frequency Shares ===")
+print("\n=== Telework Frequency Shares by County ===")
 print(srv_results_telework_freq_COUNTY, n = Inf)
 
-
-# Save to CSV with timestamp (only for the telework_freq_grouped_label1), as I decided that Table 2 is too aggregate
-output_file <- glue("{working_dir}/telework_freq_shares_{format(Sys.time(), '%Y%m%d_%H%M%S')}.csv")
-write_csv(srv_results_telework_freq1, output_file)
-
-
-# Save to CSV with timestamp BY HOME COUNTY
-output_file <- glue("{working_dir}/telework_freq_shares_ByCounty{format(Sys.time(), '%Y%m%d_%H%M%S')}.csv")
-write_csv(srv_results_telework_freq_COUNTY, output_file)
-
-# -------------------------
-# Table 4: Calculate Remote or Hybrid share
-# Sum of weight for those Remote or Hybrid / total workers
-# -------------------------
-
-# Remote or Hybrid share by survey cycle
-srv_results_WFH2OrMoreDays_share <- srv_design %>%
-  group_by(survey_cycle) %>%
-  summarize(
-    n_total_unweighted = unweighted(n()),
-    total_weighted = survey_total(vartype = NULL),
-    n_WFH2OrMoreDays_unweighted = unweighted(sum(telework_freq_3cat_label2 == "1. Work from home 2 or more days a week")),
-    WFH2OrMoreDays_weighted = survey_total(telework_freq_3cat_label2 == "1. Work from home 2 or more days a week", vartype = NULL),
-    WFH2OrMoreDays_share = survey_mean(telework_freq_3cat_label2 == "1. Work from home 2 or more days a week", vartype = c("se", "ci", "cv"))
-  )
-
-# Display results
-print("\n=== Remote or Hybrid Worker Share (Overall) ===")
-print(srv_results_WFH2OrMoreDays_share, n = Inf)
-
-# Remote or Hybrid share by survey cycle and county
+# By home county (WFH 2+ days)
 srv_results_WFH2OrMoreDays_share_county <- srv_design %>%
   group_by(survey_cycle, home_county_grouped_label) %>%
   summarize(
@@ -146,20 +205,33 @@ srv_results_WFH2OrMoreDays_share_county <- srv_design %>%
     total_weighted = survey_total(vartype = NULL),
     n_WFH2OrMoreDays_unweighted = unweighted(sum(telework_freq_3cat_label2 == "1. Work from home 2 or more days a week")),
     WFH2OrMoreDays_weighted = survey_total(telework_freq_3cat_label2 == "1. Work from home 2 or more days a week", vartype = NULL),
-    WFH2OrMoreDays_share = survey_mean(telework_freq_3cat_label2 == "1. Work from home 2 or more days a week", vartype = c("se", "ci", "cv"))
+    WFH2OrMoreDays_share = survey_mean(telework_freq_3cat_label2 == "1. Work from home 2 or more days a week", 
+                                       vartype = c("se", "ci", "cv"))
   )
 
-# Display results
 print("\n=== Remote or Hybrid Worker Share (By County) ===")
 print(srv_results_WFH2OrMoreDays_share_county, n = Inf)
 
-# Save Remote or Hybrid share results to CSV
-output_file <- glue("{working_dir}/WFH2OrMoreDays_share_{format(Sys.time(), '%Y%m%d_%H%M%S')}.csv")
-write_csv(srv_results_WFH2OrMoreDays_share, output_file)
+# Save county results
+write_csv(srv_results_telework_freq_COUNTY, glue("{working_dir}/telework_freq_shares_ByCounty_{timestamp}.csv"))
+write_csv(srv_results_WFH2OrMoreDays_share_county, glue("{working_dir}/WFH2OrMoreDays_share_ByCounty_{timestamp}.csv"))
 
-output_file <- glue("{working_dir}/WFH2OrMoreDays_share_ByCounty_{format(Sys.time(), '%Y%m%d_%H%M%S')}.csv")
-write_csv(srv_results_WFH2OrMoreDays_share_county, output_file)
+# -------------------------
+# SEGMENTED ANALYSIS - BY DEMOGRAPHICS
+# -------------------------
 
-# TODO: reformat to add CV acceptance etc.
+# By Gender
+gender_results <- calculate_telework_by_segment(srv_design, gender_label, "gender_label")
+
+# By Income
+income_results <- calculate_telework_by_segment(srv_design, income_detailed_grouped, "income_detailed_grouped")
+
+
+# -------------------------
+# Summary message
+# -------------------------
+print("\n=== Analysis Complete ===")
+print(glue("All results saved to: {working_dir}"))
+print(glue("Log file: {log_file}"))
 
 sink()

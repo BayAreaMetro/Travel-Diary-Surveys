@@ -24,7 +24,7 @@ hh2023_path <- file.path(background_dataset_2023_dir, hh2023_file)
 hh2023_df <- read_csv(hh2023_path)
 
 hh2023_df <- hh2023_df %>%
-  select(hh_id, sample_segment, home_lon, home_lat, income_broad, home_county) %>%
+  select(hh_id, sample_segment, home_lon, home_lat, income_broad, income_detailed, home_county) %>%
   mutate(survey_cycle = 2023) %>%
   mutate(home_county = as.character(home_county)) %>%
   rename(stratification_var = sample_segment)
@@ -35,7 +35,7 @@ person2023_path <- file.path(background_dataset_2023_dir, person2023_file)
 person2023_df <- read_csv(person2023_path)
 
 person2023_df <- person2023_df %>%
-  select(hh_id, person_id, person_weight_rmove_only, age, employment, telework_freq, job_type, work_lat, work_lon) %>%
+  select(hh_id, person_id, person_weight_rmove_only, age, gender, employment, telework_freq, job_type, work_lat, work_lon) %>%
   rename(telework_freq2023=telework_freq) %>% # the 2023 coding has more categories than the 2019 coding
   mutate(survey_cycle = 2023)
 
@@ -48,7 +48,7 @@ hh2019_path <- file.path(background_dataset_2019_dir, hh2019_file)
 hh2019_df <- read_tsv(hh2019_path)
 
 hh2019_df <- hh2019_df %>%
-  select(hh_id, sample_stratum, reported_home_lat, reported_home_lon, income_aggregate, home_county_fips) %>%
+  select(hh_id, sample_stratum, reported_home_lat, reported_home_lon, income_aggregate, income_detailed, home_county_fips) %>%
   mutate(survey_cycle = 2019) %>%
   mutate(home_county_fips = as.character(home_county_fips)) %>% # note that the 2023 dataset uses all five digits but the 2019 dataset uses only the last three digits 001, 003
   rename(home_lat = reported_home_lat,
@@ -65,7 +65,7 @@ person2019_df <- read_tsv(person2019_path)
 # because Wkday weights are zeroed where travel_date_dow > 4
 # based on this: https://github.com/BayAreaMetro/tnc_california_studies/blob/6486dffc1ca9c42e9ec682d054ce56ccff9bf370/8.1_PopSim_weighting/02_join_weights.R#L229
 person2019_df <- person2019_df %>%
-  select(hh_id, person_id, wt_sphone_wkday, age, employment, telework_freq, job_type, work_lat, work_lon) %>%
+  select(hh_id, person_id, wt_sphone_wkday, age, gender, employment, telework_freq, job_type, work_lat, work_lon) %>%
   mutate(survey_cycle = 2019) %>%
   rename(telework_freq2019=telework_freq) %>%
   rename(person_weight_rmove_only = wt_sphone_wkday)
@@ -82,6 +82,16 @@ person_2019_2023_df <- person_2019_2023_df %>%
 # ------------------
 # Add labels
 # ------------------
+person_2019_2023_df <- person_2019_2023_df %>%
+  mutate(
+    gender_label = case_when(
+      gender == 1 ~ "1. Female",
+      gender == 2 ~ "2. Male",
+      gender == 4 ~ "4. Non-binary",
+      TRUE ~ NA_character_ 
+    )
+  )
+
 person_2019_2023_df <- person_2019_2023_df %>%
   mutate(
     employment_label = case_when(
@@ -142,13 +152,53 @@ person_2019_2023_df <- person_2019_2023_df %>%
     TRUE ~ NA_character_  # For other survey cycles or other values
   ))
 
+# income_detailed
+person_2019_2023_df <- person_2019_2023_df %>%
+  mutate(
+    income_detailed_label = case_when(
+      income_detailed == 1  ~ "1. Less than $15,000",
+      income_detailed == 2  ~ "2. $15,000-$24,999",
+      income_detailed == 3  ~ "3. $25,000-$34,999",
+      income_detailed == 4  ~ "4. $35,000-$49,999",
+      income_detailed == 5  ~ "5. $50,000-$74,999",
+      income_detailed == 6  ~ "6. $75,000-$99,999",
+      income_detailed == 7  ~ "7. $100,000-$149,999",
+      income_detailed == 8  ~ "8. $150,000-$199,999",
+      income_detailed == 9  ~ "9. $200,000-$249,999",
+      income_detailed == 10 ~ "10.$250,000 or more",
+      income_detailed == 999 ~ "999. Prefer not to answer",
+      TRUE ~ "Other"
+    )
+  )
+
+
+# income detailed (and then grouped)
+# grouping informed by the fact that median household income in 2023 is $128K in the Bay Area
+person_2019_2023_df <- person_2019_2023_df %>%
+  mutate(
+    income_detailed_grouped = case_when(
+      income_detailed == 1  ~ "1. Less than $50,000",
+      income_detailed == 2  ~ "1. Less than $50,000",
+      income_detailed == 3  ~ "1. Less than $50,000",
+      income_detailed == 4  ~ "1. Less than $50,000",
+      income_detailed == 5  ~ "2. $50,000-$99,999",
+      income_detailed == 6  ~ "2. $50,000-$99,999",
+      income_detailed == 7  ~ "3. $100,000-$199,999",
+      income_detailed == 8  ~ "3. $100,000-$199,999",
+      income_detailed == 9  ~ "4. $200,000 or more",
+      income_detailed == 10 ~ "4. $200,000 or more",
+      income_detailed == 999 ~ "999. Prefer not to answer",
+      TRUE ~ "Other"
+    )
+  )
+
   # label telework_freq based on codebook
   person_2019_2023_df <- person_2019_2023_df %>%
   mutate(telework_freq_temp_label = case_when(
     survey_cycle == 2019 & telework_freq2019 == 1   ~ "1. 6-7 days a week",
     survey_cycle == 2019 & telework_freq2019 == 2   ~ "2. 5 days a week",
     survey_cycle == 2019 & telework_freq2019 == 3   ~ "3. 4 days a week",
-    survey_cycle == 2019 & telework_freq2019 == 4   ~ "4. 2-3 days a week", # ths category is different across cycle
+    survey_cycle == 2019 & telework_freq2019 == 4   ~ "4. 2-3 days a week", # ths category is different across cycles
     survey_cycle == 2019 & telework_freq2019 == 5   ~ "5. 1 day a week",
     survey_cycle == 2019 & telework_freq2019 == 6   ~ "6. 1-3 days a month",
     survey_cycle == 2019 & telework_freq2019 == 7   ~ "7. Less than monthly",
@@ -166,31 +216,33 @@ person_2019_2023_df <- person_2019_2023_df %>%
     TRUE ~ NA_character_  # For other survey cycles or other values
   ))
 
-
-  person_2019_2023_df <- person_2019_2023_df %>%
-  mutate(telework_freq_grouped_label = case_when(
-    survey_cycle == 2019 & telework_freq2019 == 1   ~ "1. Fully remote",
-    survey_cycle == 2019 & telework_freq2019 == 2   ~ "1. Fully remote",
+# use telework_freq in conjunction with the job_type variable
+ person_2019_2023_df <- person_2019_2023_df %>%
+    mutate(telework_jobtype3_label = case_when(
+    job_type == 3                                   ~ "1. 5+ days a week", # Work ONLY from home or remotely (telework, self-employed)
+    survey_cycle == 2019 & telework_freq2019 == 1   ~ "1. 5+ days a week",
+    survey_cycle == 2019 & telework_freq2019 == 2   ~ "1. 5+ days a week",
     survey_cycle == 2019 & telework_freq2019 == 3   ~ "2. 4 days a week",
-    survey_cycle == 2019 & telework_freq2019 == 4   ~ "3. 2-3 days a week", # ths category is different across cycle
+    survey_cycle == 2019 & telework_freq2019 == 4   ~ "3. 2-3 days a week", # ths category is different across cycles
     survey_cycle == 2019 & telework_freq2019 == 5   ~ "4. 1 day a week",
-    survey_cycle == 2019 & telework_freq2019 == 6   ~ "5. Fully on-site",
-    survey_cycle == 2019 & telework_freq2019 == 7   ~ "5. Fully on-site",
-    survey_cycle == 2019 & telework_freq2019 == 8   ~ "5. Fully on-site",
-    survey_cycle == 2023 & telework_freq2023 == 1       ~ "1. Fully remote",
-    survey_cycle == 2023 & telework_freq2023 == 2       ~ "1. Fully remote",
+    survey_cycle == 2019 & telework_freq2019 == 6   ~ "5. Less than weekly",
+    survey_cycle == 2019 & telework_freq2019 == 7   ~ "5. Less than weekly",
+    survey_cycle == 2019 & telework_freq2019 == 8   ~ "5. Less than weekly",
+    survey_cycle == 2023 & telework_freq2023 == 1       ~ "1. 5+ days a week",
+    survey_cycle == 2023 & telework_freq2023 == 2       ~ "1. 5+ days a week",
     survey_cycle == 2023 & telework_freq2023 == 3       ~ "2. 4 days a week",
     survey_cycle == 2023 & telework_freq2023 == 4       ~ "3. 2-3 days a week",
     survey_cycle == 2023 & telework_freq2023 == 5       ~ "3. 2-3 days a week",
     survey_cycle == 2023 & telework_freq2023 == 6       ~ "4. 1 day a week",
-    survey_cycle == 2023 & telework_freq2023 == 7       ~ "5. Fully on-site",
-    survey_cycle == 2023 & telework_freq2023 == 8       ~ "5. Fully on-site",
-    survey_cycle == 2023 & telework_freq2023 == 996     ~ "5. Fully on-site",
+    survey_cycle == 2023 & telework_freq2023 == 7       ~ "5. Less than weekly",
+    survey_cycle == 2023 & telework_freq2023 == 8       ~ "5. Less than weekly",
+    survey_cycle == 2023 & telework_freq2023 == 996     ~ "5. Less than weekly",
     TRUE ~ NA_character_  # For other survey cycles or other values
   ))
 
  person_2019_2023_df <- person_2019_2023_df %>%
     mutate(telework_freq_3cat_label = case_when(
+    job_type == 3                                   ~ "1. Fully remote",
     survey_cycle == 2019 & telework_freq2019 == 1   ~ "1. Fully remote",
     survey_cycle == 2019 & telework_freq2019 == 2   ~ "1. Fully remote",
     survey_cycle == 2019 & telework_freq2019 == 3   ~ "2. Hybrid",
@@ -214,6 +266,7 @@ person_2019_2023_df <- person_2019_2023_df %>%
 
  person_2019_2023_df <- person_2019_2023_df %>%
     mutate(telework_freq_3cat_label2 = case_when(
+    job_type == 3                                   ~ "1. Work from home 2 or more days a week",
     survey_cycle == 2019 & telework_freq2019 == 1   ~ "1. Work from home 2 or more days a week",
     survey_cycle == 2019 & telework_freq2019 == 2   ~ "1. Work from home 2 or more days a week",
     survey_cycle == 2019 & telework_freq2019 == 3   ~ "1. Work from home 2 or more days a week",
@@ -233,6 +286,7 @@ person_2019_2023_df <- person_2019_2023_df %>%
     survey_cycle == 2023 & telework_freq2023 == 996     ~ "3. Work from home infrequently (less than 1 day a week) or fully on-site",
     TRUE ~ NA_character_  # For other survey cycles or other values
   ))
+
 
 #-----------------------------------------
 # Handle home_county code inconsistencies
