@@ -125,6 +125,7 @@ summarize_for_attr <- function(survey_data, summary_col, strata_vars = c("survey
     # Create survey design with stratification
     srv_design <- df_dummy %>%
       as_survey_design(
+        ids     = c(hhno, pno),
         weights = trexpfac, 
         strata = all_of(strata_vars)
       )
