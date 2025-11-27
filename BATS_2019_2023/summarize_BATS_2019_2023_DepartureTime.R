@@ -58,7 +58,8 @@ nrows_by_cycle
 
 # Function to calculate weighted statistics for a given survey cycle
 analyze_departure_by_hour <- function(df, cycle_year, group_vars = NULL, 
-                                      HomeToWork_filter = NULL) {
+                                      HomeToWork_filter = NULL,
+                                      conf_level = 0.90) {
   
   # Filter for specific survey cycle
   df_filtered <- df %>%
@@ -86,17 +87,23 @@ analyze_departure_by_hour <- function(df, cycle_year, group_vars = NULL,
   }
 
   # Calculate weighted statistics by hour
+
   results <- svy_design %>%
     group_by(!!!group_syms) %>%
     summarise(
       # Unweighted count
       n_unweighted = unweighted(n()),
       # Weighted count
-      n_weighted = survey_total(vartype = c("se", "ci", "cv")),
+      n_weighted = survey_total(vartype = c("se", "ci", "cv"), level = conf_level),
       .groups = "drop"
     )
   
   # Calculate shares within each subgroup
+
+  # Calculate z-score for the confidence level (1.96 for 95%, 1.645 for 90%)
+  z_score <- qnorm(1 - (1 - conf_level) / 2)
+
+
   if (!is.null(group_vars)) {
     results <- results %>%
       group_by(across(all_of(group_vars))) %>%
@@ -104,8 +111,8 @@ analyze_departure_by_hour <- function(df, cycle_year, group_vars = NULL,
         weighted_share = n_weighted / sum(n_weighted),
         share_se = n_weighted_se / sum(n_weighted),
         share_cv = share_se / weighted_share,
-        share_ci_lower = weighted_share - 1.96 * share_se,
-        share_ci_upper = weighted_share + 1.96 * share_se
+        share_ci_lower = weighted_share - z_score * share_se,
+        share_ci_upper = weighted_share + z_score * share_se
       ) %>%
       ungroup()
   } else {
@@ -114,8 +121,8 @@ analyze_departure_by_hour <- function(df, cycle_year, group_vars = NULL,
         weighted_share = n_weighted / sum(n_weighted),
         share_se = n_weighted_se / sum(n_weighted),
         share_cv = share_se / weighted_share,
-        share_ci_lower = weighted_share - 1.96 * share_se,
-        share_ci_upper = weighted_share + 1.96 * share_se
+        share_ci_lower = weighted_share - z_score * share_se,
+        share_ci_upper = weighted_share + z_score * share_se
       )
   }
 
