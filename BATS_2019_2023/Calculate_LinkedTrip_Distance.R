@@ -167,43 +167,19 @@ calc_path_distance <- function(linked_trips, survey_locations, survey_trips_join
   return(linked_trips)
 }
 
-# Match unlinked trips to linked trips from Daysim output
-match_unlinked_trips <- function(survey_trips, daysim_trips, time_tolerance = 0) {
-  
-  # Convert to data.table if not already
-  setDT(survey_trips)
-  setDT(daysim_trips)
-    
-  # Prepare linked trips interval data
-  lnk_int <- daysim_trips[
-    ,
-    .(
-      hhno, pno, day, ltrip_id,
-      start_link = deptm - time_tolerance,
-      end_link = arrtm + time_tolerance
-    )
-  ]
-  
-  # Match survey trips to linked trips using non-equi join
-  # Survey trip must fall within linked trip time window
-  print("Matching survey trips to linked trips using non-equi join...")
-  survey_trips_joined <- survey_trips[
-    lnk_int,
-    on = .(hhno, pno, day, deptm >= start_link, arrtm <= end_link),
-    nomatch = 0
-  ]
-  
-  # Diagnostic: check match rates
-  n_matched_linked_trips <- length(unique(survey_trips_joined$ltrip_id))
-  n_matched_unlinked_trips <- nrow(survey_trips_joined)
-  unlinked_rate = round(100 * n_matched_unlinked_trips / nrow(survey_trips), 2)
-  linked_rate = round(100 * n_matched_linked_trips / nrow(daysim_trips), 2)
-  print(glue("Total survey trips: {nrow(survey_trips)}"))
-  print(glue("Total linked trips: {nrow(daysim_trips)}"))
-  print(glue("Matched survey trips: {nrow(survey_trips_joined)}, Match rate: {unlinked_rate}%"))
-  print(glue("Matched linked trips: {n_matched_linked_trips}, Match rate: {linked_rate}%"))
-  
-  return(survey_trips_joined)
+
+# Routes trip using Nick's OSRM server, returns distance in meters
+route_coords <- function(o_lat, o_lon, d_lat, d_lon) {
+
+  url = glue::glue("http://router.nicholasfournier.com/route/v1/driving/{o_lon},{o_lat};{d_lon},{d_lat}?overview=false&geometries=geojson")
+
+  res = httr::GET(url)
+  res_content = httr::content(res)
+  if (res$status_code != 200) {
+    stop(glue::glue("Error: OSRM request failed with status code {res$status_code}"))
+  }
+  distance_meters = res_content$routes[[1]]$distance
+  return(distance_meters)
 }
 
 
@@ -248,12 +224,35 @@ survey_trips_2019_2023 <- rbindlist(list(
   survey_trips2023[, .(hhno, pno, day, deptm, arrtm, trip_id, distance_meters)]
 ))
 
-# Find unlinked trips
-matched_survey_trips <- match_unlinked_trips(survey_trips_2019_2023, LinkedTrips_2019_2023_df, time_tolerance = 15)
 
+
+# Prepare linked trips interval data
+lnk_int <- LinkedTrips_2019_2023_df[,
+  .(
+    hhno, pno, day, ltrip_id,
+    deptm_lt = deptm,
+    arrtm_lt = arrtm
+  )
+]
+
+# Match survey trips to linked trips using non-equi join
+# Survey trip must fall within linked trip time window
+print("Matching survey trips to linked trips using non-equi join...")
+survey_trips_2019_2023[
+  lnk_int,
+  ltrip_id := i.ltrip_id,
+  on = .(hhno, pno, day, deptm >= deptm_lt, arrtm <= arrtm_lt)
+]
+
+# Diagnostic: check match rates
+n_matched_unlinked_trips <- nrow(survey_trips_2019_2023[!is.na(ltrip_id), ])
+unlinked_rate = round(100 * n_matched_unlinked_trips / nrow(survey_trips_2019_2023), 2)
+linked_rate = round(100 * n_matched_unlinked_trips / nrow(LinkedTrips_2019_2023_df), 2)
+print(glue("Total survey trips: {nrow(survey_trips_2019_2023)}, matched: {n_matched_unlinked_trips}, Match rate: {unlinked_rate}%"))
+print(glue("Total linked trips: {nrow(LinkedTrips_2019_2023_df)}, matched: {n_matched_unlinked_trips}, Match rate: {linked_rate}%"))
 
 # Calculate summed distances for unlinked trips
-sum_distances <- matched_survey_trips[
+sum_distances <- survey_trips_2019_2023[
   ,
   .(sum_distance_meters = sum(distance_meters, na.rm = TRUE)),
   by = ltrip_id
@@ -264,24 +263,27 @@ LinkedTrips_2019_2023_df[, distance_miles := distance_meters / 1609.34]
 
 
 # Export final linked trips with distances
-fwrite(LinkedTrips_2019_2023_df, glue("{working_dir}/LinkedTrips_2019_2023_withDist.csv"))
+# fwrite(LinkedTrips_2019_2023_df, glue("{working_dir}/LinkedTrips_2019_2023_withDist.csv"))
 print("Linked trips with distances saved.")
 
 
+#### DEBUG
+# Find ltrip_id missing from unlinked trips
+missing_ltrip_ids <- setdiff(
+  LinkedTrips_2019_2023_df$ltrip_id,
+  survey_trips_2019_2023$ltrip_id
+)
 
-
-##########
-# Diagnose why some trips are not matched
-unmatched_survey_trips <- survey_trips_2019_2023[
-  !matched_survey_trips,
-  on = .(hhno, pno, day, deptm, arrtm, trip_id, distance_meters)
-]
-
-unmatched_survey_trips[
-  hhno == 23803687 & pno == 1 & day == 4 & deptm >= 2045 & arrtm <= 2258,
-]
+print(glue("Number of unmatched linked trips: {length(missing_ltrip_ids)}"))
 
 LinkedTrips_2019_2023_df[
-  hhno == 23803687  & pno == 1 & day == 4,
-  .(hhno, pno, day, ltrip_id, deptm, arrtm)
+  ltrip_id %in% missing_ltrip_ids[1],
+  .(hhno, pno, day, deptm, arrtm)
 ]
+
+survey_trips_2019_2023[
+  hhno == 23000339 & pno == 1 & day == 7,
+]
+
+
+
