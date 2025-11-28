@@ -53,8 +53,8 @@ LinkedTrips_2019_2023_df <- LinkedTrips_2019_2023_df %>%
 #-----------------------------------------
 # Create 5 "commute categories" 
 # - full time workers who commuted
-# - full time workers who telecommuted (4+ hours)
-# - full time workers who telecommuted (less than 4 hours)
+# - full time workers who telecommuted (6+ hours)
+# - full time workers who telecommuted (less than 6 hours)
 # - full time workres who didn't work (took time off or sick day)
 # - adults (18+) who are not full time workers
 #
@@ -64,8 +64,8 @@ LinkedTrips_2019_2023_df <- LinkedTrips_2019_2023_df %>%
   mutate(
     commute_cat = case_when(
       employment == 1 & Commuted_on_travel_day == 1                           ~ "1. Commuted",
-      employment == 1 & telecommute_time >= 420 & Commuted_on_travel_day == 0 ~ "2. Telecommuted 7+ hours and not Commuted",
-      employment == 1 & telecommute_time > 0 & Commuted_on_travel_day == 0    ~ "3. Telecommuted <7 hours and not Commuted",
+      employment == 1 & telecommute_time >= 360 & Commuted_on_travel_day == 0 ~ "2. Telecommuted 6+ hours and not Commuted",
+      employment == 1 & telecommute_time > 0 & Commuted_on_travel_day == 0    ~ "3. Telecommuted <6 hours and not Commuted",
       employment == 1 & telecommute_time == 0 & Commuted_on_travel_day == 0   ~ "4. Did not work",
       TRUE                                                                    ~ "5. Not full-time worker" 
     )
