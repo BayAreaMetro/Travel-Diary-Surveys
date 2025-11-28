@@ -3,6 +3,7 @@
 # -----------
 
 # Load required libraries
+library(crul)
 library(readr)
 library(dplyr)
 library(glue)
@@ -47,6 +48,7 @@ person_2019_2023_df %>%
 #The easternmost point of El Dorado County: 38.870630, -119.877219
 #The westernmost point of Sonoma County: 38.768395, -123.533743
 
+# TODO: Use a shapefile of the mega region for more accurate filtering
 # Create indicator variables in the data frame
 person_2019_2023_df$HomeLonInMegaRegion <- ifelse(
   person_2019_2023_df$home_lon >= -123.533743 & 
@@ -121,8 +123,125 @@ haversine_distance <- function(lon1, lat1, lon2, lat2) {
 # Calculate crow fly distance for home-to-work location
 person_2019_2023_ForHWloc_df <- person_2019_2023_ForHWloc_df %>%
   mutate(
-    home_to_work_miles = haversine_distance(home_lon, home_lat, work_lon, work_lat)
+    home_to_work_crowfly_miles = haversine_distance(home_lon, home_lat, work_lon, work_lat)
   )
+
+
+# Get routed distance using OSRM server
+
+# Using data.table for efficiency, tidy is too slow for this
+
+# Sequential trip routing using Nick's OSRM server, returns distance in meters
+route_coords <- function(o_lon, o_lat, d_lon, d_lat) {
+  
+  # Initialize result vector
+  n <- length(o_lon)
+  distance_meters <- rep(NA_real_, n)
+  
+  # Find valid (non-NA) rows
+  valid_rows <- !is.na(o_lon) & !is.na(o_lat) & !is.na(d_lon) & !is.na(d_lat)
+  
+  if (sum(valid_rows) == 0) {
+    return(distance_meters)
+  }
+  
+  # Process valid rows
+  valid_indices <- which(valid_rows)
+  n_valid <- length(valid_indices)
+  
+  for (j in seq_along(valid_indices)) {
+    i <- valid_indices[j]
+    
+    # Progress bar
+    if (j %% 100 == 0) {
+      print(glue("Routing trip {j} of {n_valid} valid trips (of {n} total trips)..."))
+    }
+    url <- glue::glue("http://router.nicholasfournier.com/route/v1/driving/{o_lon[i]},{o_lat[i]};{d_lon[i]},{d_lat[i]}?geometries=geojson")
+    
+    tryCatch({
+      res <- httr::GET(url)
+      if (res$status_code == 200) {
+        res_content <- httr::content(res)
+        distance_meters[i] <- res_content$routes[[1]]$distance
+      }
+    }, error = function(e) {
+      # Keep as NA on error
+    })
+  }
+
+  return(distance_meters)
+}
+
+# Asynchronous trip routing using Nick's OSRM server, returns distance in meters
+route_coords_async <- function(o_lon, o_lat, d_lon, d_lat, batch_size = 1000) {
+  
+  # Initialize result vector
+  n <- length(o_lon)
+  distance_meters <- rep(NA_real_, n)
+  
+  # Find valid rows
+  valid_rows <- !is.na(o_lon) & !is.na(o_lat) & !is.na(d_lon) & !is.na(d_lat)
+  
+  if (sum(valid_rows) == 0) {
+    print("No valid rows found for routing, returning NA vector.")
+    return(distance_meters)
+  }
+  
+  valid_indices <- which(valid_rows)
+  n_valid <- length(valid_indices)
+  n_batches <- ceiling(n_valid / batch_size)
+  
+  # Process in batches
+  for (batch in seq_len(n_batches)) {
+    start_idx <- (batch - 1) * batch_size + 1
+    end_idx <- min(batch * batch_size, n_valid)
+    batch_indices <- valid_indices[start_idx:end_idx]
+    
+    print(glue("Processing batch {batch} of {n_batches} ({start_idx} to {end_idx} of {n_valid} valid trips)..."))
+    
+    # Create async client pool
+    base_url = "http://router.nicholasfournier.com/route/v1/driving/"
+    options = "?geometries=geojson"
+    urls <- glue::glue("{base_url}{o_lon[batch_indices]},{o_lat[batch_indices]};{d_lon[batch_indices]},{d_lat[batch_indices]}{options}")
+    
+    # Create async requests
+    cc <- Async$new(urls = urls)
+    
+    # Execute all requests concurrently
+    res <- cc$get()
+    
+    # Parse results
+    for (k in seq_along(batch_indices)) {
+      i <- batch_indices[k]
+      tryCatch({
+        if (res[[k]]$status_code == 200) {
+          content <- jsonlite::fromJSON(res[[k]]$parse("UTF-8"))
+          distance_meters[i] <- content$routes$distance
+        }
+      }, error = function(e) {
+        # Keep as NA on error
+      })
+    }
+  }
+  
+  return(distance_meters)
+}
+
+
+# Routing home/work trips to get distances ================================
+person_2019_2023_ForHWloc_df <- person_2019_2023_ForHWloc_df %>%
+  mutate(
+    home_to_work_miles = route_coords_async(home_lon, home_lat, work_lon, work_lat) / 1609.34
+  )
+
+# Routing home/school trips to get distances ================================
+person_2019_2023_ForHWloc_df <- person_2019_2023_ForHWloc_df %>%
+  mutate(
+    home_to_school_miles = route_coords_async(home_lon, home_lat, school_lon, school_lat) / 1609.34
+  )
+
+
+### Statistical summaries
 
 # Summary statistics
 summary_home_to_work_miles <- person_2019_2023_ForHWloc_df %>%
