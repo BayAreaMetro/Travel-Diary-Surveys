@@ -19,6 +19,9 @@ sink(log_file, append = TRUE, split = TRUE)
 print(glue("\n=== Log Entry for person-day trip rate and trip distance calculations: {format(Sys.time(), '%Y-%m-%d %H:%M:%S')} ==="))
 cat("\n")
 
+# Set confidence level for all analyses
+CONF_LEVEL <- 0.90 
+
 # -------------------------
 # REUSABLE FUNCTIONS
 # -------------------------
@@ -38,7 +41,7 @@ cat("\n")
 #'                   Set to NULL for overall totals (all adults)
 #' @param summary_level_name Name for this analysis level (e.g., "By Income", "By Employment")
 #' @return A list of survey result dataframes
-calculate_trip_metrics <- function(survey_design, group_vars = NULL, summary_level_name = "All adults") {
+calculate_trip_metrics <- function(survey_design, group_vars = NULL, summary_level_name = "All adults", conf_level = CONF_LEVEL) {
   
   # Add survey_cycle to grouping vars if not already included
   if (!is.null(group_vars)) {
@@ -74,7 +77,7 @@ calculate_trip_metrics <- function(survey_design, group_vars = NULL, summary_lev
       summarize(
         n_unweighted = unweighted(n()),
         n_weighted = survey_total(),
-        !!paste0("mean_", metric$name) := survey_mean(.data[[metric$var]], vartype = c("se", "ci", "cv"))
+        !!paste0("mean_", metric$name) := survey_mean(.data[[metric$var]], vartype = c("se", "ci", "cv"), level = conf_level)
       ) %>%
       mutate(
         summary_col = metric$var,
@@ -93,7 +96,8 @@ calculate_trip_metrics <- function(survey_design, group_vars = NULL, summary_lev
       avg_trip_length = survey_ratio(
         numerator = personDay_dist_in_miles,
         denominator = num_trips,
-        vartype = c("se", "ci", "cv")
+        vartype = c("se", "ci", "cv"),
+        level = conf_level
       )
     ) %>%
     mutate(
@@ -126,8 +130,8 @@ standardize_results <- function(results_list, summary_level_name) {
       rename(
         mean = !!sym(mean_col),
         se = !!sym(paste0(mean_col, "_se")),
-        ci_lower_95 = !!sym(paste0(mean_col, "_low")),
-        ci_upper_95 = !!sym(paste0(mean_col, "_upp")),
+        ci_lower = !!sym(paste0(mean_col, "_low")),
+        ci_upper = !!sym(paste0(mean_col, "_upp")),
         coeff_of_var = !!sym(paste0(mean_col, "_cv"))
       )
     
@@ -149,7 +153,7 @@ add_reliability_flags <- function(summary_df) {
     mutate(
       unweighted_count = n_unweighted,
       weighted_count = n_weighted,
-      ci_95 = ci_upper_95 - ci_lower_95,
+      ci_width = ci_upper - ci_lower,
       cv_flag = coeff_of_var > 0.30,
       sample_size_flag = unweighted_count < 30,
       suppress = cv_flag | sample_size_flag,
@@ -400,9 +404,9 @@ comprehensive_summary <- comprehensive_summary %>%
     chart_label,
     mean,
     se,
-    ci_95,
-    ci_lower_95,
-    ci_upper_95,
+    ci_width,
+    ci_lower,
+    ci_upper,
     coeff_of_var,
     estimate_reliability,
     unweighted_count,
