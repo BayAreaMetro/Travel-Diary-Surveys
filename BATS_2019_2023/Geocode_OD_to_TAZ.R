@@ -221,7 +221,7 @@ cat("\n")
 # Read the skims
 distance_skim_df <- read.csv("\\\\model3-b\\Model3B-Share\\Projects\\2023_TM161_IPA_35\\database\\DistanceSkimsDatabaseAM.csv") %>%
   select(orig, dest, daToll) %>%
-  rename(dist_in_miles = daToll)
+  rename(skim_dist_in_miles = daToll)
 
 # Left join LinkedTrips_2019_2023_df to distance_skim_df
 LinkedTrips_2019_2023_df <- LinkedTrips_2019_2023_df %>%
@@ -232,7 +232,7 @@ LinkedTrips_2019_2023_df <- LinkedTrips_2019_2023_df %>%
 summary_trip_noDist <- LinkedTrips_2019_2023_df %>%
   summarise(
     total_trips = n(),
-    missing_dist = sum(is.na(dist_in_miles)),
+    missing_dist = sum(is.na(skim_dist_in_miles)),
     pct_missing = round(100 * missing_dist / total_trips, 2)
   )
 
@@ -300,9 +300,241 @@ LinkedTrips_2019_2023_df <- LinkedTrips_2019_2023_df %>%
     crow_fly_miles_cap200 = pmin(crow_fly_miles, 200)
   )
 
+
+
+# =========================================================================================
+# Matching unlinked trips to linked trips and calculating distances =======================
+# =========================================================================================
+
+# Using data.table because tidy is way too slow for this operation
+library(data.table)
+library(lubridate)
+add_datetime_cols = function(trips_dt, day_dt) {
+
+  # If table does not have _date columns
+  if (!("depart_date" %in% names(trips_dt)) | !("arrive_date" %in% names(trips_dt))) {
+    print("Adding depart_date and arrive_date columns to trips...")
+
+    # Add depart_date and arrive_date to trips  
+    trips_dt[
+      day_dt,
+      depart_date := i.travel_date,
+      on = .(hh_id, person_id, day_num)
+    ]
+    
+    # Check if trip spans midnight, if so, adjust arrive_date
+    trips_dt[
+      ,
+      arrive_date := fifelse(
+        (arrive_hour < depart_hour) | # trip crosses midnight, e.g., depart 23:30 arrive 00:15
+          # edge case: very long trip that crosses midnight within the same hour, e.g., depart 23:30 (prev day) arrive 23:15 (next day)
+          (arrive_hour == depart_hour & arrive_minute < depart_minute),
+        as.Date(depart_date) + 1,
+        as.Date(depart_date)
+      )
+    ]
+  }
+
+  # if no seconds columns, add dummy seconds columns
+  if (!("depart_seconds" %in% names(trips_dt)) | !("arrive_seconds" %in% names(trips_dt))) {
+    # Add dummy seconds columns
+    trips_dt[
+      ,
+      `:=`(
+        depart_seconds = 0,
+        arrive_seconds = 0
+      )
+    ]
+  }
+
+  # if arrive/depart_second is pluralized incorrectly, rename
+  if ("depart_seconds" %in% names(trips_dt)) {
+    setnames(trips_dt, "depart_seconds", "depart_second")
+  }
+
+  if ("arrive_seconds" %in% names(trips_dt)) {
+    setnames(trips_dt, "arrive_seconds", "arrive_second")
+  }
+
+  # Add _time and deptm and arrtm columns
+  if (!("depart_time" %in% names(trips_dt)) | !("arrive_time" %in% names(trips_dt))) {
+    print("Preparing survey trips data with deptm/arrtm. Datetime operations are slow....")
+    trips_dt <- trips_dt[
+      ,
+      `:=`(
+        # Create datetime columns for depart and arrive times
+        depart_time = as.POSIXct(
+          paste(depart_date, sprintf("%02d:%02d:%02d", depart_hour, depart_minute, depart_second)),
+          format = "%Y-%m-%d %H:%M:%S"
+        ),
+        arrive_time = as.POSIXct(
+          paste(arrive_date, sprintf("%02d:%02d:%02d", arrive_hour, arrive_minute, arrive_second)),
+          format = "%Y-%m-%d %H:%M:%S"
+        )
+      )
+    ]
+  }
+  # Add deptm, arrtm, day, hhno, pno columns
+  if (!("deptm" %in% names(trips_dt)) | !("arrtm" %in% names(trips_dt)) |
+      !("day" %in% names(trips_dt)) | !("hhno" %in% names(trips_dt)) |
+      !("pno" %in% names(trips_dt))) {
+    print("Adding deptm, arrtm, day, hhno, pno columns to trips...")
+    trips_dt <- trips_dt[
+      ,
+      `:=`(
+        # Create arrtm and deptm integer columns for joining
+        deptm = as.integer(depart_hour * 100 + depart_minute),
+        arrtm = as.integer(arrive_hour * 100 + arrive_minute),
+        # day (aka dow), 1=Monday, 2=Tuesday, 3=Wednesday, 4=Thursday, 5=Friday, 6=Saturday, 7=Sunday
+        day = as.integer(wday(as.Date(depart_date, format = "%Y-%m-%d"))) - 1,
+        # Create hhno (aka hh_id) and pno (aka person_num) columns for joining
+        hhno = hh_id,
+        pno = person_num
+      )
+    ]
+  }
+  
+  return(trips_dt)
+}
+
+# Calculate trip distances from location points from linked trips
+calc_path_distance <- function(linked_trips, survey_locations, survey_trips_joined) {
+  
+  # Convert to data.table if not already
+  setDT(survey_locations)
+  setDT(survey_trips_joined)
+  setDT(linked_trips)
+  
+  # Step 5: Calculate path distance from location points
+  # Sort by trip_id and calculate lagged values
+  setorder(survey_locations, trip_id)
+  survey_locations[
+    ,
+    `:=`(
+      lat_prev = shift(lat, 1, type = "lag"),
+      lon_prev = shift(lon, 1, type = "lag")
+    ),
+    by = trip_id
+  ]
+  
+  # Calculate segment distances
+  survey_locations[
+    ,
+    segment_distance_m := fifelse(
+      is.na(lat_prev) | is.na(lon_prev),
+      NA_real_,
+      haversine_distance(lat_prev, lon_prev, lat, lon)
+    )
+  ]
+  
+  # Join with trip mapping and aggregate
+  trip_mapping <- unique(survey_trips_joined[, .(trip_id, ltrip_id)])
+  survey_locations_with_ltrip <- trip_mapping[survey_locations, on = "trip_id"]
+  
+  path_distance <- survey_locations_with_ltrip[
+    ,
+    .(path_distance_meters = sum(segment_distance_m, na.rm = TRUE)),
+    by = ltrip_id
+  ]
+  
+  # Step 6: Merge path distance back onto linked trips
+  linked_trips <- path_distance[linked_trips, on = "ltrip_id"]
+  
+  return(linked_trips)
+}
+
+
+# Prepare linked trips data, add ltrip_id
+# Create dummy linked trip ID for mapping from row numbers
+LinkedTrips_2019_2023_df <- LinkedTrips_2019_2023_df[, ltrip_id := .I]
+
+# Prep survey trip date time columns
+survey_trips2019 <- add_datetime_cols(survey_trips2019, survey_day2019)
+survey_trips2023 <- add_datetime_cols(survey_trips2023, survey_day2023)
+
+# Convert 2019 distance from miles to meters for consistency
+survey_trips2019[, distance_meters := distance * 1609.34]
+
+# Combine the two survey years
+survey_trips_2019_2023 <- rbindlist(list(
+  survey_trips2019[, .(hhno, pno, day, deptm, arrtm, trip_id, distance_meters)],
+  survey_trips2023[, .(hhno, pno, day, deptm, arrtm, trip_id, distance_meters)]
+))
+
+
+
+# Prepare linked trips interval data
+lnk_int <- LinkedTrips_2019_2023_df[,
+  .(
+    hhno, pno, day, ltrip_id,
+    deptm_lt = deptm,
+    arrtm_lt = arrtm
+  )
+]
+
+# Match survey trips to linked trips using non-equi join
+# Survey trip must fall within linked trip time window
+print("Matching survey trips to linked trips using non-equi join...")
+survey_trips_2019_2023[
+  lnk_int,
+  ltrip_id := i.ltrip_id,
+  on = .(hhno, pno, day, deptm >= deptm_lt, arrtm <= arrtm_lt)
+]
+
+# Diagnostic: check match rates
+n_matched_unlinked_trips <- nrow(survey_trips_2019_2023[!is.na(ltrip_id), ])
+unlinked_rate = round(100 * n_matched_unlinked_trips / nrow(survey_trips_2019_2023), 2)
+linked_rate = round(100 * n_matched_unlinked_trips / nrow(LinkedTrips_2019_2023_df), 2)
+print(glue(
+  "Total survey trips: {nrow(survey_trips_2019_2023)}, ",
+  "matched: {n_matched_unlinked_trips}, ",
+  "Match rate: {unlinked_rate}% ",
+  "(should be smaller because the linker drops a lot of drips and non-study days)"
+))
+print(glue(
+  "Total linked trips: {nrow(LinkedTrips_2019_2023_df)}, "
+  "matched: {n_matched_unlinked_trips}, Match rate: {linked_rate}%"
+  ))
+
+# Calculate summed distances for unlinked trips
+sum_distances <- survey_trips_2019_2023[
+  ,
+  .(sum_distance_meters = sum(distance_meters, na.rm = TRUE)),
+  by = ltrip_id
+]
+
+LinkedTrips_2019_2023_df[sum_distances, distance_meters := i.sum_distance_meters, on = "ltrip_id"]
+LinkedTrips_2019_2023_df[, distance_miles := distance_meters / 1609.34]
+
+
+
+#### DEBUG
+# Find ltrip_id missing from unlinked trips
+missing_ltrip_ids <- setdiff(
+  LinkedTrips_2019_2023_df$ltrip_id,
+  survey_trips_2019_2023$ltrip_id
+)
+
+print(glue("Number of unmatched linked trips: {length(missing_ltrip_ids)}"))
+
+LinkedTrips_2019_2023_df[
+  ltrip_id %in% missing_ltrip_ids[1],
+  .(hhno, pno, day, deptm, arrtm)
+]
+
+survey_trips_2019_2023[
+  hhno == 23000339 & pno == 1 & day == 7,
+]
+#### END DEBUG
+
+
+
+
+
 # Write LinkedTrips_2019_2023_df to csv for subsequent processes
 output_trips_csv <- glue("{working_dir}/LinkedTrips_2019_2023_withDist.csv")
-write.csv(LinkedTrips_2019_2023_df, file = output_trips_csv, row.names = FALSE)
+# write.csv(LinkedTrips_2019_2023_df, file = output_trips_csv, row.names = FALSE)
+fwrite(LinkedTrips_2019_2023_df, file = output_trips_csv)
 print(glue("Wrote {nrow(LinkedTrips_2019_2023_df)} rows to {output_trips_csv}"))
 
 sink() # to close the log file connection
