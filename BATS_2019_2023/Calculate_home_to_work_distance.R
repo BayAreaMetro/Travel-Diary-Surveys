@@ -41,36 +41,35 @@ person_2019_2023_df %>%
 
 
 # make sure the home and work locations are within the mega region
-# use a bounding box to clean it
-# -------------------------
-#The northernmost point of Yuba County: 39.639458, -121.009478
-#The southernmost point of Monterey County: 35.795190, -121.347789
-#The easternmost point of El Dorado County: 38.870630, -119.877219
-#The westernmost point of Sonoma County: 38.768395, -123.533743
 
-# TODO: Use a shapefile of the mega region for more accurate filtering
-# Create indicator variables in the data frame
-person_2019_2023_df$HomeLonInMegaRegion <- ifelse(
-  person_2019_2023_df$home_lon >= -123.533743 & 
-  person_2019_2023_df$home_lon <= -119.877219, 1, 0)
+# Load geojson file for counties in the mega region
+mega_region_counties_sf <- st_read(glue("{working_dir}/../../region_county_6062446197583704732.geojson"))
 
-person_2019_2023_df$WorkLonInMegaRegion <- ifelse(
-  person_2019_2023_df$work_lon >= -123.533743 & 
-  person_2019_2023_df$work_lon <= -119.877219, 1, 0)
+# Check if home and work points are within the mega region counties
 
-person_2019_2023_df$HomeLatInMegaRegion <- ifelse(
-  person_2019_2023_df$home_lat >= 35.795190 & 
-  person_2019_2023_df$home_lat <= 39.639458, 1, 0)
+# Create separate sf objects for home and work points
+home_points_sf <- person_2019_2023_df %>%
+  filter(valid_home_latlon) %>%
+  st_as_sf(coords = c("home_lon", "home_lat"), crs = 4326)
 
-person_2019_2023_df$WorkLatInMegaRegion <- ifelse(
-  person_2019_2023_df$work_lat >= 35.795190 & 
-  person_2019_2023_df$work_lat <= 39.639458, 1, 0)
+work_points_sf <- person_2019_2023_df %>%
+  filter(valid_work_latlon) %>%
+  st_as_sf(coords = c("work_lon", "work_lat"), crs = 4326)
 
-person_2019_2023_df$HomeWork_In_MegaRegion <- ifelse(
-  person_2019_2023_df$HomeLonInMegaRegion == 1 & 
-  person_2019_2023_df$HomeLatInMegaRegion == 1 & 
-  person_2019_2023_df$WorkLonInMegaRegion == 1 & 
-  person_2019_2023_df$WorkLatInMegaRegion == 1, 1, 0)
+# Check if point intersects with ANY county in the region, force to logical vector (not sparse matrix)
+home_in_region <- rowSums(st_intersects(home_points_sf, mega_region_counties_sf, sparse = FALSE)) > 0
+work_in_region <- rowSums(st_intersects(work_points_sf, mega_region_counties_sf, sparse = FALSE)) > 0
+
+# Add results back to person_2019_2023_df
+person_2019_2023_df$HomeInMegaRegion <- 0
+person_2019_2023_df$WorkInMegaRegion <- 0
+person_2019_2023_df$HomeInMegaRegion[person_2019_2023_df$valid_home_latlon] <- as.integer(home_in_region)
+person_2019_2023_df$WorkInMegaRegion[person_2019_2023_df$valid_work_latlon] <- as.integer(work_in_region)
+
+# Create indicator for both home and work in mega region
+person_2019_2023_df$HomeWork_In_MegaRegion <- as.integer(
+  person_2019_2023_df$HomeInMegaRegion == 1 & person_2019_2023_df$WorkInMegaRegion == 1
+)
 
 
 # -------------------------
