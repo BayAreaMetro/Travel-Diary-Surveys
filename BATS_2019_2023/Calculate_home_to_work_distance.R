@@ -273,6 +273,25 @@ print("Home-to-work distance summary, by employment (unweighted):")
 print(summary_home_to_work_miles_ByEmployment)
 cat("\n")
 
+# Pivot to compare 2019 vs 2023
+cat("\n")
+print("Home-to-work distance summary, by employment (2019 vs 2023):")
+home_to_work_employment_pivot <- summary_home_to_work_miles_ByEmployment %>%
+  select(survey_cycle, employment_label, mean_miles) %>%
+  tidyr::pivot_wider(
+    names_from = survey_cycle,
+    values_from = c(mean_miles),
+    names_sep = "_"
+  ) %>%
+  # Calculate change
+  mutate(
+    mean_miles_change = `2023` - `2019`,
+    mean_miles_pct_change = ifelse(
+       `2019` == 0, NA, 
+      (`2023` - `2019`) / `2019` * 100)
+  )
+print(home_to_work_employment_pivot)
+cat("\n")
 
 # Mean and median by survey_cycle and income
 summary_home_to_work_miles_ByIncome <- person_2019_2023_ForHWloc_df %>%
