@@ -342,3 +342,8 @@ person_2019_2023_df <- person_2019_2023_df %>%
     TRUE ~ NA_character_  
   ))
 
+
+# Write person_2019_2023_df  to csv for subsequent processes
+output_persons_csv <- glue("{working_dir}/person_2019_2023.csv")
+write.csv(person_2019_2023_df, file = output_persons_csv, row.names = FALSE)
+print(glue("Wrote {nrow(person_2019_2023_df)} rows to {output_persons_csv}"))
