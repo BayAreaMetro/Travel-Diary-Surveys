@@ -15,11 +15,17 @@ library(srvyr)
 # Set working directory
 working_dir <- "M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Processed/BATS2019_2023"
 
+# Set confidence level for all analyses
+CONF_LEVEL <- 0.90 
+
 # Start a log file
 log_file <- glue("{working_dir}/BATS_multi_year_Shares_{format(Sys.time(), '%Y%m%d_%H%M%S')}.log")
 sink(log_file, append = TRUE, split = TRUE) 
 print(glue("\n=== Log Entry for trip-level mode, purpose etc share calculations: {format(Sys.time(), '%Y-%m-%d %H:%M:%S')} ==="))
 cat("\n") # print a clean blank line
+
+print(glue("Confidence Level: {CONF_LEVEL * 100}%"))
+cat("\n")
 
 # -------------------------
 # The unit of analysis is trip level
@@ -77,7 +83,8 @@ LinkedTrips_2019_2023_df <- LinkedTrips_2019_2023_df %>%
 # -------------------------
 
 # Function to summarize BATS data by attribute
-summarize_for_attr <- function(survey_data, summary_col, strata_vars = c("survey_cycle", "stratification_var"), summary_levels = c("survey_cycle")) {
+summarize_for_attr <- function(survey_data, summary_col, strata_vars = c("survey_cycle", "stratification_var"), 
+                               summary_levels = c("survey_cycle"), conf_level = CONF_LEVEL) {
   summary_col_str <- as_label(enquo(summary_col))
   print(glue("===== Summarizing for {summary_col_str}"))
   
@@ -136,10 +143,10 @@ summarize_for_attr <- function(survey_data, summary_col, strata_vars = c("survey
       summarise(
         across(
           starts_with("pref_"),
-          ~ survey_mean(.x, vartype = c("se", "ci", "cv")),
+          ~ survey_mean(.x, vartype = c("se", "ci", "cv"), level = conf_level),
           .names = "{.col}_{.fn}"
         ),
-        total_weighted = survey_total(vartype = "se"),
+        total_weighted = survey_total(),
         total_unweighted = unweighted(n()),
         .groups = 'drop'
       )
@@ -156,8 +163,8 @@ summarize_for_attr <- function(survey_data, summary_col, strata_vars = c("survey
         stat_type = case_when(
           stat_type == "_1" ~ "weighted_share",
           stat_type == "_1_se" ~ "se",
-          stat_type == "_1_low" ~ "ci_lower_95",
-          stat_type == "_1_upp" ~ "ci_upper_95",
+          stat_type == "_1_low" ~ "ci_lower",
+          stat_type == "_1_upp" ~ "ci_upper",
           stat_type == "_1_cv"  ~ "coeff_of_var"
         ))
     
@@ -171,9 +178,10 @@ summarize_for_attr <- function(survey_data, summary_col, strata_vars = c("survey
     # Calculate additional metrics and merge actual counts
     srv_results <- srv_results %>%
       mutate(
-        ci_95 = ci_upper_95 - weighted_share,
+        ci_width = ci_upper - ci_lower,
         summary_level = summary_level,
-        summary_col = summary_col_str
+        summary_col = summary_col_str,
+        confidence_level = conf_level
       ) %>%
       # Join with actual unweighted counts
       left_join(
@@ -192,8 +200,8 @@ summarize_for_attr <- function(survey_data, summary_col, strata_vars = c("survey
         weighted_count = replace_na(weighted_count, 0),
         cv_flag = coeff_of_var > 0.30,
         sample_size_flag = unweighted_count < 30,
-        ci_width_flag = (ci_upper_95 - ci_lower_95) > 0.40,
-        extreme_values_flag = ci_lower_95 < 0 | ci_upper_95 > 1,
+        ci_width_flag = (ci_upper - ci_lower) > 0.40,
+        extreme_values_flag = ci_lower < 0 | ci_upper > 1,
         suppress = cv_flag | sample_size_flag | ci_width_flag | extreme_values_flag,
         estimate_reliability = case_when(
           cv_flag ~ "Poor (High CV >30%)",
@@ -205,8 +213,8 @@ summarize_for_attr <- function(survey_data, summary_col, strata_vars = c("survey
       ) %>%
       select(
         all_of(group_vars), all_of(summary_col_str),
-        weighted_share, se, ci_95, ci_lower_95, ci_upper_95, coeff_of_var,
-        weighted_count, unweighted_count, total_weighted, total_unweighted,
+        weighted_share, se, ci_width, ci_lower, ci_upper, coeff_of_var,
+        weighted_count, unweighted_count, total_weighted, total_unweighted, confidence_level,
         estimate_reliability, summary_level, summary_col
       )
     
@@ -271,15 +279,16 @@ full_summary <- full_summary %>%
     dpurp_label,  
     weighted_share,
     se,
-    ci_95,
-    ci_lower_95,
-    ci_upper_95,
+    ci_width,
+    ci_lower,
+    ci_upper,
     coeff_of_var,
     unweighted_count,   
     weighted_count,
     total_unweighted,
     total_unweighted_str,
     total_weighted,
+    confidence_level, 
     estimate_reliability,
     summary_level
   )
