@@ -73,15 +73,6 @@ calculate_telework_by_segment <- function(srv_design, segment_var, segment_label
   cat("\n")
   print(glue("=== Processing segmentation by: {segment_label} ==="))
 
-# Table 1: Shares by telework freq categories (proportions)
-srv_results_telework_freq1 <- srv_design %>%
-  group_by(survey_cycle, telework_jobtype3_label) %>%
-  summarize(
-    n_unweighted = unweighted(n()),
-    n_weighted = survey_total(vartype = NULL),
-    proportion = survey_prop(vartype = c("se", "ci", "cv"))
-  )
-
   # Table 1: Detailed telework frequency by segment
   results_detailed <- srv_design %>%
     group_by(survey_cycle, {{segment_var}}, telework_jobtype3_label) %>%
@@ -182,49 +173,20 @@ write_csv(srv_results_telework_freq1, glue("{working_dir}/telework_freq_shares_o
 write_csv(srv_results_WFH2OrMoreDays_share, glue("{working_dir}/WFH2OrMoreDays_share_overall_{timestamp}.csv"))
 
 # -------------------------
-# SEGMENTED ANALYSIS - BY COUNTY
-# -------------------------
-
-# By home county (detailed)
-srv_results_telework_freq_COUNTY <- srv_design %>%
-  group_by(survey_cycle, telework_freq_3cat_label2, home_county_grouped_label) %>%
-  summarize(
-    n_unweighted = unweighted(n()),
-    n_weighted = survey_total(vartype = NULL),
-    proportion = survey_prop(vartype = c("se", "ci", "cv"))
-  )
-
-print("\n=== Telework Frequency Shares by County ===")
-print(srv_results_telework_freq_COUNTY, n = Inf)
-
-# By home county (WFH 2+ days)
-srv_results_WFH2OrMoreDays_share_county <- srv_design %>%
-  group_by(survey_cycle, home_county_grouped_label) %>%
-  summarize(
-    n_total_unweighted = unweighted(n()),
-    total_weighted = survey_total(vartype = NULL),
-    n_WFH2OrMoreDays_unweighted = unweighted(sum(telework_freq_3cat_label2 == "1. Work from home 2 or more days a week")),
-    WFH2OrMoreDays_weighted = survey_total(telework_freq_3cat_label2 == "1. Work from home 2 or more days a week", vartype = NULL),
-    WFH2OrMoreDays_share = survey_mean(telework_freq_3cat_label2 == "1. Work from home 2 or more days a week", 
-                                       vartype = c("se", "ci", "cv"))
-  )
-
-print("\n=== Remote or Hybrid Worker Share (By County) ===")
-print(srv_results_WFH2OrMoreDays_share_county, n = Inf)
-
-# Save county results
-write_csv(srv_results_telework_freq_COUNTY, glue("{working_dir}/telework_freq_shares_ByCounty_{timestamp}.csv"))
-write_csv(srv_results_WFH2OrMoreDays_share_county, glue("{working_dir}/WFH2OrMoreDays_share_ByCounty_{timestamp}.csv"))
-
-# -------------------------
 # SEGMENTED ANALYSIS - BY DEMOGRAPHICS
 # -------------------------
+
+# By Employment Status
+employment_results <- calculate_telework_by_segment(srv_design, employment_label, "employment_label")
 
 # By Gender
 gender_results <- calculate_telework_by_segment(srv_design, gender_label, "gender_label")
 
 # By Income
 income_results <- calculate_telework_by_segment(srv_design, income_detailed_grouped, "income_detailed_grouped")
+
+# By County
+county_results <- calculate_telework_by_segment(srv_design, home_county_grouped_label, "home_county_grouped_label")
 
 
 # -------------------------
