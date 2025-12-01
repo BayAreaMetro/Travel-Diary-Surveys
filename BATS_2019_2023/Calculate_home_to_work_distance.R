@@ -23,7 +23,7 @@ print(glue("\n=== Log Entry for calculating home-to-work distances: {format(Sys.
 cat("\n") # print a clean blank line
 
 # Run the script that load the person level dataset
-source("E:/GitHub/Travel-Diary-Surveys/BATS_2019_2023/Load_Person_df_with_demographic_and_strata_vars.R")
+source("./BATS_2019_2023/Load_Person_df_with_demographic_and_strata_vars.R")
 # alternatively, one can just read the output from the above process
 
 # check dataset for valid values of home and work location
@@ -177,6 +177,7 @@ route_coords_async <- function(o_lon, o_lat, d_lon, d_lat, batch_size = 1000) {
   # Initialize result vector
   n <- length(o_lon)
   distance_meters <- rep(NA_real_, n)
+  routes <- vector("list", n)
   
   # Find valid rows
   valid_rows <- !is.na(o_lon) & !is.na(o_lat) & !is.na(d_lon) & !is.na(d_lat)
@@ -216,6 +217,7 @@ route_coords_async <- function(o_lon, o_lat, d_lon, d_lat, batch_size = 1000) {
         if (res[[k]]$status_code == 200) {
           content <- jsonlite::fromJSON(res[[k]]$parse("UTF-8"))
           distance_meters[i] <- content$routes$distance
+          routes[[i]] <- content$routes$geometry
         }
       }, error = function(e) {
         # Keep as NA on error
@@ -223,27 +225,281 @@ route_coords_async <- function(o_lon, o_lat, d_lon, d_lat, batch_size = 1000) {
     }
   }
   
-  return(distance_meters)
+  return(list(
+    distance_meters = distance_meters,
+    routes = routes
+  ))
 }
 
 
 # Routing home/work trips to get distances ================================
+print("Routing home-to-work trips to get distances...")
+work_routes_data = route_coords_async(
+  person_2019_2023_ForHWloc_df$home_lon,
+  person_2019_2023_ForHWloc_df$home_lat,
+  person_2019_2023_ForHWloc_df$work_lon,
+  person_2019_2023_ForHWloc_df$work_lat,
+  batch_size = 5000
+)
 person_2019_2023_ForHWloc_df <- person_2019_2023_ForHWloc_df %>%
   mutate(
-    home_to_work_miles = route_coords_async(home_lon, home_lat, work_lon, work_lat) / 1609.34
+    home_to_work_miles = work_routes_data$distance_meters / 1609.34,
+    route = work_routes_data$routes
   )
 
-# Routing home/school trips to get distances ================================
-person_2019_2023_ForHWloc_df <- person_2019_2023_ForHWloc_df %>%
-  mutate(
-    home_to_school_miles = route_coords_async(home_lon, home_lat, school_lon, school_lat) / 1609.34
+# Compare crow fly vs routed distances
+
+# XY scatter plot
+library(ggplot2)
+ggplot(person_2019_2023_ForHWloc_df, aes(x = home_to_work_crowfly_miles, y = home_to_work_miles)) +
+  geom_point(alpha = 0.3) +
+  geom_abline(slope = 1, intercept = 0, color = "red", linetype = "dashed") +
+  labs(
+    title = "Home-to-Work Distance: Crow Fly vs Routed",
+    x = "Crow Fly Distance (miles)",
+    y = "Routed Distance (miles)"
+  ) +
+  coord_fixed() +
+  theme_minimal()
+ggsave(glue("{working_dir}/home_to_work_crowfly_vs_routed_scatterplot.png"), width = 8, height = 8)
+
+### Mapping a sample of routes
+
+
+# Function to plot sample of routes from multiple survey cycles
+plot_sample_routes <- function(person_df, sample_size = 100) {
+  # Set seed for reproducibility
+  set.seed(123)
+
+  # Filter out records with 0 distance and 0 weight
+  person_df <- person_df %>%
+    filter(home_to_work_miles > 0 & !is.na(work_lon) & !is.na(work_lat) & person_weight_rmove_only > 0)
+  
+  n_2019 <- nrow(person_df %>% filter(survey_cycle == 2019))
+  n_2023 <- nrow(person_df %>% filter(survey_cycle == 2023))
+
+  # Check if the samples are balanced, stop if not
+  if (n_2019 < sample_size | n_2023 < sample_size) {
+    warning(glue("Sample size reduced due to insufficient records: 2019={n_2019}, 2023={n_2023}"))
+    sample_size <- min(n_2019, n_2023, sample_size)
+  }
+
+  # Sample from each survey cycle
+  sample_2019 <- person_df %>%
+    filter(survey_cycle == 2019) %>%
+    sample_n(min(sample_size, n()))
+  
+  sample_2023 <- person_df %>%
+    filter(survey_cycle == 2023) %>%
+    sample_n(min(sample_size, n()))
+  
+
+  # Function to convert routes to sf linestrings
+  routes_to_sf <- function(sample_df) {
+    routes_sf <- st_sfc(lapply(sample_df$route, function(geojson) {
+      if (is.null(geojson)) {
+        return(NULL)
+      }
+      st_linestring(do.call(rbind, geojson$coordinates))
+    }), crs = 4326)
+    
+    return(routes_sf)
+  }
+  
+  # Convert routes to sf objects
+  routes_2019_sf <- routes_to_sf(sample_2019)
+  routes_2023_sf <- routes_to_sf(sample_2023)
+  
+  # Create home location points
+  home_2019_sf <- sample_2019 %>%
+    st_as_sf(coords = c("home_lon", "home_lat"), crs = 4326) %>%
+    mutate(survey_cycle = "2019")
+  
+  home_2023_sf <- sample_2023 %>%
+    st_as_sf(coords = c("home_lon", "home_lat"), crs = 4326) %>%
+    mutate(survey_cycle = "2023")
+  
+  home_combined <- rbind(
+    home_2019_sf %>% select(survey_cycle, geometry),
+    home_2023_sf %>% select(survey_cycle, geometry)
   )
+
+  # Create work location points
+  work_2019_sf <- sample_2019 %>%
+    st_as_sf(coords = c("work_lon", "work_lat"), crs = 4326) %>%
+    mutate(survey_cycle = "2019")
+  
+  work_2023_sf <- sample_2023 %>%
+    st_as_sf(coords = c("work_lon", "work_lat"), crs = 4326) %>%
+    mutate(survey_cycle = "2023")
+
+  work_combined <- rbind(
+    work_2019_sf %>% select(survey_cycle, geometry),
+    work_2023_sf %>% select(survey_cycle, geometry)
+  )
+  
+  # Create combined plot
+  # Create data frames with survey cycle labels for legend
+  routes_2019_df <- st_sf(geometry = routes_2019_sf, survey_cycle = "2019")
+  routes_2023_df <- st_sf(geometry = routes_2023_sf, survey_cycle = "2023")
+  routes_combined <- rbind(routes_2019_df, routes_2023_df)
+  
+  plot = ggplot() +
+    geom_sf(data = routes_combined, aes(color = survey_cycle), alpha = 0.2) +
+    geom_sf(data = home_combined, aes(color = survey_cycle), size = 1, shape = 19, alpha = 0.2) +
+    geom_sf(data = work_combined, aes(color = survey_cycle), size = 1, shape = 5, alpha = 0.2) +
+    scale_color_manual(values = c("2019" = "blue", "2023" = "red"), name = "Survey Cycle") +
+    ggtitle(glue("Sample of {sample_size} Home-to-Work Routes and Home Locations by Year")) +
+    theme_minimal()
+
+  return(plot)
+}
+
+# Plot sample of routes and save to file
+# Count of valid home-to-work records by survey cycle
+person_2019_2023_ForHWloc_df %>% filter(
+  home_to_work_miles > 0 & person_weight_rmove_only > 0
+) %>% group_by(survey_cycle) %>% summarise(n = n())
+
+map <- plot_sample_routes(person_2019_2023_ForHWloc_df, sample_size = 1000)
+plot(map)
+ggsave(glue("{working_dir}/sample_home_to_work_routes.png"), plot = map, width = 12, height = 12)
 
 
 ### Statistical summaries
 
+
+# Summarize the count and distance weighted and unweighted by home county and survey cycle
+
 # Summary statistics
-summary_home_to_work_miles <- person_2019_2023_ForHWloc_df %>%
+home_to_work_miles_county <- person_2019_2023_ForHWloc_df %>%
+  filter(
+    home_to_work_crowfly_miles > 0 &
+    person_weight_rmove_only > 0
+  ) %>%
+  group_by(survey_cycle, home_county_label) %>%
+  summarise(
+    n = n(),
+    weighted_n = sum(person_weight_rmove_only, na.rm = TRUE),
+    avg_crowfly = mean(home_to_work_crowfly_miles, na.rm = TRUE),
+    avg_routed = mean(home_to_work_miles, na.rm = TRUE),
+    avg_crowfly_wtd = weighted.mean(home_to_work_crowfly_miles, w = person_weight_rmove_only, na.rm = TRUE),
+    avg_routed_wtd = weighted.mean(home_to_work_miles, w = person_weight_rmove_only, na.rm = TRUE)
+  ) %>%
+  # Transpose for better readability comparing 2019 vs 2023
+  tidyr::pivot_wider(
+    names_from = survey_cycle,
+    values_from = c(n, weighted_n, avg_crowfly, avg_routed, avg_crowfly_wtd, avg_routed_wtd),
+    names_sep = "_"
+  )
+
+home_to_work_miles_region <- person_2019_2023_ForHWloc_df %>%
+  filter(
+    home_to_work_crowfly_miles > 0 &
+    person_weight_rmove_only > 0
+  ) %>%
+  group_by(survey_cycle) %>%
+  summarise(
+    n = n(),
+    weighted_n = sum(person_weight_rmove_only, na.rm = TRUE),
+    avg_crowfly = mean(home_to_work_crowfly_miles, na.rm = TRUE),
+    avg_routed = mean(home_to_work_miles, na.rm = TRUE),
+    avg_crowfly_wtd = weighted.mean(home_to_work_crowfly_miles, w = person_weight_rmove_only, na.rm = TRUE),
+    avg_routed_wtd = weighted.mean(home_to_work_miles, w = person_weight_rmove_only, na.rm = TRUE)
+  ) %>%
+  # Transpose for better readability comparing 2019 vs 2023
+  tidyr::pivot_wider(
+    names_from = survey_cycle,
+    values_from = c(n, weighted_n, avg_crowfly, avg_routed, avg_crowfly_wtd, avg_routed_wtd),
+    names_sep = "_"
+  )
+
+# Combine county and region level summaries
+home_to_work_miles <- bind_rows(
+  home_to_work_miles_county %>%
+    mutate(home_county_label = as.character(home_county_label)),
+  home_to_work_miles_region %>%
+    mutate(home_county_label = "Region")
+) %>%
+  # Calculate percent change
+  mutate(
+    pct_change_avg_routed = ifelse(
+      avg_routed_2019 == 0, NA,
+      (avg_routed_2023 - avg_routed_2019) / avg_routed_2019 * 100
+    ),
+    pct_change_avg_routed_wtd = ifelse(
+      avg_routed_wtd_2019 == 0, NA,
+      (avg_routed_wtd_2023 - avg_routed_wtd_2019) / avg_routed_wtd_2019 * 100
+    )
+  ) %>%
+  # Calcuate share of total region
+  mutate(
+    share_of_region_2019 = n_2019 / sum(n_2019, na.rm = TRUE) * 100,
+    share_of_region_2023 = n_2023 / sum(n_2023, na.rm = TRUE) * 100,
+    share_of_region_wtd_2019 = weighted_n_2019 / sum(weighted_n_2019, na.rm = TRUE) * 100,
+    share_of_region_wtd_2023 = weighted_n_2023 / sum(weighted_n_2023, na.rm = TRUE) * 100
+  ) %>%
+  # Rename columns for clarity
+  rename(
+    `(wtd) Work Distance 2019` = avg_routed_wtd_2019,
+    `(wtd) Work Distance 2023` = avg_routed_wtd_2023,
+    `(unwtd) Work Distance 2019` = avg_routed_2019,
+    `(unwtd) Work Distance 2023` = avg_routed_2023,
+    `Count 2019` = n_2019,
+    `Count 2023` = n_2023,
+    `(wtd) Count 2019` = weighted_n_2019,
+    `(wtd) Count 2023` = weighted_n_2023,
+    `%Change (unwtd)` = pct_change_avg_routed,
+    `%Change (wtd)` = pct_change_avg_routed_wtd,
+    # `Share of Region 2019 (unwtd)` = share_of_region_2019,
+    # `Share of Region 2023 (unwtd)` = share_of_region_2023,
+    # `Share of Region 2019 (wtd)` = share_of_region_wtd_2019,
+    `Share of Region 2023 (wtd)` = share_of_region_wtd_2023
+  )
+
+
+
+
+cat("\n")
+print("Home-to-work distance by home county (weighted):")
+print(summary_home_to_work_miles)
+cat("\n")
+
+
+# Table of average distances by home county, weighted vs unweighted
+home_to_work_miles %>%
+  select(home_county_label, contains("Distance"), contains("%Change")) %>%
+  # Calculate share of total region
+  mutate(
+    `Share of Region 2019 (wtd)` = `(wtd) Count 2019` / sum(`(wtd) Count 2019`, na.rm = TRUE) * 100,
+    `Share of Region 2023 (wtd)` = `(wtd) Count 2023` / sum(`(wtd) Count 2023`, na.rm = TRUE) * 100
+  ) %>%
+  arrange(-`(wtd) Count 2023`) %>%
+  print(width = Inf)
+
+# Bar plot to visually show the changes
+plot_home_to_work_distance <- ggplot(home_to_work_miles %>%
+  mutate(home_county_label = factor(home_county_label,
+    levels = c(setdiff(unique(home_county_label), "Region"), "Region"))),
+  aes(x = reorder(home_county_label, ifelse(home_county_label == "Region", -Inf, `%Change (wtd)`)), 
+      y = `%Change (wtd)`,
+      width = `Share of Region 2023 (wtd)` / 50)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  coord_flip() +
+  labs(
+    title = "Percent Change in Average Home-to-Work Distance by Home County (Weighted)",
+    subtitle = "Bar width scaled by share of region",
+    x = "Home County",
+    y = "Percent Change (%)"
+  ) +
+  theme_minimal()
+ggsave(glue("{working_dir}/home_to_work_distance_percent_change_by_county.png"),
+  plot = plot_home_to_work_distance, width = 8, height = 6)
+
+
+
+# -------------------------
+summary_home_to_work_miles_stats <- person_2019_2023_ForHWloc_df %>%
   group_by(survey_cycle) %>%
   summarise(
     mean_distance = round(mean(home_to_work_miles, na.rm = TRUE), 2),
@@ -253,7 +509,7 @@ summary_home_to_work_miles <- person_2019_2023_ForHWloc_df %>%
 
 cat("\n")
 print("Home-to-work distance summary (unweighted):")
-print(summary_home_to_work_miles)
+print(summary_home_to_work_miles_stats)
 cat("\n")
 
 # Mean and median by survey_cycle and employment
@@ -364,3 +620,6 @@ cat("\n")
 
 sink() # to close the log file connection
 
+
+# Save the person_2019_2023_ForHWloc_df with calculated distances
+saveRDS(person_2019_2023_ForHWloc_df, file = glue("{working_dir}/person_2019_2023_hws_distances.rds"))
