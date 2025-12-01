@@ -40,7 +40,7 @@ class GeoCrosswalker:
         else:
             raise ValueError("Input must be a file path or a GeoDataFrame.")
 
-    def geo_crosswalk_point(self, shapefiles, id_columns):
+    def geo_crosswalk_point(self, shapefiles, id_columns, center='representative'):
         """
         Create a geo crosswalk by nesting smaller layers into larger layers using representative points.
 
@@ -66,7 +66,13 @@ class GeoCrosswalker:
                 larger_layer = larger_layer.to_crs(smaller_layer.crs)
 
             # Convert the smaller layer to a point layer using representative_point
-            smaller_layer['geometry'] = smaller_layer['geometry'].representative_point()
+            # smaller_layer['geometry'] = smaller_layer['geometry'].representative_point()
+            if center == 'centroid':
+                smaller_layer = smaller_layer.assign(geometry=smaller_layer['geometry'].centroid)
+            elif center == 'representative':
+                smaller_layer = smaller_layer.assign(geometry=smaller_layer['geometry'].representative_point())
+            else:
+                raise ValueError("center parameter must be either 'centroid' or 'representative'")
 
             # Perform spatial join to nest smaller layer within the larger layer
             joined = gpd.sjoin(smaller_layer, larger_layer, how='left', predicate='within')
