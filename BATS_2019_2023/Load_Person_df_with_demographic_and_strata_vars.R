@@ -35,7 +35,7 @@ person2023_path <- file.path(background_dataset_2023_dir, person2023_file)
 person2023_df <- read_csv(person2023_path)
 
 person2023_df <- person2023_df %>%
-  select(hh_id, person_id, person_weight_rmove_only, age, gender, employment, telework_freq, job_type, work_lat, work_lon) %>%
+  select(hh_id, person_id, person_weight_rmove_only, age, gender, employment, telework_freq, job_type, education, industry, occupation, work_lat, work_lon) %>%
   rename(telework_freq2023=telework_freq) %>% # the 2023 coding has more categories than the 2019 coding
   mutate(survey_cycle = 2023)
 
@@ -65,7 +65,7 @@ person2019_df <- read_tsv(person2019_path)
 # because Wkday weights are zeroed where travel_date_dow > 4
 # based on this: https://github.com/BayAreaMetro/tnc_california_studies/blob/6486dffc1ca9c42e9ec682d054ce56ccff9bf370/8.1_PopSim_weighting/02_join_weights.R#L229
 person2019_df <- person2019_df %>%
-  select(hh_id, person_id, wt_sphone_wkday, age, gender, employment, telework_freq, job_type, work_lat, work_lon) %>%
+  select(hh_id, person_id, wt_sphone_wkday, age, gender, employment, telework_freq, job_type, education, work_lat, work_lon) %>%
   mutate(survey_cycle = 2019) %>%
   rename(telework_freq2019=telework_freq) %>%
   rename(person_weight_rmove_only = wt_sphone_wkday)
@@ -287,6 +287,86 @@ person_2019_2023_df <- person_2019_2023_df %>%
     TRUE ~ NA_character_  # For other survey cycles or other values
   ))
 
+
+# ----------------------------------------
+# Education
+#-----------------------------------------
+
+person_2019_2023_df <- person_2019_2023_df %>%
+  mutate(education_label = case_when(
+    education == 1 ~ "1. Less than high school",
+    education == 2 ~ "2. High school graduate/GED",
+    education == 3 ~ "3. Some college",
+    education == 4 ~ "4. Vocational/technical training",
+    education == 5 ~ "5. Associate degree",
+    education == 6 ~ "6. Bachelor's degree",
+    education == 7 ~ "7. Graduate/post-graduate degree",
+    #education == 995 ~ "Missing Response",
+    #education == 999 ~ "Prefer not to answer",
+    TRUE ~ NA_character_
+  ))
+
+
+# ----------------------------------------
+# Industry and occupation (only in 2023)
+#-----------------------------------------
+
+person_2019_2023_df <- person_2019_2023_df %>%
+  mutate(industry_label = case_when(
+    industry == 1 ~ "1. Agriculture, Forestry, Fishing, and Hunting",
+    industry == 2 ~ "2. Mining, Quarrying, and Oil and Gas Extraction",
+    industry == 3 ~ "3. Utilities",
+    industry == 4 ~ "4. Construction",
+    industry == 5 ~ "5. Manufacturing",
+    industry == 6 ~ "6. Wholesale Trade",
+    industry == 7 ~ "7. Retail Trade",
+    industry == 8 ~ "8. Transportation and Warehousing",
+    industry == 9 ~ "9. Information",
+    industry == 10 ~ "10. Finance and Insurance",
+    industry == 11 ~ "11. Real Estate and Rental and Leasing",
+    industry == 12 ~ "12. Professional, Scientific, and Technical Services",
+    industry == 13 ~ "13. Management of Companies and Enterprises",
+    industry == 14 ~ "14. Administrative and Support and Waste Management and Remediation Services",
+    industry == 15 ~ "15. Educational Services",
+    industry == 16 ~ "16. Health Care and Social Assistance",
+    industry == 17 ~ "17. Arts, Entertainment, and Recreation",
+    industry == 18 ~ "18. Accommodation and Food Services",
+    industry == 19 ~ "19. Other Services (except Public Administration)",
+    industry == 20 ~ "20. Public Administration",
+    #industry == 995 ~ "Missing Response",
+    #industry == 997 ~ "Other, please specify",
+    TRUE ~ NA_character_
+  ))
+
+person_2019_2023_df <- person_2019_2023_df %>%
+  mutate(occupation_label = case_when(
+    occupation == 1 ~ "1. Management",
+    occupation == 2 ~ "2. Business and Financial Operations",
+    occupation == 3 ~ "3. Computer and Mathematical",
+    occupation == 4 ~ "4. Architecture and Engineering",
+    occupation == 5 ~ "5. Life, Physical, and Social Science",
+    occupation == 6 ~ "6. Community and Social Service",
+    occupation == 7 ~ "7. Legal",
+    occupation == 8 ~ "8. Educational Instruction and Library",
+    occupation == 9 ~ "9. Arts, Design, Entertainment, Sports, and Media",
+    occupation == 10 ~ "10. Healthcare Practitioners and Technical",
+    occupation == 11 ~ "11. Healthcare Support",
+    occupation == 12 ~ "12. Protective Service",
+    occupation == 13 ~ "13. Food Preparation and Serving Related",
+    occupation == 14 ~ "14. Building and Grounds Cleaning and Maintenance",
+    occupation == 15 ~ "15. Personal Care and Service",
+    occupation == 16 ~ "16. Sales and Related",
+    occupation == 17 ~ "17. Office and Administrative Support",
+    occupation == 18 ~ "18. Farming, Fishing, and Forestry",
+    occupation == 19 ~ "19. Construction and Extraction",
+    occupation == 20 ~ "20. Installation, Maintenance, and Repair",
+    occupation == 21 ~ "21. Production",
+    occupation == 22 ~ "22. Transportation and Material Moving",
+    occupation == 23 ~ "23. Military Specific",
+    #occupation == 995 ~ "Missing Response",
+    #occupation == 997 ~ "Other, please specify",
+    TRUE ~ NA_character_
+  ))
 
 #-----------------------------------------
 # Handle home_county code inconsistencies

@@ -188,6 +188,14 @@ income_results <- calculate_telework_by_segment(srv_design, income_detailed_grou
 # By County
 county_results <- calculate_telework_by_segment(srv_design, home_county_grouped_label, "home_county_grouped_label")
 
+# By Education
+education_results <- calculate_telework_by_segment(srv_design, education_label, "education_label")
+
+# By Industry (for 2023 only)
+industry_results <- calculate_telework_by_segment(srv_design, industry_label, "industry_label")
+
+# By Occupation (for 2023 only)
+occupation_results <- calculate_telework_by_segment(srv_design, occupation_label, "occupation_label")
 
 # -------------------------
 # Summary message
