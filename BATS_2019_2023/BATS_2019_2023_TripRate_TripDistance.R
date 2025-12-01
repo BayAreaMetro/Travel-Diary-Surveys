@@ -19,6 +19,9 @@ sink(log_file, append = TRUE, split = TRUE)
 print(glue("\n=== Log Entry for person-day trip rate and trip distance calculations: {format(Sys.time(), '%Y-%m-%d %H:%M:%S')} ==="))
 cat("\n")
 
+# Set confidence level for all analyses
+CONF_LEVEL <- 0.90 
+
 # -------------------------
 # REUSABLE FUNCTIONS
 # -------------------------
@@ -38,7 +41,7 @@ cat("\n")
 #'                   Set to NULL for overall totals (all adults)
 #' @param summary_level_name Name for this analysis level (e.g., "By Income", "By Employment")
 #' @return A list of survey result dataframes
-calculate_trip_metrics <- function(survey_design, group_vars = NULL, summary_level_name = "All adults") {
+calculate_trip_metrics <- function(survey_design, group_vars = NULL, summary_level_name = "All adults", conf_level = CONF_LEVEL) {
   
   # Add survey_cycle to grouping vars if not already included
   if (!is.null(group_vars)) {
@@ -74,7 +77,7 @@ calculate_trip_metrics <- function(survey_design, group_vars = NULL, summary_lev
       summarize(
         n_unweighted = unweighted(n()),
         n_weighted = survey_total(),
-        !!paste0("mean_", metric$name) := survey_mean(.data[[metric$var]], vartype = c("se", "ci", "cv"))
+        !!paste0("mean_", metric$name) := survey_mean(.data[[metric$var]], vartype = c("se", "ci", "cv"), level = conf_level)
       ) %>%
       mutate(
         summary_col = metric$var,
@@ -93,7 +96,8 @@ calculate_trip_metrics <- function(survey_design, group_vars = NULL, summary_lev
       avg_trip_length = survey_ratio(
         numerator = personDay_dist_in_miles,
         denominator = num_trips,
-        vartype = c("se", "ci", "cv")
+        vartype = c("se", "ci", "cv"),
+        level = conf_level
       )
     ) %>%
     mutate(
@@ -126,8 +130,8 @@ standardize_results <- function(results_list, summary_level_name) {
       rename(
         mean = !!sym(mean_col),
         se = !!sym(paste0(mean_col, "_se")),
-        ci_lower_95 = !!sym(paste0(mean_col, "_low")),
-        ci_upper_95 = !!sym(paste0(mean_col, "_upp")),
+        ci_lower = !!sym(paste0(mean_col, "_low")),
+        ci_upper = !!sym(paste0(mean_col, "_upp")),
         coeff_of_var = !!sym(paste0(mean_col, "_cv"))
       )
     
@@ -149,7 +153,7 @@ add_reliability_flags <- function(summary_df) {
     mutate(
       unweighted_count = n_unweighted,
       weighted_count = n_weighted,
-      ci_95 = ci_upper_95 - ci_lower_95,
+      ci_width = ci_upper - ci_lower,
       cv_flag = coeff_of_var > 0.30,
       sample_size_flag = unweighted_count < 30,
       suppress = cv_flag | sample_size_flag,
@@ -171,7 +175,7 @@ create_chart_labels <- function(df, group_vars = NULL) {
   if (is.null(group_vars)) {
     # All adults - no grouping
     df <- df %>%
-      mutate(chart_label = paste(survey_cycle, "- All"))
+      mutate(chart_label = "All")
   } else if ("commute_cat" %in% group_vars && "home_county_label" %in% group_vars) {
     # Commute category and county
     df <- df %>%
@@ -184,37 +188,36 @@ create_chart_labels <- function(df, group_vars = NULL) {
           commute_cat == "5. Not full-time worker" ~ "Not full-time worker",
           TRUE ~ as.character(commute_cat)
         ),
-        chart_label = paste(survey_cycle, "-", commute_cat_short, "-", home_county_label)
+        chart_label = paste(commute_cat_short, "-", home_county_label)
       ) %>%
       select(-commute_cat_short)
   } else if ("commute_cat" %in% group_vars) {
     # Commute category only
     df <- df %>%
       mutate(
-        chart_label = paste(survey_cycle, "-", case_when(
+        chart_label = case_when(
           commute_cat == "1. Commuted" ~ "Commuted",
           commute_cat == "2. Telecommuted 7+ hours and not Commuted" ~ "Telecommuted 7+ hours",
           commute_cat == "3. Telecommuted <7 hours and not Commuted" ~ "Telecommuted <7 hours",
           commute_cat == "4. Did not work" ~ "Did not work",
           commute_cat == "5. Not full-time worker" ~ "Not full-time worker",
           TRUE ~ as.character(commute_cat)
-        ))
+        )
       )
   } else if ("home_county_label" %in% group_vars) {
     # County only
     df <- df %>%
-      mutate(chart_label = paste(survey_cycle, "-", home_county_label))
+      mutate(chart_label = home_county_label)
   } else {
     # Generic handling for other grouping variables
     # Create label from first non-survey_cycle grouping variable
     group_var <- setdiff(group_vars, "survey_cycle")[1]
     df <- df %>%
-      mutate(chart_label = paste(survey_cycle, "-", .data[[group_var]]))
+      mutate(chart_label = as.character(.data[[group_var]]))
   }
   
   return(df)
 }
-
 # -------------------------
 # DATA PREPARATION
 # -------------------------
@@ -246,12 +249,13 @@ ProcessedPersonDays_2019_2023_df <- ProcessedPersonDays_2019_2023_df %>%
   mutate(
     commute_cat = case_when(
       employment == 1 & commuted_on_travel_day == 1                           ~ "1. Commuted",
-      employment == 1 & telecommute_time >= 420 & commuted_on_travel_day == 0 ~ "2. Telecommuted 7+ hours and not Commuted",
-      employment == 1 & telecommute_time > 0 & commuted_on_travel_day == 0    ~ "3. Telecommuted <7 hours and not Commuted",
+      employment == 1 & telecommute_time >= 360 & commuted_on_travel_day == 0 ~ "2. Telecommuted 6+ hours and not Commuted",
+      employment == 1 & telecommute_time > 0 & commuted_on_travel_day == 0    ~ "3. Telecommuted <6 hours and not Commuted",
       employment == 1 & telecommute_time == 0 & commuted_on_travel_day == 0   ~ "4. Did not work",
       TRUE                                                                     ~ "5. Not full-time worker"
     )
   )
+
 
 
 # -------------------------
@@ -260,6 +264,7 @@ ProcessedPersonDays_2019_2023_df <- ProcessedPersonDays_2019_2023_df %>%
 
 srv_design <- ProcessedPersonDays_2019_2023_df %>%
   as_survey_design(
+    ids     = hhno, 
     weights = pdexpfac,
     strata = c(survey_cycle, stratification_var)
   )
@@ -347,6 +352,16 @@ results_by_income4cat <- calculate_trip_metrics(
    add_reliability_flags() %>%
    create_chart_labels(group_vars = "income_detailed_grouped")
 
+# 7. By race and ethnicity
+print("Calculating metrics by race and ethnicity...")
+results_by_race_eth <- calculate_trip_metrics(
+   srv_design,
+   group_vars = "race_eth",
+   summary_level_name = "By Race and Ethnicity"
+ )
+ summary_by_race_eth <- standardize_results(results_by_race_eth, "By Race and Ethnicity") %>%
+   add_reliability_flags() %>%
+   create_chart_labels(group_vars = "race_eth")
 
 
 # ADD NEW ANALYSES HERE
@@ -373,6 +388,7 @@ comprehensive_summary <- bind_rows(
   summary_by_county,
   summary_commute_county,
   summary_by_employment,
+  summary_by_race_eth,
   summary_by_income_detailed,
   summary_by_income4cat
   # summary_by_age
@@ -389,9 +405,9 @@ comprehensive_summary <- comprehensive_summary %>%
     chart_label,
     mean,
     se,
-    ci_95,
-    ci_lower_95,
-    ci_upper_95,
+    ci_width,
+    ci_lower,
+    ci_upper,
     coeff_of_var,
     estimate_reliability,
     unweighted_count,
