@@ -16,11 +16,17 @@ library(glue)
 # Set working directory
 working_dir <- "M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Processed/BATS2019_2023"
 
+# Set confidence level for all analyses
+CONF_LEVEL <- 0.90 
+
 # Start a log file
 log_file <- glue("{working_dir}/calculate_telework_freq_shares{format(Sys.time(), '%Y%m%d_%H%M%S')}.log")
 sink(log_file, append = TRUE, split = TRUE) 
 print(glue("\n=== Log Entry for calculating telework frequency shares: {format(Sys.time(), '%Y-%m-%d %H:%M:%S')} ==="))
 cat("\n") # print a clean blank line
+
+print(glue("Confidence Level: {CONF_LEVEL * 100}%"))
+cat("\n")
 
 # Run the script that load the person level dataset
 source("E:/GitHub/Travel-Diary-Surveys/BATS_2019_2023/Load_Person_df_with_demographic_and_strata_vars.R")
@@ -79,7 +85,7 @@ calculate_telework_by_segment <- function(srv_design, segment_var, segment_label
     summarize(
       n_unweighted = unweighted(n()),
       n_weighted = survey_total(vartype = NULL),
-      proportion = survey_prop(vartype = c("se", "ci", "cv"))
+      proportion = survey_prop(vartype = c("se", "ci", "cv"), level = CONF_LEVEL)
     )  %>%
     mutate(segment_type = segment_label) 
 
@@ -89,7 +95,7 @@ calculate_telework_by_segment <- function(srv_design, segment_var, segment_label
     summarize(
       n_unweighted = unweighted(n()),
       n_weighted = survey_total(vartype = NULL),
-      proportion = survey_prop(vartype = c("se", "ci", "cv"))
+      proportion = survey_prop(vartype = c("se", "ci", "cv"), level = CONF_LEVEL)
     )  %>%
     mutate(segment_type = segment_label) 
 
@@ -102,7 +108,7 @@ calculate_telework_by_segment <- function(srv_design, segment_var, segment_label
       n_WFH2OrMoreDays_unweighted = unweighted(sum(telework_freq_3cat_label2 == "1. Work from home 2 or more days a week")),
       WFH2OrMoreDays_weighted = survey_total(telework_freq_3cat_label2 == "1. Work from home 2 or more days a week", vartype = NULL),
       WFH2OrMoreDays_share = survey_mean(telework_freq_3cat_label2 == "1. Work from home 2 or more days a week", 
-                                         vartype = c("se", "ci", "cv"))
+                                         vartype = c("se", "ci", "cv"), level = CONF_LEVEL)
     )  %>%
     mutate(segment_type = segment_label) 
   
@@ -131,7 +137,7 @@ srv_results_telework_freq1 <- srv_design %>%
   summarize(
     n_unweighted = unweighted(n()),
     n_weighted = survey_total(vartype = NULL),
-    proportion = survey_prop(vartype = c("se", "ci", "cv"))
+    proportion = survey_prop(vartype = c("se", "ci", "cv"), level = CONF_LEVEL)
   )  %>%
   mutate(segment_type = "Overall", segment_value = "All Workers")
 
@@ -144,7 +150,7 @@ srv_results_telework_freq2 <- srv_design %>%
   summarize(
     n_unweighted = unweighted(n()),
     n_weighted = survey_total(vartype = NULL),
-    proportion = survey_prop(vartype = c("se", "ci", "cv"))
+    proportion = survey_prop(vartype = c("se", "ci", "cv"), level = CONF_LEVEL)
   ) %>%
   mutate(segment_type = "Overall", segment_value = "All Workers")
 
@@ -160,7 +166,7 @@ srv_results_WFH2OrMoreDays_share <- srv_design %>%
     n_WFH2OrMoreDays_unweighted = unweighted(sum(telework_freq_3cat_label2 == "1. Work from home 2 or more days a week")),
     WFH2OrMoreDays_weighted = survey_total(telework_freq_3cat_label2 == "1. Work from home 2 or more days a week", vartype = NULL),
     WFH2OrMoreDays_share = survey_mean(telework_freq_3cat_label2 == "1. Work from home 2 or more days a week", 
-                                       vartype = c("se", "ci", "cv"))
+                                       vartype = c("se", "ci", "cv"), level = CONF_LEVEL)
   ) %>%
   mutate(segment_type = "Overall", segment_value = "All Workers")
 
@@ -184,7 +190,7 @@ income_results <- calculate_telework_by_segment(srv_design, income_detailed_grou
 county_results <- calculate_telework_by_segment(srv_design, home_county_grouped_label, "home_county_grouped_label")
 
 # By Education
-education_results <- calculate_telework_by_segment(srv_design, education_label, "education_label")
+education_results <- calculate_telework_by_segment(srv_design, education_grouped_label, "education_grouped_label")
 
 # By Industry (for 2023 only)
 industry_results <- calculate_telework_by_segment(srv_design, industry_label, "industry_label")

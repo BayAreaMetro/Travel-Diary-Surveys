@@ -306,6 +306,21 @@ person_2019_2023_df <- person_2019_2023_df %>%
     TRUE ~ NA_character_
   ))
 
+person_2019_2023_df <- person_2019_2023_df %>%
+  mutate(education_grouped_label = case_when(
+    education == 1 ~ "1. High school or less",
+    education == 2 ~ "1. High school or less",
+    education == 3 ~ "2. Some college or associate degree",
+    education == 4 ~ "2. Some college or associate degree",
+    education == 5 ~ "2. Some college or associate degree",
+    education == 6 ~ "3. Bachelor's degree or higher",
+    education == 7 ~ "3. Bachelor's degree or higher",
+    #education == 995 ~ "Missing Response",
+    #education == 999 ~ "Prefer not to answer",
+    TRUE ~ NA_character_
+  ))
+
+
 
 # ----------------------------------------
 # Industry and occupation (only in 2023)
