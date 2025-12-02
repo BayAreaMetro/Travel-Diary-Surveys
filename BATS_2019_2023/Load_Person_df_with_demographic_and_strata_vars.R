@@ -8,7 +8,7 @@ library(stringr) # so I can use str_sub()
 library(tidyr)   # so I can use replace_na
 
 # Set working directory
-working_dir <- "M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Processed/BATS2019_2023"
+working_dir <- "M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Processed/BATS2019_2023_Analysis"
 
 # Start a log file
 log_file <- glue("{working_dir}/LoadPersonFile_{format(Sys.time(), '%Y%m%d_%H%M%S')}.log")
@@ -18,7 +18,7 @@ cat("\n") # print a clean blank line
 
 # Read 2023 household data
 # Reading from the weighted database
-background_dataset_2023_dir <- "X:/survey_repos/ProjRoot_Mon-Thu20251011/WgtRoot_Mon-Thu20251011/output/full_weighted_dataset"
+background_dataset_2023_dir <- "X:/survey_repos/ProjRoot_Mon-Thu20251201/WgtRoot_Mon-Thu20251201/output/full_weighted_dataset"
 hh2023_file <- "hh.csv"
 hh2023_path <- file.path(background_dataset_2023_dir, hh2023_file)
 hh2023_df <- read_csv(hh2023_path)

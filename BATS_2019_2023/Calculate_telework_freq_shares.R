@@ -14,7 +14,7 @@ library(glue)
 # -------------------------
 
 # Set working directory
-working_dir <- "M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Processed/BATS2019_2023"
+working_dir <- "M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Processed/BATS2019_2023_Analysis"
 
 # Set confidence level for all analyses
 CONF_LEVEL <- 0.90 
