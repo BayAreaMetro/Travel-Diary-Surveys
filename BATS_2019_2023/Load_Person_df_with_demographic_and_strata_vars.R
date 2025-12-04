@@ -18,7 +18,7 @@ cat("\n") # print a clean blank line
 
 # Read 2023 household data
 # Reading from the weighted database
-background_dataset_2023_dir <- "X:/survey_repos/ProjRoot_Mon-Thu20251201/WgtRoot_Mon-Thu20251201/output/full_weighted_dataset"
+background_dataset_2023_dir <- "X:/survey_repos/ProjRoot_Mon-Thu20251201/WgtRoot_Mon-Thu20251201_nocommutemode/output/full_weighted_dataset"
 hh2023_file <- "hh.csv"
 hh2023_path <- file.path(background_dataset_2023_dir, hh2023_file)
 hh2023_df <- read_csv(hh2023_path)
@@ -240,26 +240,28 @@ person_2019_2023_df <- person_2019_2023_df %>%
     TRUE ~ NA_character_  # For other survey cycles or other values
   ))
 
- person_2019_2023_df <- person_2019_2023_df %>%
-    mutate(telework_freq_3cat_label = case_when(
-    job_type == 3                                   ~ "1. Fully remote",
-    survey_cycle == 2019 & telework_freq2019 == 1   ~ "1. Fully remote",
-    survey_cycle == 2019 & telework_freq2019 == 2   ~ "1. Fully remote",
-    survey_cycle == 2019 & telework_freq2019 == 3   ~ "2. Hybrid",
-    survey_cycle == 2019 & telework_freq2019 == 4   ~ "2. Hybrid",
-    survey_cycle == 2019 & telework_freq2019 == 5   ~ "2. Hybrid",
-    survey_cycle == 2019 & telework_freq2019 == 6   ~ "3. Fully on-site",
-    survey_cycle == 2019 & telework_freq2019 == 7   ~ "3. Fully on-site",
-    survey_cycle == 2019 & telework_freq2019 == 8   ~ "3. Fully on-site",
-    survey_cycle == 2023 & telework_freq2023 == 1       ~ "1. Fully remote",
-    survey_cycle == 2023 & telework_freq2023 == 2       ~ "1. Fully remote",
-    survey_cycle == 2023 & telework_freq2023 == 3       ~ "2. Hybrid",
-    survey_cycle == 2023 & telework_freq2023 == 4       ~ "2. Hybrid",
-    survey_cycle == 2023 & telework_freq2023 == 5       ~ "2. Hybrid",
-    survey_cycle == 2023 & telework_freq2023 == 6       ~ "2. Hybrid",
-    survey_cycle == 2023 & telework_freq2023 == 7       ~ "3. Fully on-site",
-    survey_cycle == 2023 & telework_freq2023 == 8       ~ "3. Fully on-site",
-    survey_cycle == 2023 & telework_freq2023 == 996     ~ "3. Fully on-site",
+ # use telework_freq in conjunction with the job_type variable (more detailed)
+  person_2019_2023_df <- person_2019_2023_df %>%
+  mutate(telework_freq_jobtype3_temp = case_when(
+    job_type == 3                                   ~ "0. Work ONLY from home", # Work ONLY from home or remotely (telework, self-employed)
+    survey_cycle == 2019 & telework_freq2019 == 1   ~ "1. 6-7 days a week",
+    survey_cycle == 2019 & telework_freq2019 == 2   ~ "2. 5 days a week",
+    survey_cycle == 2019 & telework_freq2019 == 3   ~ "3. 4 days a week",
+    survey_cycle == 2019 & telework_freq2019 == 4   ~ "4. 2-3 days a week", # ths category is different across cycles
+    survey_cycle == 2019 & telework_freq2019 == 5   ~ "5. 1 day a week",
+    survey_cycle == 2019 & telework_freq2019 == 6   ~ "6. 1-3 days a month",
+    survey_cycle == 2019 & telework_freq2019 == 7   ~ "7. Less than monthly",
+    survey_cycle == 2019 & telework_freq2019 == 8   ~ "8. Never",
+    survey_cycle == 2023 & telework_freq2023 == 1       ~ "1. 6-7 days a week",
+    survey_cycle == 2023 & telework_freq2023 == 2       ~ "2. 5 days a week",
+    survey_cycle == 2023 & telework_freq2023 == 3       ~ "3. 4 days a week",
+    survey_cycle == 2023 & telework_freq2023 == 4       ~ "4. 3 days a week",
+    survey_cycle == 2023 & telework_freq2023 == 5       ~ "5. 2 days a week ",
+    survey_cycle == 2023 & telework_freq2023 == 6       ~ "6. 1 day a week ",
+    survey_cycle == 2023 & telework_freq2023 == 7       ~ "7. 1-3 days a month",
+    survey_cycle == 2023 & telework_freq2023 == 8       ~ "8. Less than monthly",
+    survey_cycle == 2023 & telework_freq2023 == 995     ~ "Missing",
+    survey_cycle == 2023 & telework_freq2023 == 996     ~ "Never",
     TRUE ~ NA_character_  # For other survey cycles or other values
   ))
 

@@ -91,7 +91,7 @@ calculate_telework_by_segment <- function(srv_design, segment_var, segment_label
 
   # Table 2: 3-category telework frequency by segment
   results_3cat <- srv_design %>%
-    group_by(survey_cycle, {{segment_var}}, telework_freq_3cat_label) %>%
+    group_by(survey_cycle, {{segment_var}}, telework_freq_jobtype3_temp) %>%
     summarize(
       n_unweighted = unweighted(n()),
       n_weighted = survey_total(vartype = NULL),
@@ -144,9 +144,9 @@ srv_results_telework_freq1 <- srv_design %>%
 print("\n=== Telework Frequency Shares (Overall - Detailed) ===")
 print(srv_results_telework_freq1, n = Inf)
 
-# Table 2: Shares by telework freq categories (3-category)
+# Table 2: Shares by telework freq categories (even more detailed)
 srv_results_telework_freq2 <- srv_design %>%
-  group_by(survey_cycle, telework_freq_3cat_label) %>%
+  group_by(survey_cycle, telework_freq_jobtype3_temp) %>%
   summarize(
     n_unweighted = unweighted(n()),
     n_weighted = survey_total(vartype = NULL),
@@ -205,7 +205,7 @@ occupation_results <- calculate_telework_by_segment(srv_design, occupation_label
 
 # Helper function to rename segment column to "segment_value"
 rename_segment_col <- function(df) {
-  standard_cols <- c("survey_cycle", "telework_jobtype3_label", "telework_freq_3cat_label",
+  standard_cols <- c("survey_cycle", "telework_jobtype3_label", "telework_freq_jobtype3_temp",
                      "n_unweighted", "n_weighted", "proportion", "proportion_se", 
                      "proportion_low", "proportion_upp", "proportion_cv",
                      "n_total_unweighted", "total_weighted", "n_WFH2OrMoreDays_unweighted",
@@ -264,7 +264,7 @@ consolidated_detailed <- consolidated_detailed %>%
   select(segment_type, segment_value, survey_cycle, telework_jobtype3_label, everything())
 
 consolidated_3cat <- consolidated_3cat %>%
-  select(segment_type, segment_value, survey_cycle, telework_freq_3cat_label, everything())
+  select(segment_type, segment_value, survey_cycle, telework_freq_jobtype3_temp, everything())
 
 consolidated_wfh2plus <- consolidated_wfh2plus %>%
   select(segment_type, segment_value, survey_cycle, everything())
@@ -272,7 +272,7 @@ consolidated_wfh2plus <- consolidated_wfh2plus %>%
 # Save consolidated results
 timestamp <- format(Sys.time(), '%Y%m%d_%H%M%S')
 write_csv(consolidated_detailed, glue("{working_dir}/telework_freq_DETAILED_all_segments_{timestamp}.csv"))
-write_csv(consolidated_3cat, glue("{working_dir}/telework_freq_3CAT_all_segments_{timestamp}.csv"))
+write_csv(consolidated_3cat, glue("{working_dir}/telework_freq_MoreDETAILED_all_segments_{timestamp}.csv"))
 write_csv(consolidated_wfh2plus, glue("{working_dir}/WFH2OrMoreDays_all_segments_{timestamp}.csv"))
 
 
@@ -282,7 +282,7 @@ write_csv(consolidated_wfh2plus, glue("{working_dir}/WFH2OrMoreDays_all_segments
 print("\n=== Analysis Complete ===")
 print(glue("Consolidated results saved to: {working_dir}"))
 print(glue("  - telework_freq_DETAILED_all_segments_{timestamp}.csv"))
-print(glue("  - telework_freq_3CAT_all_segments_{timestamp}.csv"))
+print(glue("  - telework_freq_MoreDETAILED_all_segments_{timestamp}.csv"))
 print(glue("  - WFH2OrMoreDays_all_segments_{timestamp}.csv"))
 print(glue("Log file: {log_file}"))
 
