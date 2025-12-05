@@ -213,7 +213,7 @@ person_2019_2023_df <- person_2019_2023_df %>%
     survey_cycle == 2023 & telework_freq2023 == 8       ~ "8. Less than monthly",
     survey_cycle == 2023 & telework_freq2023 == 995     ~ "Missing",
     survey_cycle == 2023 & telework_freq2023 == 996     ~ "Never",
-    TRUE ~ NA_character_  # For other survey cycles or other values
+    TRUE ~ NA_character_  # For other values (the 2019 survey has 995 but it's not in the codebook)
   ))
 
 # use telework_freq in conjunction with the job_type variable
@@ -237,7 +237,7 @@ person_2019_2023_df <- person_2019_2023_df %>%
     survey_cycle == 2023 & telework_freq2023 == 7       ~ "5. Less than weekly",
     survey_cycle == 2023 & telework_freq2023 == 8       ~ "5. Less than weekly",
     survey_cycle == 2023 & telework_freq2023 == 996     ~ "5. Less than weekly",
-    TRUE ~ NA_character_  # For other survey cycles or other values
+    TRUE ~ NA_character_  # Missing
   ))
 
  # use telework_freq in conjunction with the job_type variable (more detailed)
@@ -255,14 +255,13 @@ person_2019_2023_df <- person_2019_2023_df %>%
     survey_cycle == 2023 & telework_freq2023 == 1       ~ "1. 6-7 days a week",
     survey_cycle == 2023 & telework_freq2023 == 2       ~ "2. 5 days a week",
     survey_cycle == 2023 & telework_freq2023 == 3       ~ "3. 4 days a week",
-    survey_cycle == 2023 & telework_freq2023 == 4       ~ "4. 3 days a week",
-    survey_cycle == 2023 & telework_freq2023 == 5       ~ "5. 2 days a week ",
-    survey_cycle == 2023 & telework_freq2023 == 6       ~ "6. 1 day a week ",
-    survey_cycle == 2023 & telework_freq2023 == 7       ~ "7. 1-3 days a month",
-    survey_cycle == 2023 & telework_freq2023 == 8       ~ "8. Less than monthly",
-    survey_cycle == 2023 & telework_freq2023 == 995     ~ "Missing",
-    survey_cycle == 2023 & telework_freq2023 == 996     ~ "Never",
-    TRUE ~ NA_character_  # For other survey cycles or other values
+    survey_cycle == 2023 & telework_freq2023 == 4       ~ "4a. 3 days a week",
+    survey_cycle == 2023 & telework_freq2023 == 5       ~ "4b. 2 days a week ",
+    survey_cycle == 2023 & telework_freq2023 == 6       ~ "5. 1 day a week ",
+    survey_cycle == 2023 & telework_freq2023 == 7       ~ "6. 1-3 days a month",
+    survey_cycle == 2023 & telework_freq2023 == 8       ~ "7. Less than monthly",
+    survey_cycle == 2023 & telework_freq2023 == 996     ~ "8. Never",
+    TRUE ~ NA_character_  # Missing
   ))
 
 
