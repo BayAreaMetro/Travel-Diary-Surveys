@@ -35,16 +35,52 @@ source("E:/GitHub/Travel-Diary-Surveys/BATS_2019_2023/Load_Person_df_with_demogr
 # -------------------------
 # Universe is all workers (full-time, part-time, self-employed, volunteer)
 # -------------------------
+
+cat("\nBefore Any Filter:\n")
+person_2019_2023_df %>%
+  group_by(survey_cycle) %>%
+  summarise(n_records = n(),
+            sum_weight = sum(person_weight_rmove_only, na.rm = TRUE),
+            .groups = 'drop') %>%
+  print()
+
+# Employment filter
 person_2019_2023_df <- person_2019_2023_df %>% 
   filter(employment_label %in% c("1. Employed full-time (paid)", 
                                   "2. Employed part-time (paid)", 
                                   "3. Self-employed", 
                                   "6. Unpaid volunteer or intern")) 
+cat("\nAfter Employment Filter:\n")
+person_2019_2023_df %>%
+  group_by(survey_cycle) %>%
+  summarise(n_records = n(),
+            sum_weight = sum(person_weight_rmove_only, na.rm = TRUE),
+            .groups = 'drop') %>%
+  print()
+
 
 # explicitly drop all 0 weight records
 person_2019_2023_df <- person_2019_2023_df %>% 
-   filter(person_weight_rmove_only>0) %>%
-   filter(!is.na(telework_jobtype3_label)) 
+   filter(person_weight_rmove_only>0)
+cat("\nAfter Weight > 0 Filter:\n")
+person_2019_2023_df %>%
+  group_by(survey_cycle) %>%
+  summarise(n_records = n(),
+            sum_weight = sum(person_weight_rmove_only, na.rm = TRUE),
+            .groups = 'drop') %>%
+  print()
+
+# Telework x job_type3 variable has to be valid
+person_2019_2023_df <- person_2019_2023_df %>%
+   filter(!is.na(telework_jobtype3_label))
+cat("\nAfter Telework x job_type3 Filter:\n")
+person_2019_2023_df %>%
+  group_by(survey_cycle) %>%
+  summarise(n_records = n(),
+            sum_weight = sum(person_weight_rmove_only, na.rm = TRUE),
+            .groups = 'drop') %>%
+  print()
+
 
 # -------------------------
 # simple tabulation
