@@ -1,5 +1,5 @@
 # -----------
-# Calculate work from home rate on survey day (use a measure comparable to SWAA's)
+# Calculate work from home rate on survey day
 # Universe is all paid workers (full-time, part-time, self-employed). No volunteers.
 # Unit is person-day
 # -----------
@@ -30,15 +30,17 @@ source("E:/GitHub/Travel-Diary-Surveys/BATS_2019_2023/Load_PersonDay_df_with_inf
 # --------------------------------------
 # Calculate work from home rate
 # --------------------------------------
+# the SWAA uses 6 hours
+minimum_WFH_hour = 6
 
 PersonDays_2019_2023_df <- PersonDays_2019_2023_df %>%
   mutate(
     commute_cat = case_when(
-      employment %in% c(1, 2, 3) & commuted_on_travel_day == 1                           ~ "1. Commuted",
-      employment %in% c(1, 2, 3) & telecommute_time >= 360 & commuted_on_travel_day == 0 ~ "2. Telecommuted 6+ hours and not Commuted",
-      employment %in% c(1, 2, 3) & telecommute_time > 0 & commuted_on_travel_day == 0    ~ "3. Telecommuted <6 hours and not Commuted",
-      employment %in% c(1, 2, 3) & telecommute_time == 0 & commuted_on_travel_day == 0   ~ "4. Did not work",
-      TRUE                                                                               ~ "5. Not a paid worker" 
+      employment %in% c(1, 2, 3) & commuted_on_travel_day == 1                                              ~ "1. Commuted",
+      employment %in% c(1, 2, 3) & telecommute_time >= minimum_WFH_hour*60 & commuted_on_travel_day == 0    ~ paste0("2. Telecommuted ", minimum_WFH_hour, "+ hours and not Commuted"),
+      employment %in% c(1, 2, 3) & telecommute_time > 0 & commuted_on_travel_day == 0                       ~ paste0("3. Telecommuted <", minimum_WFH_hour, " hours and not Commuted"),
+      employment %in% c(1, 2, 3) & telecommute_time == 0 & commuted_on_travel_day == 0                      ~ "4. Did not work",
+      TRUE                                                                                                  ~ "5. Not a paid worker" 
     )
   )
 
@@ -51,12 +53,12 @@ commute_cat_summary <- PersonDays_2019_2023_df %>%
   )
 
 wfh_rate <- commute_cat_summary %>%
-  filter(commute_cat %in% c("1. Commuted", "2. Telecommuted 6+ hours and not Commuted")) %>%
+  filter(commute_cat %in% c("1. Commuted", paste0("2. Telecommuted ", minimum_WFH_hour, "+ hours and not Commuted"))) %>%
   group_by(survey_cycle) %>%
   summarise(
-    wfh_rate_unweighted = sum(unweighted[commute_cat == "2. Telecommuted 6+ hours and not Commuted"]) / 
+    wfh_rate_unweighted = sum(unweighted[commute_cat == paste0("2. Telecommuted ", minimum_WFH_hour, "+ hours and not Commuted")]) / 
                           sum(unweighted),
-    wfh_rate_weighted = sum(weighted[commute_cat == "2. Telecommuted 6+ hours and not Commuted"]) / 
+    wfh_rate_weighted = sum(weighted[commute_cat == paste0("2. Telecommuted ", minimum_WFH_hour, "+ hours and not Commuted")]) / 
                         sum(weighted),
     .groups = "drop"
   )
