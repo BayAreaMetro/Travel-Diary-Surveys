@@ -25,7 +25,7 @@ cat("\n") # print a clean blank line
 PersonDays2023_df <- read_csv("X:/survey_repos/ProjRoot_Mon-Thu20251201/WgtRoot_Mon-Thu20251201_nocommutemode/output/full_weighted_dataset/day.csv",
                                 progress = FALSE) %>% 
   mutate(survey_cycle = 2023)  %>%
-  select(survey_cycle, hh_id, person_id, day_id, day_num, travel_dow, telecommute_time, day_weight_rmove_only)
+  select(survey_cycle, hh_id, person_id, day_id, day_num, travel_dow, telecommute_time, is_complete, day_weight_rmove_only)
 
 # align variable names across years
 PersonDays2023_df <- PersonDays2023_df %>%
@@ -42,7 +42,7 @@ cat("\n")
 PersonDays2019_df <- read_tsv("M:/Data/HomeInterview/Bay Area Travel Study 2018-2019/Data/Final Version with Imputations/Final Updated Dataset as of 10-18-2021/day.tsv",
                                 progress = FALSE) %>% 
   mutate(survey_cycle = 2019)  %>%
-  select(survey_cycle, hh_id, person_id, day_num, travel_date_dow, telework_time, daywt_sphone_wkday)
+  select(survey_cycle, hh_id, person_id, day_num, travel_date_dow, telework_time, day_complete, daywt_sphone_wkday)
 
 # Align variable names across years
 PersonDays2019_df <- PersonDays2019_df %>%
@@ -79,7 +79,7 @@ hh2023_path <- file.path(background_dataset_2023_dir, hh2023_file)
 hh2023_df <- read_csv(hh2023_path)
 
 hh2023_df <- hh2023_df %>%
-  select(hh_id, sample_segment, home_county, income_detailed) %>%
+  select(hh_id, sample_segment, home_lat, home_lon, home_county, income_detailed) %>%
   mutate(survey_cycle = 2023) %>%
   mutate(home_county = as.character(home_county)) %>%
   rename(stratification_var = sample_segment)
@@ -91,7 +91,7 @@ person2023_df <- read_csv(person2023_path)
 
 person2023_df <- person2023_df %>%
   select(
-    hh_id, person_id, age, employment, telework_freq,
+    hh_id, person_id, age, employment, work_lat, work_lon, work_county, job_type, telework_freq,
     ethnicity_1, ethnicity_2, ethnicity_3, ethnicity_4,
     ethnicity_997, ethnicity_999, ethnicity_other,
     race_1, race_2, race_3, race_4, race_5, race_997, race_999
@@ -108,9 +108,11 @@ hh2019_path <- file.path(background_dataset_2019_dir, hh2019_file)
 hh2019_df <- read_tsv(hh2019_path)
 
 hh2019_df <- hh2019_df %>%
-  select(hh_id, sample_stratum, home_county_fips, income_detailed) %>%
+  select(hh_id, sample_stratum, reported_home_lat, reported_home_lon, home_county_fips, income_detailed) %>%
   mutate(survey_cycle = 2019) %>%
-  rename(stratification_var = sample_stratum) %>%
+  rename(stratification_var = sample_stratum,
+         home_lat = reported_home_lat,
+         home_lon = reported_home_lon) %>%
   mutate(home_county_fips = as.character(home_county_fips)) # note that the 2023 dataset uses all five digits but the 2019 dataset uses only the last three digits 001, 003
 
 # --- person2019 ---
@@ -119,7 +121,7 @@ person2019_path <- file.path(background_dataset_2019_dir, person2019_file)
 person2019_df <- read_tsv(person2019_path)
 
 person2019_df <- person2019_df %>%
-  select(hh_id, person_id, age, employment, telework_freq, raceeth_new_imputed) %>%
+  select(hh_id, person_id, age, employment, work_lat, work_lon, job_type, telework_freq, raceeth_new_imputed) %>%
   mutate(survey_cycle = 2019) 
 
 
@@ -275,11 +277,99 @@ PersonDays_2019_2023_df <- PersonDays_2019_2023_df %>%
     num_trips_SOCREC = replace_na(num_trips_SOCREC, 0)
   )
 
-# Filter to adults (18+) - universe is adults only because 2019 survey was adult-only
+# ---------------------------
+# Add filters that apply to all analysis
+# ---------------------------
+
+# Initial count
+initial_summary <- PersonDays_2019_2023_df %>%
+  group_by(survey_cycle) %>%
+  summarise(
+    count = n(),
+    sum_weight = sum(day_weight, na.rm = TRUE)
+  )
+print(initial_summary)
+
+# Store initial counts for reference
+n_initial <- nrow(PersonDays_2019_2023_df)
+n_initial_2019 <- nrow(PersonDays_2019_2023_df %>% filter(survey_cycle == 2019))
+n_initial_2023 <- nrow(PersonDays_2019_2023_df %>% filter(survey_cycle == 2023))
+
+# Filter to adults (18+)
 PersonDays_2019_2023_df <- PersonDays_2019_2023_df %>%
   filter(age >= 4)
 
-write_csv(PersonDays_2019_2023_df, file.path(working_dir, "PersonDays_2019_2023_adults.csv"))
+cat("\nAfter age filter (18+):\n")
+PersonDays_2019_2023_df %>%
+  group_by(survey_cycle) %>%
+  summarise(
+    count = n(),
+    sum_weight = sum(day_weight, na.rm = TRUE)
+  ) %>%
+  print()
+
+
+# Filter to workers
+PersonDays_2019_2023_df <- PersonDays_2019_2023_df %>%
+  filter(employment %in% c(1, 2, 3) )
+
+cat("\nAfter worker filter (includes only full-time, part-time and self-employment):\n")
+PersonDays_2019_2023_df %>%
+  group_by(survey_cycle) %>%
+  summarise(
+    count = n(),
+    sum_weight = sum(day_weight, na.rm = TRUE)
+  ) %>%
+  print()
+
+# Filter to day weight > 0
+PersonDays_2019_2023_df <- PersonDays_2019_2023_df %>%
+  filter(day_weight > 0)
+
+cat("\nAfter weight filter (day_weight > 0):\n")
+PersonDays_2019_2023_df %>%
+  group_by(survey_cycle) %>%
+  summarise(
+    count = n(),
+    sum_weight = sum(day_weight, na.rm = TRUE)
+  ) %>%
+  print()
+
+# --------------------------------------
+# side investigation: Many records with no work location? Is it just because of questionnaire logic?
+# --------------------------------------
+# Create the has_work_location variable
+PersonDays_2019_2023_df <- PersonDays_2019_2023_df %>%
+  mutate(has_work_location = !is.na(work_lat) & !is.na(work_lon),
+         has_work_location = factor(has_work_location,
+                                   levels = c(TRUE, FALSE),
+                                   labels = c("has work location", "no work location")))
+
+# Label job_type
+PersonDays_2019_2023_df <- PersonDays_2019_2023_df %>%
+  mutate(job_type_label = case_when(
+    survey_cycle == 2023 & job_type == 1 ~ "1. Go to one work location ONLY",
+    survey_cycle == 2023 & job_type == 2 ~ "2. Work location regularly varies",
+    survey_cycle == 2023 & job_type == 3 ~ "3. Work at home ONLY",
+    survey_cycle == 2023 & job_type == 4 ~ "4. Drive/travel for work",
+    survey_cycle == 2023 & job_type == 5 ~ "5. Work remotely some days and travel to a work location some days",
+    survey_cycle == 2023 & job_type == 995 ~ "Missing Response",
+    survey_cycle == 2019 & job_type == 1 ~ "1. Go to one work location ONLY",
+    survey_cycle == 2019 & job_type == 2 ~ "2. Work location regularly varies",
+    survey_cycle == 2019 & job_type == 3 ~ "3. Work at home ONLY",
+    survey_cycle == 2019 & job_type == 4 ~ "4. Drive/travel for work",
+    TRUE ~ as.character(job_type)
+  ))
+
+# chcek crosstab
+xtabs(~ job_type_label + has_work_location, 
+      data = PersonDays_2019_2023_df %>% filter(survey_cycle == 2019))
+
+xtabs(~ job_type_label + has_work_location, 
+      data = PersonDays_2019_2023_df %>% filter(survey_cycle == 2023))
+
+# --------------------------------------
+
+write_csv(PersonDays_2019_2023_df, file.path(working_dir, "PersonDays_2019_2023_workers.csv"))
 
 sink()
-
