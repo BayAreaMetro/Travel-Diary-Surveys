@@ -48,8 +48,8 @@ person_2019_2023_df %>%
 person_2019_2023_df <- person_2019_2023_df %>% 
   filter(employment_label %in% c("1. Employed full-time (paid)", 
                                   "2. Employed part-time (paid)", 
-                                  "3. Self-employed", 
-                                  "6. Unpaid volunteer or intern")) 
+                                  "3. Self-employed"))
+
 cat("\nAfter Employment Filter:\n")
 person_2019_2023_df %>%
   group_by(survey_cycle) %>%
