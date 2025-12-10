@@ -13,7 +13,7 @@ library(tidyr) # to use replace_na
 
 
 # Set working directory
-working_dir <- "M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Processed/BATS2019_2023"
+working_dir <- "M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Processed/BATS2019_2023_Analysis"
 
 # Start a log file
 log_file <- glue("{working_dir}/BATS_multi_year_RemoteWorkerLocation_{format(Sys.time(), '%Y%m%d_%H%M%S')}.log")
@@ -29,7 +29,7 @@ cat("\n") # print a clean blank line
 # Run the script that create the person-day level dataset
 source("E:/GitHub/Travel-Diary-Surveys/BATS_2019_2023/Create_PersonDay_df_with_demographic_and_strata_vars.R")
 # alternatively, one can just read the output from the above process:
-# PersonDays_2019_2023_df <- read_csv("M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Processed/BATS2019_2023/ProcessedPersonDays_2019_2023.csv")
+# PersonDays_2019_2023_df <- read_csv("M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Processed/BATS2019_2023_Analysis/ProcessedPersonDays_2019_2023.csv")
 
 # The universe is all adults (18+) because the 2019 survey was adult-only
 # updated the unverse to "all workers" or just "full time workers" to make it a bit more comparable to PUMS

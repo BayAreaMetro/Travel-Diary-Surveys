@@ -6,7 +6,7 @@ library(tidyverse)
 library(srvyr)
 
 # Read the data
-data <- read_csv("M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Processed/BATS2019_2023/LinkedTrips_2019_2023_withDist_withStrata.csv")
+data <- read_csv("M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Processed/BATS2019_2023_Analysis/LinkedTrips_2019_2023_withDist_withStrata.csv")
 
 
 # Label the variable opurp
@@ -35,7 +35,7 @@ data <- data %>%
   filter(trexpfac > 0)
 
 write_csv(data, 
-          "M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Processed/BATS2019_2023/LinkedTrips_2019_2023_withDist_withStrata_AdultOnly_No0trexpfac.csv")
+          "M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Processed/BATS2019_2023_Analysis/LinkedTrips_2019_2023_withDist_withStrata_AdultOnly_No0trexpfac.csv")
 
 # Create hourly bins from deptm
 # deptm format is HHMM (e.g., 700 = 7:00 AM, 1445 = 2:45 PM)
@@ -208,7 +208,7 @@ print(results_2023_work_income, n = Inf)
 
 
 # Save combined results to CSV
-output_filename <- sprintf("M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Processed/BATS2019_2023/departure_time_analysis_by_cycle_and_purpose_%s.csv",
+output_filename <- sprintf("M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Processed/BATS2019_2023_Analysis/departure_time_analysis_by_cycle_and_purpose_%s.csv",
                           format(Sys.time(), "%Y%m%d_%H%M%S"))
 write_csv(all_results, output_filename)
 cat("\nResults saved to:", output_filename, "\n")

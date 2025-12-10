@@ -11,7 +11,7 @@ library(tidyr)
 library(srvyr)
 
 # Set working directory
-working_dir <- "M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Processed/BATS2019_2023"
+working_dir <- "M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Processed/BATS2019_2023_Analysis"
 
 # Start a log file
 log_file <- glue("{working_dir}/BATS_multi_year_TripRate_TripDistance_{format(Sys.time(), '%Y%m%d_%H%M%S')}.log")
@@ -225,7 +225,7 @@ create_chart_labels <- function(df, group_vars = NULL) {
 # Run the script that creates the person-day level dataset
 source("E:/GitHub/Travel-Diary-Surveys/BATS_2019_2023/Create_PersonDay_df_with_demographic_and_strata_vars.R")
 # Alternatively, read the processed file:
-# ProcessedPersonDays_2019_2023_df <- read_csv("M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Processed/BATS2019_2023/ProcessedPersonDays_2019_2023.csv")
+# ProcessedPersonDays_2019_2023_df <- read_csv("M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Processed/BATS2019_2023_Analysis/ProcessedPersonDays_2019_2023.csv")
 
 # Filter to adults (18+) - universe is adults only because 2019 survey was adult-only
 ProcessedPersonDays_2019_2023_df <- ProcessedPersonDays_2019_2023_df %>%

@@ -9,7 +9,7 @@ library(sf)      # simple features, for spatial joins
 # -------------------------
 
 # Set working directory
-working_dir <- "M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Processed/BATS2019_2023"
+working_dir <- "M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Processed/BATS2019_2023_Analysis"
 
 # Start a log file
 log_file <- glue("{working_dir}/multi-cycle_BATS_processing_{format(Sys.time(), '%Y%m%d_%H%M%S')}.log")
@@ -19,7 +19,7 @@ cat("\n") # print a clean blank line
 
 # Read 2023 linked trip file
 # Suppress progress bar for cleaner log output
-LinkedTrips2023_df <- read_csv("M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Processed/TripLinking_20251012/03b-assign_day/wt-wkday_4day/trip.csv",
+LinkedTrips2023_df <- read_csv("M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Processed/TripLinking_20251209/03b-assign_day/wt-wkday_4day/trip.csv",
                                 progress = FALSE) %>% 
   mutate(survey_cycle = 2023)
 

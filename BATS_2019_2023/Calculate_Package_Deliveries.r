@@ -7,7 +7,7 @@ library(tidyr)
 # Read input
 # -----------
 # 2023
-weighted_2023dataset_dir <- "X:/survey_repos/ProjRoot_Mon-Thu20251011/WgtRoot_Mon-Thu20251011/output/full_weighted_dataset"
+weighted_2023dataset_dir <- "X:/survey_repos/ProjRoot_Mon-Thu20251201/WgtRoot_Mon-Thu20251201_nocommutemode/output/full_weighted_dataset"
 
 day2023_file <- "day.csv"
 hh2023_file <- "hh.csv"
@@ -61,7 +61,7 @@ hh_2019_2023_df <- hh_2019_2023_df %>%
   )
 
 # Check for any missing weights
-table(is.na(hh_2019_2023_df$hh_weight), hh_delivery_df$survey_cycle, useNA = "ifany")
+table(is.na(hh_2019_2023_df$hh_weight), hh_2019_2023_df$survey_cycle, useNA = "ifany")
 
 
 # -----------
@@ -98,12 +98,12 @@ hh_2019_2023_df <- hh_2019_2023_df %>%
     survey_cycle == 2019 & income_aggregate == 2   ~ "2. $25,000-$49,999",
     survey_cycle == 2019 & income_aggregate == 3   ~ "3. $50,000-$74,999",
     survey_cycle == 2019 & income_aggregate == 4   ~ "4. $75,000-$99,999",
-    survey_cycle == 2019 & income_aggregate == 5   ~ "5. $100,000 or more ",
-    survey_cycle == 2019 & income_aggregate == 6   ~ "5. $100,000 or more ",
+    survey_cycle == 2019 & income_aggregate == 5   ~ "5. $100,000 or more",
+    survey_cycle == 2019 & income_aggregate == 6   ~ "5. $100,000 or more",
     survey_cycle == 2019 & income_aggregate == 999 ~ "Missing",
     survey_cycle == 2023 & income_broad == 1       ~ "1. Under $25,000",
     survey_cycle == 2023 & income_broad == 2       ~ "2. $25,000-$49,999",
-    survey_cycle == 2023 & income_broad == 3       ~ "3. $50,000-$74,2999",
+    survey_cycle == 2023 & income_broad == 3       ~ "3. $50,000-$74,999",
     survey_cycle == 2023 & income_broad == 4       ~ "4. $75,000-$99,999",
     survey_cycle == 2023 & income_broad == 5       ~ "5. $100,000 or more",
     survey_cycle == 2023 & income_broad == 6       ~ "5. $100,000 or more",
@@ -118,8 +118,8 @@ hh_2019_2023_df <- hh_2019_2023_df %>%
     survey_cycle == 2019 & income_aggregate == 2   ~ "1. Under $50,000",
     survey_cycle == 2019 & income_aggregate == 3   ~ "2. $50,000-$99,999",
     survey_cycle == 2019 & income_aggregate == 4   ~ "2. $50,000-$99,999",
-    survey_cycle == 2019 & income_aggregate == 5   ~ "3. $100,000 or more ",
-    survey_cycle == 2019 & income_aggregate == 6   ~ "3. $100,000 or more ",
+    survey_cycle == 2019 & income_aggregate == 5   ~ "3. $100,000 or more",
+    survey_cycle == 2019 & income_aggregate == 6   ~ "3. $100,000 or more",
     survey_cycle == 2019 & income_aggregate == 999 ~ "Missing",
     survey_cycle == 2023 & income_broad == 1       ~ "1. Under $50,000",
     survey_cycle == 2023 & income_broad == 2       ~ "1. Under $50,000",
@@ -173,20 +173,20 @@ hh_2019_2023_df <- hh_2019_2023_df %>%
 # packages at home
 delivery_rows_df <- day_2019_2023_df %>%
   filter(
-    (survey_cycle == 2023 & if_any(all_of(c('delivery_5', 'delivery_9')), 
+    (survey_cycle == 2023 & if_any(all_of(c('delivery_5', 'delivery_8')), 
                                     ~ . == 1)) |
     (survey_cycle == 2019 & if_any(all_of(c('delivery_home', 'delivery_other')), 
                                     ~ . == 1))
   )
 
 # food or groceries
-delivery_rows_df <- day_2019_2023_df %>%
-  filter(
-    (survey_cycle == 2023 & if_any(all_of(c('delivery_2', 'delivery_4')), 
-                                    ~ . == 1)) |
-    (survey_cycle == 2019 & if_any(all_of(c('delivery_food')), 
-                                    ~ . == 1))
-  )
+#delivery_rows_df <- day_2019_2023_df %>%
+#  filter(
+#    (survey_cycle == 2023 & if_any(all_of(c('delivery_2', 'delivery_4')), 
+#                                    ~ . == 1)) |
+#    (survey_cycle == 2019 & if_any(all_of(c('delivery_food')), 
+#                                    ~ . == 1))
+#  )
 
 
 # households that had a delivery

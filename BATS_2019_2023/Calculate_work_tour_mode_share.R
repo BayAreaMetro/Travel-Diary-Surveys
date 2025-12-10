@@ -15,7 +15,7 @@ library(tidyr) # to use replace_na
 
 
 # Set working directory
-working_dir <- "M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Processed/BATS2019_2023"
+working_dir <- "M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Processed/BATS2019_2023_Analysis"
 
 # Start a log file
 log_file <- glue("{working_dir}/BATS_work_tour_mode_share_{format(Sys.time(), '%Y%m%d_%H%M%S')}.log")
@@ -31,7 +31,7 @@ cat("\n") # print a clean blank line
 # Run the script that create the person-day level dataset
 source("E:/GitHub/Travel-Diary-Surveys/BATS_2019_2023/Create_PersonDay_df_with_demographic_and_strata_vars.R")
 # alternatively, one can just read the output from the above process:
-# PersonDays_2019_2023_df <- read_csv("M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Processed/BATS2019_2023/ProcessedPersonDays_2019_2023.csv")
+# PersonDays_2019_2023_df <- read_csv("M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Processed/BATS2019_2023_Analysis/ProcessedPersonDays_2019_2023.csv")
 
 # Include only adults
 ProcessedPersonDays_2019_2023_df <- ProcessedPersonDays_2019_2023_df %>%
@@ -76,7 +76,7 @@ ProcessedPersonDays_2019_2023_df <- ProcessedPersonDays_2019_2023_df %>%
 
 # Read 2023 tour file
 # Suppress progress bar for cleaner log output
-tour2023_df <- read_csv("M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Processed/TripLinking_20251012/03b-assign_day/wt-wkday_4day/tour.csv",
+tour2023_df <- read_csv("M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Processed/TripLinking_20251209/03b-assign_day/wt-wkday_4day/tour.csv",
                                 progress = FALSE) %>% 
   mutate(survey_cycle = 2023)
 

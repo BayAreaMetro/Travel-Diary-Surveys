@@ -9,7 +9,7 @@ library(stringr) # so I can use str_sub()
 library(tidyr)   # so I can use replace_na
 
 # Set working directory
-working_dir <- "M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Processed/BATS2019_2023"
+working_dir <- "M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Processed/BATS2019_2023_Analysis"
 
 # Start a log file
 log_file <- glue("{working_dir}/GeneratePersonDayFile_{format(Sys.time(), '%Y%m%d_%H%M%S')}.log")
@@ -26,7 +26,7 @@ cat("\n") # print a clean blank line
 
 # Read 2023 processed PersonDay file
 # Suppress progress bar for cleaner log output
-ProcessedPersonDays2023_df <- read_csv("M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Processed/TripLinking_20251012/03b-assign_day/wt-wkday_4day/personday.csv",
+ProcessedPersonDays2023_df <- read_csv("M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Processed/TripLinking_20251209/03b-assign_day/wt-wkday_4day/personday.csv",
                                 progress = FALSE) %>% 
   mutate(survey_cycle = 2023)  %>%
   select(survey_cycle, hhno, pno, day, pdexpfac)

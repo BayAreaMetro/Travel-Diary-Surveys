@@ -13,7 +13,7 @@ library(srvyr)
 
 
 # Set working directory
-working_dir <- "M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Processed/BATS2019_2023"
+working_dir <- "M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Processed/BATS2019_2023_Analysis"
 
 # Set confidence level for all analyses
 CONF_LEVEL <- 0.90 
@@ -34,7 +34,7 @@ cat("\n")
 # Run the script that create the trip level dataset
 source("E:/GitHub/Travel-Diary-Surveys/BATS_2019_2023/Add_Stratification_Variables_And_Labels_to_LinkedTrips.R")
 # alternatively, one can just read the output from the above process:
-# PersonDays_2019_2023_df <- read_csv("M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Processed/BATS2019_2023/LinkedTrips_2019_2023_withDist_withStrata.csv")
+# PersonDays_2019_2023_df <- read_csv("M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Processed/BATS2019_2023_Analysis/LinkedTrips_2019_2023_withDist_withStrata.csv")
 
 # Drop if weight is 0 (to get correct unweighted count), although this only have negligible impacts on the weighted shares, se, ci, cv calc (4 or 5 digits after the decimal)
 LinkedTrips_2019_2023_df <- LinkedTrips_2019_2023_df %>%

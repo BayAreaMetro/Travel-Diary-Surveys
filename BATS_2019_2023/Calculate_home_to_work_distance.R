@@ -13,7 +13,7 @@ library(sf)      # simple features, for spatial joins
 # -------------------------
 
 # Set working directory
-working_dir <- "M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Processed/BATS2019_2023"
+working_dir <- "M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Processed/BATS2019_2023_Analysis"
 
 # Start a log file
 log_file <- glue("{working_dir}/calculate_home_to_work_distance{format(Sys.time(), '%Y%m%d_%H%M%S')}.log")
