@@ -35,7 +35,7 @@ person2023_path <- file.path(background_dataset_2023_dir, person2023_file)
 person2023_df <- read_csv(person2023_path)
 
 person2023_df <- person2023_df %>%
-  select(hh_id, person_id, person_weight_rmove_only, age, gender, employment, telework_freq, job_type, work_mode, education, industry, occupation, work_lat, work_lon) %>%
+  select(hh_id, person_id, person_weight_rmove_only, age, gender, employment, commute_freq, telework_freq, job_type, work_mode, education, industry, occupation, work_lat, work_lon) %>%
   rename(telework_freq2023=telework_freq) %>% # the 2023 coding has more categories than the 2019 coding
   mutate(survey_cycle = 2023)
 
@@ -436,6 +436,23 @@ person_2019_2023_df <- person_2019_2023_df %>%
     survey_cycle == 2019 & home_county_fips == "95" ~ "Marin, Napa, Sonoma, Solano",
     survey_cycle == 2019 & home_county_fips == "97" ~ "Marin, Napa, Sonoma, Solano",
     TRUE ~ NA_character_  
+  ))
+
+
+# Label job_type
+person_2019_2023_df <- person_2019_2023_df %>%
+  mutate(job_type_label = case_when(
+    survey_cycle == 2023 & job_type == 1 ~ "1. Go to one work location ONLY",
+    survey_cycle == 2023 & job_type == 2 ~ "2. Work location regularly varies",
+    survey_cycle == 2023 & job_type == 3 ~ "3. Work at home ONLY",
+    survey_cycle == 2023 & job_type == 4 ~ "4. Drive/travel for work",
+    survey_cycle == 2023 & job_type == 5 ~ "5. Work remotely some days and travel to a work location some days",
+    survey_cycle == 2023 & job_type == 995 ~ "Missing Response",
+    survey_cycle == 2019 & job_type == 1 ~ "1. Go to one work location ONLY",
+    survey_cycle == 2019 & job_type == 2 ~ "2. Work location regularly varies",
+    survey_cycle == 2019 & job_type == 3 ~ "3. Work at home ONLY",
+    survey_cycle == 2019 & job_type == 4 ~ "4. Drive/travel for work",
+    TRUE ~ as.character(job_type)
   ))
 
 
