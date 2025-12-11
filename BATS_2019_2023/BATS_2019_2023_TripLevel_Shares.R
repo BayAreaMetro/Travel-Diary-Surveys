@@ -256,8 +256,18 @@ dpurp_summary <- summarize_for_attr(
                      "survey_cycle,commute_cat,adult_yn")
 )
 
+trip_dist_bin_summary <- summarize_for_attr(
+  LinkedTrips_2019_2023_df, 
+  trip_dist_bin,
+  summary_levels = c("survey_cycle", "adult_yn", "commute_cat",
+                     "survey_cycle,adult_yn", 
+                     "survey_cycle,income_detailed_grouped,adult_yn",
+                     "survey_cycle,race_eth,adult_yn",
+                     "survey_cycle,commute_cat,adult_yn")
+)
+
 # Combine summaries
-full_summary <- bind_rows(mode5cat_summary, mode_summary, dpurp_summary)
+full_summary <- bind_rows(mode5cat_summary, mode_summary, dpurp_summary, trip_dist_bin_summary)
 
 # Add formatted unweighted count string
 full_summary <- full_summary %>% 
@@ -276,7 +286,8 @@ full_summary <- full_summary %>%
     summary_col,
     mode5cat_label,
     mode_label,
-    dpurp_label,  
+    dpurp_label, 
+    trip_dist_bin,  
     weighted_share,
     se,
     ci_width,
@@ -304,7 +315,8 @@ full_summary <- full_summary %>%
     summary_col,
     mode5cat_label,
     mode_label,
-    dpurp_label
+    dpurp_label,
+    trip_dist_bin
   )
 
 # Save results

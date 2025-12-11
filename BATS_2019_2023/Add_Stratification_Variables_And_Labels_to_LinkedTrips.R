@@ -252,10 +252,23 @@ LinkedTrips_2019_2023_df <- LinkedTrips_2019_2023_df %>%
     )
   )
 
+
 # Combine 2019 and 2023 race/ethnicity into one variable
 LinkedTrips_2019_2023_df <- LinkedTrips_2019_2023_df %>%
   mutate(
     race_eth = coalesce(race_recode_2023, race_eth_label_2019)
+  )
+
+# Bin the trips by distance
+LinkedTrips_2019_2023_df <- LinkedTrips_2019_2023_df %>%
+  mutate(
+    trip_dist_bin = case_when(
+      crow_fly_miles < 0.2 ~ "0-0.2 miles",
+      crow_fly_miles < 1   ~ "0.2-1 miles",
+      crow_fly_miles < 5   ~ "1-5 miles",
+      crow_fly_miles < 20  ~ "5-20 miles",          
+      TRUE                 ~ ">20 miles"
+    )
   )
 
 # Write LinkedTrips_2019_2023_df to csv for subsequent processes
