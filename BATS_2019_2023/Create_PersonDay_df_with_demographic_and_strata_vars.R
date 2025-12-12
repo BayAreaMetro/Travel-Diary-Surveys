@@ -293,9 +293,12 @@ PersonDayFromLinkedTrips_2019_2023_df <- LinkedTrips_2019_2023_df %>%
 
     personDay_dist_in_miles       = sum(crow_fly_miles_cap200, na.rm = TRUE),
     personDay_dist_PbShMeSo_miles = sum(crow_fly_miles_cap200[dpurp_label %in% c("PERS_BUS", "SHOP", "MEAL", "SOCREC")], na.rm = TRUE),
+
     num_trips                     = n(),
+    num_EscOthPbSch_trips = sum(dpurp_label %in% c("ESCORT","OTHER","PERS_BUS","SCHOOL"), na.rm = TRUE),
     num_PbShMeSo_trips = sum(dpurp_label %in% c("PERS_BUS", "SHOP", "MEAL", "SOCREC"), na.rm = TRUE),
     num_ShMeSo_trips = sum(dpurp_label %in% c("SHOP", "MEAL", "SOCREC"), na.rm = TRUE),
+    num_MeSo_trips = sum(dpurp_label %in% c("MEAL", "SOCREC"), na.rm = TRUE),
 
     # Number of trips by purpose
     num_trips_HOME                = sum(dpurp_label == "HOME", na.rm = TRUE),
@@ -336,7 +339,9 @@ ProcessedPersonDays_2019_2023_df <- ProcessedPersonDays_2019_2023_df %>%
     personDay_dist_PbShMeSo_miles = replace_na(personDay_dist_PbShMeSo_miles, 0),
     num_trips = replace_na(num_trips, 0),
     num_PbShMeSo_trips = replace_na(num_PbShMeSo_trips, 0),
+    num_EscOthPbSch_trips = replace_na(num_EscOthPbSch_trips, 0),
     num_ShMeSo_trips = replace_na(num_ShMeSo_trips, 0),
+    num_MeSo_trips = replace_na(num_MeSo_trips, 0),
     num_trips_HOME = replace_na(num_trips_HOME, 0),
     num_trips_WORK = replace_na(num_trips_WORK, 0),
     num_trips_SCHOOL = replace_na(num_trips_SCHOOL, 0),
