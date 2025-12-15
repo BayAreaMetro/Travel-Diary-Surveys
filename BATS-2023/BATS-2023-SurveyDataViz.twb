@@ -33,7 +33,7 @@
       <connection class='federated'>
         <named-connections>
           <named-connection caption='location' name='textscan.086lllt0rlawbv10qkwut036e9rk'>
-            <connection class='textscan' directory='M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Full Weighted 2023 Dataset/WeightedDataset_02212025' filename='location.csv' password='' server='' workgroup-auth-mode='as-is' />
+            <connection class='textscan' directory='E:/Box/Modeling and Surveys/Surveys/Travel Diary Survey/BATS_2023/Versioned_Data/Weighted_PreLink_MonToThu_20251202' filename='location.csv' password='' server='' workgroup-auth-mode='as-is' />
           </named-connection>
           <named-connection caption='trip_id_matched_path_summary' name='textscan.1kxwytr147ldtz18irjo902ccigb'>
             <connection class='textscan' directory='M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Full Weighted 2023 Dataset/WeightedDataset_08092024/OSM_match_v2' filename='trip_id_matched_path_summary.csv' password='' server='' workgroup-auth-mode='as-is' />
