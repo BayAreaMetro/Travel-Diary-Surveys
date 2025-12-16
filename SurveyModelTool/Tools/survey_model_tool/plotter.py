@@ -909,8 +909,11 @@ class Plotter:
             ax.legend(handles=handles, loc='best', title='Estimate Reliability')
         # Attach Bokeh spec for interactive conversion in dashboard (include reliability)
         try:
+            # Merge lower/upper bounds and reliability into the Bokeh spec data
             gw = group_weighted[[group_cols[0], 'share']].copy()
+            bounds_map = results[[group_cols[0], 'lower_bound', 'upper_bound']]
             rel_map = results[[group_cols[0], 'est_reliability']].rename(columns={'est_reliability': 'reliability'})
+            gw = gw.merge(bounds_map, on=group_cols[0], how='left')
             gw = gw.merge(rel_map, on=group_cols[0], how='left')
             # Build a palette for Bokeh (list of hex colors)
             from matplotlib.colors import to_hex
