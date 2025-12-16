@@ -749,8 +749,10 @@ class Plotter:
         combined_handles = hue_handles + (reliability_patches if rel_legend else [])
         ax.legend(handles=combined_handles, loc='upper left', bbox_to_anchor=(1, 1), title=hue.replace('_', ' ').title())
         # Attach Bokeh spec for interactive conversion in dashboard (include reliability)
+
         try:
-            data_for_spec = weighted[[group_cols[0], group_cols[1], 'share']].copy()
+            # Add error bars to bokeh spec for plot_share_hue only
+            data_for_spec = results[[group_cols[0], group_cols[1], 'share', 'lower_bound', 'upper_bound']].copy()
             rel_cols = [group_cols[0], group_cols[1], 'est_reliability']
             rel_map = results[rel_cols].rename(columns={'est_reliability': 'reliability'})
             data_for_spec = data_for_spec.merge(rel_map, on=[group_cols[0], group_cols[1]], how='left')
@@ -1831,21 +1833,31 @@ class Plotter:
             y_col = 'share'
 
         # Build Bokeh ColumnDataSource for grouped bars
+        hatch_dict = {'High': ' ', 'Medium': "\\", 'Low': 'x'}
         factors = [(str(g), str(h)) for g in axis_order for h in hue_order]
         y_vals = []
         reliabilities = []
+        hatch = []
+        lower_bounds = []
+        upper_bounds = []
         for g in axis_order:
             for h in hue_order:
                 match = next((rec for rec in data_records if str(rec[group_col]) == str(g) and str(rec[hue_col]) == str(h)), None)
                 y_vals.append(match.get(y_col, 0) if match else 0)
                 reliabilities.append(match.get('reliability') if match and 'reliability' in match else None)
-
+                hatch.append(hatch_dict.get(match.get('reliability')) if match and 'reliability' in match else None)
+                lower_bounds.append(match.get('lower_bound') if match and 'lower_bound' in match else None)
+                upper_bounds.append(match.get('upper_bound') if match and 'upper_bound' in match else None)
+        print("checking bounds", lower_bounds, upper_bounds)
         source = ColumnDataSource(data=dict(
             x=factors,
             y=y_vals,
             group=[g for g, h in factors],
             hue=[h for g, h in factors],
-            reliability=reliabilities
+            reliability=reliabilities,
+            lower=lower_bounds,
+            upper=upper_bounds,
+            hatch=hatch
         ))
 
         # Pick colors for hue groups (use provided palette if available)
@@ -1868,15 +1880,29 @@ class Plotter:
         )
 
         # Add vertical bars with color mapped to hue (2nd factor)
-        p.vbar(
+        bar_renderer = p.vbar(
             x='x',
             top='y',
             width=0.8,
             source=source,
+            # hatch_pattern='hatch',
+            # hatch_alpha=0.4,
             fill_color=factor_cmap('x', palette=colors, factors=[str(h) for h in hue_order], start=1, end=2),
             line_color="black",
             legend_group='hue'
         )
+        # Add error bars (whiskers) if available, and ensure they are drawn on top of bars
+        from bokeh.models import Whisker, LabelSet
+        if any(lower_bounds) and any(upper_bounds):
+            whisker = Whisker(source=source, base='x', upper='upper', lower='lower', line_width=2, line_color='black', level='overlay')
+            p.add_layout(whisker)
+            # Optionally, add whisker annotations (upper and lower)
+            # label_upper = LabelSet(x='x', y='upper', text='upper', level='glyph', source=source,
+            #                       render_mode='canvas', text_font_size='8pt', text_align='center', y_offset=2)
+            # label_lower = LabelSet(x='x', y='lower', text='lower', level='glyph', source=source,
+            #                       render_mode='canvas', text_font_size='8pt', text_align='center', y_offset=-10)
+            # p.add_layout(label_upper)
+            # p.add_layout(label_lower)
 
         # Add hover tool, use x-axis label for group_col in tooltip
         x_axis_label = spec.get('x_label', group_col)
@@ -1924,6 +1950,7 @@ class Plotter:
             raise ValueError("Figure does not have a _bokeh_spec attribute to convert.")
 
         spec = fig._bokeh_spec
+        hatch_dict = {'High': ' ', 'Medium': "\\", 'Low': 'x'}
 
         from bokeh.models import NumeralTickFormatter
         group_col = spec['group_col']
@@ -1940,6 +1967,8 @@ class Plotter:
             # Include reliability per stacker if provided in spec data
             rel_key = f"reliability_{s}"
             data_dict[rel_key] = [rec.get(rel_key, None) for rec in data_records]
+            hatch_col = f"hatch_{s}"
+            data_dict[hatch_col] = [hatch_dict.get(rec.get(rel_key), " ") for rec in data_records]
 
         source = ColumnDataSource(data=data_dict)
 
@@ -1966,6 +1995,8 @@ class Plotter:
             width=0.8,
             color=colors,
             source=source,
+            hatch_pattern=[f'hatch_{str(s)}' for s in stackers],
+            hatch_alpha=0.4,
             legend_label=[str(s) for s in stackers]
         )
 
@@ -2247,7 +2278,9 @@ class Plotter:
                     key = json.dumps([str(row[group_col]), str(row[hue_col])], separators=(',', ':'))
                     key_map[key] = {
                         'share': row['share'],
-                        'reliability': row['est_reliability']
+                        'reliability': row['est_reliability'],
+                        'upper_bound': row.get('upper_bound', None),
+                        'lower_bound': row.get('lower_bound', None)
                     }
                 summarized[opt_str] = key_map
             else:
@@ -2256,7 +2289,9 @@ class Plotter:
                 for _, row in grouped.iterrows():
                     key_map[str(row[group_col])] = {
                         'share': row['share'],
-                        'reliability': row['est_reliability']
+                        'reliability': row['est_reliability'],
+                        'upper_bound': row.get('upper_bound', None),
+                        'lower_bound': row.get('lower_bound', None)
                     }
                 summarized[opt_str] = key_map
 
@@ -2273,23 +2308,31 @@ class Plotter:
                 rels = []
                 group_vals = []
                 hue_vals = []
+                lowers = []
+                uppers = []
                 for x in axis_order:
                     for y in hue_order:
                         key = json.dumps([str(x), str(y)], separators=(',', ':'))
-                        val = key_map.get(key, {'share': 0, 'reliability': None})
+                        val = key_map.get(key, {'share': 0, 'reliability': None, 'lower_bound': None, 'upper_bound': None})
                         shares.append(val['share'])
                         rels.append(val['reliability'])
                         group_vals.append(str(x))
                         hue_vals.append(str(y))
-                return ColumnDataSource(data=dict(x=factors, share=shares, reliability=rels, **{group_col: group_vals, hue_col: hue_vals}))
+                        lowers.append(val.get('lower_bound', None))
+                        uppers.append(val.get('upper_bound', None))
+                return ColumnDataSource(data=dict(x=factors, share=shares, reliability=rels, lower=lowers, upper=uppers, **{group_col: group_vals, hue_col: hue_vals}))
             else:
                 shares = []
                 rels = []
+                lowers = []
+                uppers = []
                 for x in axis_order:
-                    val = key_map.get(str(x), {'share': 0, 'reliability': None})
+                    val = key_map.get(str(x), {'share': 0, 'reliability': None, 'lower_bound': None, 'upper_bound': None})
                     shares.append(val['share'])
                     rels.append(val['reliability'])
-                return ColumnDataSource(data=dict(x=axis_order, share=shares, reliability=rels))
+                    lowers.append(val.get('lower_bound', None))
+                    uppers.append(val.get('upper_bound', None))
+                return ColumnDataSource(data=dict(x=axis_order, share=shares, reliability=rels, lower=lowers, upper=uppers))
 
         initial = dropdown_options[0]
         source = make_source(initial)
@@ -2311,6 +2354,11 @@ class Plotter:
                 x='x', top='share', width=0.8, source=source, line_color="white",
                 fill_color=palette[0] if palette else "#4CB4E7"
             )
+        # Add whiskers (error bars) if available
+        from bokeh.models import Whisker
+        # Always add whisker, and ensure it updates with the source
+        whisker = Whisker(source=source, base='x', upper='upper', lower='lower', line_width=2, line_color='black', level='overlay')
+        p.add_layout(whisker)
         p.xaxis.major_label_orientation = 1
         p.xaxis.axis_label = x_label
         p.yaxis.axis_label = y_label if y_label else 'Share'
@@ -2363,44 +2411,32 @@ class Plotter:
                         }
                     }
                 }
-                // Debugging output
-                console.log('Dropdown selected:', selected);
-                console.log('summarized_js keys:', keys);
-                if (!key_map) {
-                    console.log('No key_map found for selected value!');
-                } else {
-                    console.log('key_map keys (first 5):', Object.keys(key_map).slice(0,5));
-                }
                 var x = [];
                 var share = [];
                 var reliability = [];
                 var group_vals = [];
                 var hue_vals = [];
+                var lower = [];
+                var upper = [];
                 for (var i = 0; i < axis_order.length; i++) {
                     for (var j = 0; j < hue_order.length; j++) {
                         var key = JSON.stringify([String(axis_order[i]), String(hue_order[j])]);
-                        if (key_map) {
-                            if (!(key in key_map)) {
-                                console.log('Key not found in key_map:', key);
-                                console.log('Available keys:', Object.keys(key_map));
-                            }
-                        }
-                        var val = key_map ? (key_map[key] || {share: 0, reliability: null}) : {share: 0, reliability: null};
+                        var val = key_map ? (key_map[key] || {share: 0, reliability: null, lower_bound: null, upper_bound: null}) : {share: 0, reliability: null, lower_bound: null, upper_bound: null};
                         x.push([axis_order[i], hue_order[j]]);
                         share.push(val.share);
                         reliability.push(val.reliability);
                         group_vals.push(String(axis_order[i]));
                         hue_vals.push(String(hue_order[j]));
+                        lower.push(val.lower_bound);
+                        upper.push(val.upper_bound);
                     }
                 }
-                // More debugging output
-                console.log('x (first 5):', x.slice(0,5));
-                console.log('share (first 5):', share.slice(0,5));
-                // Only assign the expected fields to avoid Bokeh confusion
                 source.data = {
                     x: x,
                     share: share,
                     reliability: reliability,
+                    lower: lower,
+                    upper: upper,
                 };
                 source.data[group_col] = group_vals;
                 source.data[hue_col] = hue_vals;
@@ -2431,17 +2467,23 @@ class Plotter:
                 var x = [];
                 var share = [];
                 var reliability = [];
+                var lower = [];
+                var upper = [];
                 for (var i = 0; i < axis_order.length; i++) {
                     var key = String(axis_order[i]);
-                    var val = key_map[key] || {share: 0, reliability: null};
+                    var val = key_map[key] || {share: 0, reliability: null, lower_bound: null, upper_bound: null};
                     x.push(axis_order[i]);
                     share.push(val.share);
                     reliability.push(val.reliability);
+                    lower.push(val.lower_bound);
+                    upper.push(val.upper_bound);
                 }
                 var data = source.data;
                 data['x'] = x;
                 data['share'] = share;
                 data['reliability'] = reliability;
+                data['lower'] = lower;
+                data['upper'] = upper;
                 source.change.emit();
             """
             summarized_js = {}
