@@ -235,6 +235,8 @@ mode_summary <- summarize_for_attr(
                      "survey_cycle,adult_yn", 
                      "survey_cycle,income_detailed_grouped,adult_yn",
                      "survey_cycle,race_eth,adult_yn",
+                    "survey_cycle,home_county_label,adult_yn",
+                     "survey_cycle,home_county_label_grouped,adult_yn",
                      "survey_cycle,commute_cat,adult_yn")
 )
 
@@ -243,8 +245,10 @@ mode5cat_summary <- summarize_for_attr(
   mode5cat_label,
   summary_levels = c("survey_cycle", "adult_yn", "commute_cat",
                      "survey_cycle,adult_yn", 
-                    "survey_cycle,income_detailed_grouped,adult_yn",
-                    "survey_cycle,race_eth,adult_yn",
+                     "survey_cycle,income_detailed_grouped,adult_yn",
+                     "survey_cycle,race_eth,adult_yn",
+                     "survey_cycle,home_county_label,adult_yn",
+                     "survey_cycle,home_county_label_grouped,adult_yn",
                      "survey_cycle,commute_cat,adult_yn")
 )
 
@@ -253,6 +257,8 @@ dpurp_summary <- summarize_for_attr(
   dpurp_label,
   summary_levels = c("survey_cycle", "adult_yn", "commute_cat",
                      "survey_cycle,adult_yn", 
+                     "survey_cycle,home_county_label,adult_yn",       
+                     "survey_cycle,home_county_label_grouped,adult_yn",                     
                      "survey_cycle,commute_cat,adult_yn")
 )
 
@@ -263,6 +269,8 @@ trip_dist_bin_summary <- summarize_for_attr(
                      "survey_cycle,adult_yn", 
                      "survey_cycle,income_detailed_grouped,adult_yn",
                      "survey_cycle,race_eth,adult_yn",
+                     "survey_cycle,home_county_label,adult_yn",
+                     "survey_cycle,home_county_label_grouped,adult_yn",
                      "survey_cycle,commute_cat,adult_yn")
 )
 
@@ -282,7 +290,9 @@ full_summary <- full_summary %>%
     adult_yn,       
     commute_cat,
     income_detailed_grouped,  
-    race_eth,    
+    race_eth,  
+    home_county_label,
+    home_county_label_grouped,
     summary_col,
     mode5cat_label,
     mode_label,
@@ -312,6 +322,8 @@ full_summary <- full_summary %>%
     commute_cat,
     income_detailed_grouped, 
     race_eth,
+    home_county_label,
+    home_county_label_grouped,
     summary_col,
     mode5cat_label,
     mode_label,
