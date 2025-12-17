@@ -189,8 +189,8 @@ LinkedTrips_2019_2023_df <- LinkedTrips_2019_2023_df %>%
     mode == 1 ~ "4. Walk",
     mode == 2 ~ "5. Bike",
     mode == 3 ~ "1. Drive Alone",
-    mode == 4 ~ "2. Carpool",
-    mode == 5 ~ "2. Carpool",
+    mode == 4 ~ "2. Drive with Others",
+    mode == 5 ~ "2. Drive with Others",
     mode == 6 ~ "3. Transit",
     mode == 7 ~ "3. Transit",
     TRUE ~ NA_character_
