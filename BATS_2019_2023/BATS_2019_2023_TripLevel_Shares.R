@@ -238,6 +238,7 @@ mode_summary <- summarize_for_attr(
 #                     "survey_cycle,home_county_label,adult_yn",
                      "survey_cycle,home_county_label_grouped,adult_yn",
                      "survey_cycle,home_county_label_grouped,income_detailed_grouped,adult_yn",
+                    "survey_cycle,home_county_label_grouped,race_eth,adult_yn",
                      "survey_cycle,commute_cat,adult_yn")
 )
 
@@ -251,6 +252,7 @@ mode5cat_summary <- summarize_for_attr(
 #                     "survey_cycle,home_county_label,adult_yn",
                      "survey_cycle,home_county_label_grouped,adult_yn",
                      "survey_cycle,home_county_label_grouped,income_detailed_grouped,adult_yn",
+                     "survey_cycle,home_county_label_grouped,race_eth,adult_yn",
                      "survey_cycle,commute_cat,adult_yn")
 )
 
@@ -261,7 +263,8 @@ dpurp_summary <- summarize_for_attr(
                      "survey_cycle,adult_yn", 
 #                     "survey_cycle,home_county_label,adult_yn",       
                      "survey_cycle,home_county_label_grouped,adult_yn",
-                     "survey_cycle,home_county_label_grouped,income_detailed_grouped,adult_yn",                     
+                     "survey_cycle,home_county_label_grouped,income_detailed_grouped,adult_yn",
+                     "survey_cycle,home_county_label_grouped,race_eth,adult_yn",                     
                      "survey_cycle,commute_cat,adult_yn")
 )
 
@@ -275,6 +278,7 @@ trip_dist_bin_summary <- summarize_for_attr(
 #                     "survey_cycle,home_county_label,adult_yn",
                      "survey_cycle,home_county_label_grouped,adult_yn",
                      "survey_cycle,home_county_label_grouped,income_detailed_grouped,adult_yn",
+                     "survey_cycle,home_county_label_grouped,race_eth,adult_yn",
                      "survey_cycle,commute_cat,adult_yn")
 )
 
