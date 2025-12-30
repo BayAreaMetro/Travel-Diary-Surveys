@@ -246,6 +246,24 @@ LinkedTrips_2019_2023_df <- LinkedTrips_2019_2023_df %>%
   ))
 
 
+#-----------------------------------------
+# Group the counties
+#-----------------------------------------
+LinkedTrips_2019_2023_df <- LinkedTrips_2019_2023_df %>%
+  mutate(home_county_label_grouped = case_when(
+    home_county_label == "Alameda County"       ~ "Alameda",
+    home_county_label == "Contra Costa County"  ~ "Contra Costa",
+    home_county_label == "Marin County"         ~ "Marin, Sonoma, Napa, Solano",
+    home_county_label == "Napa County"          ~ "Marin, Sonoma, Napa, Solano",
+    home_county_label == "San Francisco County" ~ "San Francisco",
+    home_county_label == "San Mateo County"     ~ "San Mateo",
+    home_county_label == "Santa Clara County"   ~ "Santa Clara",
+    home_county_label == "Solano County"        ~ "Marin, Sonoma, Napa, Solano",
+    home_county_label == "Sonoma County"        ~ "Marin, Sonoma, Napa, Solano",
+    TRUE ~ NA_character_  
+  ))
+
+
 # Collapse LinkedTrips_2019_2023_df so it becomes a person day file
 # Group by hhno, pno, day and indicate if the person commuted on that day
 

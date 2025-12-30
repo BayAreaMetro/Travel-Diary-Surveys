@@ -235,6 +235,10 @@ mode_summary <- summarize_for_attr(
                      "survey_cycle,adult_yn", 
                      "survey_cycle,income_detailed_grouped,adult_yn",
                      "survey_cycle,race_eth,adult_yn",
+#                     "survey_cycle,home_county_label,adult_yn",
+                     "survey_cycle,home_county_label_grouped,adult_yn",
+                     "survey_cycle,home_county_label_grouped,income_detailed_grouped,adult_yn",
+                    "survey_cycle,home_county_label_grouped,race_eth,adult_yn",
                      "survey_cycle,commute_cat,adult_yn")
 )
 
@@ -243,8 +247,12 @@ mode5cat_summary <- summarize_for_attr(
   mode5cat_label,
   summary_levels = c("survey_cycle", "adult_yn", "commute_cat",
                      "survey_cycle,adult_yn", 
-                    "survey_cycle,income_detailed_grouped,adult_yn",
-                    "survey_cycle,race_eth,adult_yn",
+                     "survey_cycle,income_detailed_grouped,adult_yn",
+                     "survey_cycle,race_eth,adult_yn",
+#                     "survey_cycle,home_county_label,adult_yn",
+                     "survey_cycle,home_county_label_grouped,adult_yn",
+                     "survey_cycle,home_county_label_grouped,income_detailed_grouped,adult_yn",
+                     "survey_cycle,home_county_label_grouped,race_eth,adult_yn",
                      "survey_cycle,commute_cat,adult_yn")
 )
 
@@ -253,6 +261,10 @@ dpurp_summary <- summarize_for_attr(
   dpurp_label,
   summary_levels = c("survey_cycle", "adult_yn", "commute_cat",
                      "survey_cycle,adult_yn", 
+#                     "survey_cycle,home_county_label,adult_yn",       
+                     "survey_cycle,home_county_label_grouped,adult_yn",
+                     "survey_cycle,home_county_label_grouped,income_detailed_grouped,adult_yn",
+                     "survey_cycle,home_county_label_grouped,race_eth,adult_yn",                     
                      "survey_cycle,commute_cat,adult_yn")
 )
 
@@ -263,8 +275,58 @@ trip_dist_bin_summary <- summarize_for_attr(
                      "survey_cycle,adult_yn", 
                      "survey_cycle,income_detailed_grouped,adult_yn",
                      "survey_cycle,race_eth,adult_yn",
+#                     "survey_cycle,home_county_label,adult_yn",
+                     "survey_cycle,home_county_label_grouped,adult_yn",
+                     "survey_cycle,home_county_label_grouped,income_detailed_grouped,adult_yn",
+                     "survey_cycle,home_county_label_grouped,race_eth,adult_yn",
                      "survey_cycle,commute_cat,adult_yn")
 )
+
+
+# Function to replace NA values with descriptive labels
+replace_na_with_labels <- function(df) {
+  result <- df
+  
+  if ("home_county_label" %in% names(result)) {
+    result <- result %>%
+      mutate(home_county_label = if_else(is.na(home_county_label), "Bay Area", home_county_label))
+  }
+  
+  if ("home_county_label_grouped" %in% names(result)) {
+    result <- result %>%
+      mutate(home_county_label_grouped = if_else(is.na(home_county_label_grouped), "Bay Area", home_county_label_grouped))
+  }
+  
+  if ("income_detailed_grouped" %in% names(result)) {
+    result <- result %>%
+      mutate(income_detailed_grouped = if_else(is.na(income_detailed_grouped), "All Income Levels", income_detailed_grouped))
+  }
+  
+  if ("race_eth" %in% names(result)) {
+    result <- result %>%
+      mutate(race_eth = if_else(is.na(race_eth), "All Race/Ethnicity Groups", race_eth))
+  }
+  
+  if ("adult_yn" %in% names(result)) {
+    result <- result %>%
+      mutate(adult_yn = if_else(is.na(adult_yn), "All Ages", adult_yn))
+  }
+  
+  if ("commute_cat" %in% names(result)) {
+    result <- result %>%
+      mutate(commute_cat = if_else(is.na(commute_cat), "All Commute Categories", commute_cat))
+  }
+  
+  return(result)
+}
+
+# Apply to all summary tables
+mode_summary <- replace_na_with_labels(mode_summary)
+mode5cat_summary <- replace_na_with_labels(mode5cat_summary)
+dpurp_summary <- replace_na_with_labels(dpurp_summary)
+trip_dist_bin_summary <- replace_na_with_labels(trip_dist_bin_summary)
+
+
 
 # Combine summaries
 full_summary <- bind_rows(mode5cat_summary, mode_summary, dpurp_summary, trip_dist_bin_summary)
@@ -282,7 +344,9 @@ full_summary <- full_summary %>%
     adult_yn,       
     commute_cat,
     income_detailed_grouped,  
-    race_eth,    
+    race_eth,  
+    #home_county_label,
+    home_county_label_grouped,
     summary_col,
     mode5cat_label,
     mode_label,
@@ -312,6 +376,8 @@ full_summary <- full_summary %>%
     commute_cat,
     income_detailed_grouped, 
     race_eth,
+    #home_county_label,
+    home_county_label_grouped,
     summary_col,
     mode5cat_label,
     mode_label,
