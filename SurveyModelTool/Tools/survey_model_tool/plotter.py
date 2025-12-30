@@ -1457,7 +1457,8 @@ class Plotter:
         y_label='Density',
         ax=None,
         palette=None,
-        grid_points=200
+        grid_points=200,
+        x_tick_labels=None  # New parameter for x-tick labels
     ):
         """
         Plot a weighted distribution (normalized to integrate to 1) for a continuous variable.
@@ -1538,10 +1539,22 @@ class Plotter:
         x_min = np.nanmin(sub[value_col].values)
         x_max = np.nanmax(sub[value_col].values)
         if np.isfinite(x_min) and np.isfinite(x_max) and x_min != x_max:
-            xs = np.linspace(x_min, x_max, grid_points)
+            # Use bins to determine the number of x-axis tick locations
+            xs = np.linspace(x_min, x_max, bins + 1)  # bins + 1 to include edges
         else:
             # Degenerate case: single unique value
-            xs = np.linspace(x_min - 1, x_max + 1, grid_points)
+            xs = np.linspace(x_min - 1, x_max + 1, bins + 1)
+
+        # Add option to set x-tick labels
+        if x_tick_labels is not None:
+            if len(x_tick_labels) != len(xs):
+                raise ValueError(
+                    f"The number of x_tick_labels ({len(x_tick_labels)}) must match the number of bins ({len(xs)})."
+                )
+            ax.set_xticks(xs)
+            ax.set_xticklabels(x_tick_labels, rotation=45, ha='right')
+        else:
+            ax.set_xticks(xs)
 
         # Helper to compute weighted histogram density line
         def weighted_hist_density(x, w):
@@ -1607,6 +1620,11 @@ class Plotter:
         if labels:
             ax.legend()
         ax.grid(True, alpha=0.2)
+
+        # Add option to set x-tick labels
+        # if x_tick_labels is not None:
+        #     ax.set_xticks(xs)
+        #     ax.set_xticklabels(x_tick_labels, rotation=45, ha='right')
 
         # Attach Bokeh spec for interactive conversion
         try:
