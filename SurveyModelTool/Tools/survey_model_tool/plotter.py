@@ -2101,11 +2101,13 @@ class Plotter:
         if y_col is None:
             y_col = 'value'
 
-        # Build ColumnDataSource, always include reliability column, but only show in tooltip if present
+        # Build ColumnDataSource, always include reliability column, and include lower/upper bounds if present
         data_dict = {
             group_col: [str(g) for g in axis_order],
             y_col: [],
-            'reliability': []
+            'reliability': [],
+            'lower': [],
+            'upper': []
         }
         has_reliability = False
         for g in axis_order:
@@ -2113,13 +2115,20 @@ class Plotter:
             if match:
                 yval = match.get(y_col, 0)
                 relval = match.get('reliability')
+                # accept either 'lower'/'upper' or 'lower_bound'/'upper_bound' keys
+                lower = match.get('lower') if 'lower' in match else match.get('lower_bound') if 'lower_bound' in match else None
+                upper = match.get('upper') if 'upper' in match else match.get('upper_bound') if 'upper_bound' in match else None
                 data_dict[y_col].append(yval)
                 data_dict['reliability'].append(relval)
+                data_dict['lower'].append(lower)
+                data_dict['upper'].append(upper)
                 if relval is not None:
                     has_reliability = True
             else:
                 data_dict[y_col].append(0)
                 data_dict['reliability'].append(None)
+                data_dict['lower'].append(None)
+                data_dict['upper'].append(None)
 
         source = ColumnDataSource(data=data_dict)
 
@@ -2152,6 +2161,15 @@ class Plotter:
             fill_color='fill_color',
             line_color="black"
         )
+
+        # Add whiskers (error bars) if lower/upper bounds are present in the spec
+        try:
+            from bokeh.models import Whisker
+            if any(v is not None for v in data_dict.get('lower', [])) and any(v is not None for v in data_dict.get('upper', [])):
+                whisker = Whisker(source=source, base=group_col, upper='upper', lower='lower', line_width=2, line_color='black', level='overlay')
+                p.add_layout(whisker)
+        except Exception:
+            pass
 
         # Add hover tool, only show reliability if present, and format share as percent if y_col is 'share'
         x_axis_label = spec.get('x_label', group_col)
