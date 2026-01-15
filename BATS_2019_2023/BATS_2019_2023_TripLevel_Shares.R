@@ -238,7 +238,10 @@ mode_summary <- summarize_for_attr(
 #                     "survey_cycle,home_county_label,adult_yn",
                      "survey_cycle,home_county_label_grouped,adult_yn",
                      "survey_cycle,home_county_label_grouped,income_detailed_grouped,adult_yn",
-                    "survey_cycle,home_county_label_grouped,race_eth,adult_yn",
+                     "survey_cycle,home_county_label_grouped,race_eth,adult_yn",
+                     "survey_cycle,home_county_label_grouped2,adult_yn",
+                     "survey_cycle,home_county_label_grouped2,income_detailed_grouped,adult_yn",
+                     "survey_cycle,home_county_label_grouped2,race_eth,adult_yn",
                      "survey_cycle,commute_cat,adult_yn")
 )
 
@@ -253,6 +256,9 @@ mode5cat_summary <- summarize_for_attr(
                      "survey_cycle,home_county_label_grouped,adult_yn",
                      "survey_cycle,home_county_label_grouped,income_detailed_grouped,adult_yn",
                      "survey_cycle,home_county_label_grouped,race_eth,adult_yn",
+                     "survey_cycle,home_county_label_grouped2,adult_yn",
+                     "survey_cycle,home_county_label_grouped2,income_detailed_grouped,adult_yn",
+                     "survey_cycle,home_county_label_grouped2,race_eth,adult_yn",
                      "survey_cycle,commute_cat,adult_yn")
 )
 
@@ -264,7 +270,10 @@ dpurp_summary <- summarize_for_attr(
 #                     "survey_cycle,home_county_label,adult_yn",       
                      "survey_cycle,home_county_label_grouped,adult_yn",
                      "survey_cycle,home_county_label_grouped,income_detailed_grouped,adult_yn",
-                     "survey_cycle,home_county_label_grouped,race_eth,adult_yn",                     
+                     "survey_cycle,home_county_label_grouped,race_eth,adult_yn",
+                     "survey_cycle,home_county_label_grouped2,adult_yn",
+                     "survey_cycle,home_county_label_grouped2,income_detailed_grouped,adult_yn",
+                     "survey_cycle,home_county_label_grouped2,race_eth,adult_yn",                     
                      "survey_cycle,commute_cat,adult_yn")
 )
 
@@ -279,6 +288,9 @@ trip_dist_bin_summary <- summarize_for_attr(
                      "survey_cycle,home_county_label_grouped,adult_yn",
                      "survey_cycle,home_county_label_grouped,income_detailed_grouped,adult_yn",
                      "survey_cycle,home_county_label_grouped,race_eth,adult_yn",
+                     "survey_cycle,home_county_label_grouped2,adult_yn",
+                     "survey_cycle,home_county_label_grouped2,income_detailed_grouped,adult_yn",
+                     "survey_cycle,home_county_label_grouped2,race_eth,adult_yn",
                      "survey_cycle,commute_cat,adult_yn")
 )
 
@@ -287,16 +299,46 @@ trip_dist_bin_summary <- summarize_for_attr(
 replace_na_with_labels <- function(df) {
   result <- df
   
-  if ("home_county_label" %in% names(result)) {
-    result <- result %>%
-      mutate(home_county_label = if_else(is.na(home_county_label), "Bay Area", home_county_label))
-  }
+  # Only replace county labels with "Bay Area" if ALL three county columns are NA
+  has_county_label <- "home_county_label" %in% names(result)
+  has_county_grouped <- "home_county_label_grouped" %in% names(result)
+  has_county_grouped2 <- "home_county_label_grouped2" %in% names(result)
   
-  if ("home_county_label_grouped" %in% names(result)) {
+  if (has_county_label | has_county_grouped | has_county_grouped2) {
+    # Build the condition by checking each column that exists
     result <- result %>%
-      mutate(home_county_label_grouped = if_else(is.na(home_county_label_grouped), "Bay Area", home_county_label_grouped))
+      mutate(all_county_na = TRUE)  # Start with TRUE
+    
+    if (has_county_label) {
+      result <- result %>%
+        mutate(all_county_na = all_county_na & is.na(home_county_label))
+    }
+    if (has_county_grouped) {
+      result <- result %>%
+        mutate(all_county_na = all_county_na & is.na(home_county_label_grouped))
+    }
+    if (has_county_grouped2) {
+      result <- result %>%
+        mutate(all_county_na = all_county_na & is.na(home_county_label_grouped2))
+    }
+    
+    # Replace with "Bay Area" only if all are NA
+    if (has_county_label) {
+      result <- result %>%
+        mutate(home_county_label = if_else(all_county_na, "Bay Area", home_county_label))
+    }
+    if (has_county_grouped) {
+      result <- result %>%
+        mutate(home_county_label_grouped = if_else(all_county_na, "Bay Area", home_county_label_grouped))
+    }
+    if (has_county_grouped2) {
+      result <- result %>%
+        mutate(home_county_label_grouped2 = if_else(all_county_na, "Bay Area", home_county_label_grouped2))
+    }
+    
+    result <- result %>% select(-all_county_na)
   }
-  
+
   if ("income_detailed_grouped" %in% names(result)) {
     result <- result %>%
       mutate(income_detailed_grouped = if_else(is.na(income_detailed_grouped), "All Income Levels", income_detailed_grouped))
@@ -347,6 +389,7 @@ full_summary <- full_summary %>%
     race_eth,  
     #home_county_label,
     home_county_label_grouped,
+    home_county_label_grouped2,
     summary_col,
     mode5cat_label,
     mode_label,
@@ -378,6 +421,7 @@ full_summary <- full_summary %>%
     race_eth,
     #home_county_label,
     home_county_label_grouped,
+    home_county_label_grouped2, 
     summary_col,
     mode5cat_label,
     mode_label,

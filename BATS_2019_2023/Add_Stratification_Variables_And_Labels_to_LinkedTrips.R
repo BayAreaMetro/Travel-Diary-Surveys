@@ -317,7 +317,19 @@ LinkedTrips_2019_2023_df <- LinkedTrips_2019_2023_df %>%
     TRUE ~ NA_character_  
   ))
 
-
+LinkedTrips_2019_2023_df <- LinkedTrips_2019_2023_df %>%
+  mutate(home_county_label_grouped2 = case_when(
+    home_county_label == "Alameda County"       ~ "Alameda",
+    home_county_label == "Contra Costa County"  ~ "Contra Costa",
+    home_county_label == "Marin County"         ~ "Marin & Sonoma",
+    home_county_label == "Napa County"          ~ "Napa & Solano",
+    home_county_label == "San Francisco County" ~ "San Francisco",
+    home_county_label == "San Mateo County"     ~ "San Mateo",
+    home_county_label == "Santa Clara County"   ~ "Santa Clara",
+    home_county_label == "Solano County"        ~ "Napa & Solano",
+    home_county_label == "Sonoma County"        ~ "Marin & Sonoma",
+    TRUE ~ NA_character_  
+  ))
 
 # Bin the trips by distance
 LinkedTrips_2019_2023_df <- LinkedTrips_2019_2023_df %>%
