@@ -281,6 +281,29 @@ summary_by_county <- standardize_results(results_by_county, "By County") %>%
   add_reliability_flags() %>%
   create_chart_labels(group_vars = "home_county_label")
 
+# 3a. By county grouped
+print("Calculating metrics by county, with 4 north bay counties grouped")
+results_by_county1 <- calculate_trip_metrics(
+  srv_design,
+  group_vars = "home_county_label_grouped",
+  summary_level_name = "By County, with 4 north bay counties grouped"
+)
+summary_by_county1 <- standardize_results(results_by_county1, "By County, with 4 north bay counties grouped") %>%
+  add_reliability_flags() %>%
+  create_chart_labels(group_vars = "home_county_label_grouped")
+
+# 3b. By county grouped2
+print("Calculating metrics by county, with Marin & Sonoma, and Napa & Solano grouped")
+results_by_county2 <- calculate_trip_metrics(
+  srv_design,
+  group_vars = "home_county_label_grouped2",
+  summary_level_name = "By County, with Marin & Sonoma, and Napa & Solano grouped"
+)
+summary_by_county2 <- standardize_results(results_by_county2, "By County, with Marin & Sonoma, and Napa & Solano grouped") %>%
+  add_reliability_flags() %>%
+  create_chart_labels(group_vars = "home_county_label_grouped2")
+
+
 # 4. By commute category and county
 print("Calculating metrics by commute category and county...")
 results_commute_county <- calculate_trip_metrics(
@@ -358,6 +381,50 @@ summary_raceEth_county <- standardize_results(results_raceEth_county, "By Race/E
   add_reliability_flags() %>%
   create_chart_labels(group_vars = c("race_eth", "home_county_label"))
 
+# 10a. By income and county grouped
+print("Calculating metrics by income and county...")
+results_income4cat_county1 <- calculate_trip_metrics(
+  srv_design,
+  group_vars = c("income_detailed_grouped", "home_county_label_grouped"),
+  summary_level_name = "By Income and County, with 4 north bay counties grouped"
+)
+summary_income4cat_county1 <- standardize_results(results_income4cat_county1, "By Income and County") %>%
+  add_reliability_flags() %>%
+  create_chart_labels(group_vars = c("income_detailed_grouped", "home_county_label_grouped"))
+
+# 11a. By race/ethnicity and county grouped
+print("Calculating metrics by race/ethnicity and county...")
+results_raceEth_county1 <- calculate_trip_metrics(
+  srv_design,
+  group_vars = c("race_eth", "home_county_label_grouped"),
+  summary_level_name = "By Race/Ethnicity and County, with 4 north bay counties grouped"
+)
+summary_raceEth_county1 <- standardize_results(results_raceEth_county1, "By Race/Ethnicity and County") %>%
+  add_reliability_flags() %>%
+  create_chart_labels(group_vars = c("race_eth", "home_county_label_grouped"))
+
+# 10b. By income and county grouped2
+print("Calculating metrics by income and county...")
+results_income4cat_county2 <- calculate_trip_metrics(
+  srv_design,
+  group_vars = c("income_detailed_grouped", "home_county_label_grouped2"),
+  summary_level_name = "By Income and County, with Marin & Sonoma, and Napa & Solano grouped"
+)
+summary_income4cat_county2 <- standardize_results(results_income4cat_county2, "By Income and County") %>%
+  add_reliability_flags() %>%
+  create_chart_labels(group_vars = c("income_detailed_grouped", "home_county_label_grouped2"))
+
+# 11b. By race/ethnicity and county grouped2
+print("Calculating metrics by race/ethnicity and county...")
+results_raceEth_county2 <- calculate_trip_metrics(
+  srv_design,
+  group_vars = c("race_eth", "home_county_label_grouped2"),
+  summary_level_name = "By Race/Ethnicity and County, with Marin & Sonoma, and Napa & Solano grouped"
+)
+summary_raceEth_county2 <- standardize_results(results_raceEth_county2, "By Race/Ethnicity and County") %>%
+  add_reliability_flags() %>%
+  create_chart_labels(group_vars = c("race_eth", "home_county_label_grouped2"))
+
 
 # ADD NEW ANALYSES HERE
 
@@ -381,15 +448,27 @@ comprehensive_summary <- bind_rows(
   summary_all_adults,
   summary_by_commute,
   summary_by_county,
+  summary_by_county1,
+  summary_by_county2,
   summary_commute_county,
   summary_by_employment,
   summary_by_race_eth,
   summary_by_income_detailed,
   summary_by_income4cat,
   summary_income4cat_county,
-  summary_raceEth_county
+  summary_raceEth_county,
+  summary_income4cat_county1,
+  summary_raceEth_county1,
+  summary_income4cat_county2,
+  summary_raceEth_county2
   # summary_by_age
 )
+
+# Add formatted unweighted count string
+comprehensive_summary <- comprehensive_summary %>%
+  mutate(
+    total_unweighted_str = paste0("N=", prettyNum(unweighted_count, big.mark = ",", scientific = FALSE))
+  )
 
 # Reorder columns for clarity
 comprehensive_summary <- comprehensive_summary %>%
@@ -398,7 +477,8 @@ comprehensive_summary <- comprehensive_summary %>%
     summary_level,
     survey_cycle,
     # Include all possible grouping variables (will be NA if not used)
-    any_of(c("commute_cat", "home_county_label", "income_cat", "employment", "age_group")),
+    any_of(c("commute_cat", "home_county_label", "home_county_label_grouped", "home_county_label_grouped2", 
+             "income_cat", "income_detailed_grouped", "race_eth", "employment", "employment_label", "age_group")),
     chart_label,
     mean,
     se,
@@ -408,6 +488,7 @@ comprehensive_summary <- comprehensive_summary %>%
     coeff_of_var,
     estimate_reliability,
     unweighted_count,
+    total_unweighted_str,
     weighted_count
   ) %>%
   arrange(summary_col, summary_level, survey_cycle)

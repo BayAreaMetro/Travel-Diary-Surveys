@@ -191,6 +191,37 @@ hh_2019_2023_df <- bind_rows(hh2019_df, hh2023_df)
 person_2019_2023_df <- bind_rows(person2019_df, person2023_df)
 day_2019_2023_df <- bind_rows(day2019_df, day2023_df)
 
+#-----------------------------------------
+# Group the counties
+#-----------------------------------------
+hh_2019_2023_df <- hh_2019_2023_df %>%
+  mutate(home_county_label_grouped = case_when(
+    home_county_label == "Alameda County"       ~ "Alameda",
+    home_county_label == "Contra Costa County"  ~ "Contra Costa",
+    home_county_label == "Marin County"         ~ "Marin, Sonoma, Napa, Solano",
+    home_county_label == "Napa County"          ~ "Marin, Sonoma, Napa, Solano",
+    home_county_label == "San Francisco County" ~ "San Francisco",
+    home_county_label == "San Mateo County"     ~ "San Mateo",
+    home_county_label == "Santa Clara County"   ~ "Santa Clara",
+    home_county_label == "Solano County"        ~ "Marin, Sonoma, Napa, Solano",
+    home_county_label == "Sonoma County"        ~ "Marin, Sonoma, Napa, Solano",
+    TRUE ~ NA_character_  
+  ))
+
+hh_2019_2023_df <- hh_2019_2023_df %>%
+  mutate(home_county_label_grouped2 = case_when(
+    home_county_label == "Alameda County"       ~ "Alameda",
+    home_county_label == "Contra Costa County"  ~ "Contra Costa",
+    home_county_label == "Marin County"         ~ "Marin & Sonoma",
+    home_county_label == "Napa County"          ~ "Napa & Solano",
+    home_county_label == "San Francisco County" ~ "San Francisco",
+    home_county_label == "San Mateo County"     ~ "San Mateo",
+    home_county_label == "Santa Clara County"   ~ "Santa Clara",
+    home_county_label == "Solano County"        ~ "Napa & Solano",
+    home_county_label == "Sonoma County"        ~ "Marin & Sonoma",
+    TRUE ~ NA_character_  
+  ))
+
 # Join to ProcessedPersonDays_2019_2023_df
 ProcessedPersonDays_2019_2023_df <- ProcessedPersonDays_2019_2023_df %>%
   left_join(hh_2019_2023_df, by = c("hhno", "survey_cycle"))
@@ -243,24 +274,6 @@ LinkedTrips_2019_2023_df <- LinkedTrips_2019_2023_df %>%
     opurp == 11 ~ "OTHER",
     opurp == -1 ~ "MISSING",
     TRUE ~ NA_character_
-  ))
-
-
-#-----------------------------------------
-# Group the counties
-#-----------------------------------------
-LinkedTrips_2019_2023_df <- LinkedTrips_2019_2023_df %>%
-  mutate(home_county_label_grouped = case_when(
-    home_county_label == "Alameda County"       ~ "Alameda",
-    home_county_label == "Contra Costa County"  ~ "Contra Costa",
-    home_county_label == "Marin County"         ~ "Marin, Sonoma, Napa, Solano",
-    home_county_label == "Napa County"          ~ "Marin, Sonoma, Napa, Solano",
-    home_county_label == "San Francisco County" ~ "San Francisco",
-    home_county_label == "San Mateo County"     ~ "San Mateo",
-    home_county_label == "Santa Clara County"   ~ "Santa Clara",
-    home_county_label == "Solano County"        ~ "Marin, Sonoma, Napa, Solano",
-    home_county_label == "Sonoma County"        ~ "Marin, Sonoma, Napa, Solano",
-    TRUE ~ NA_character_  
   ))
 
 
