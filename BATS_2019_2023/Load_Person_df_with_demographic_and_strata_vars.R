@@ -418,26 +418,50 @@ person_2019_2023_df <- person_2019_2023_df %>%
     # 2023
     survey_cycle == 2023 & home_county == "06001" ~ "Alameda",
     survey_cycle == 2023 & home_county == "06013" ~ "Contra Costa",
-    survey_cycle == 2023 & home_county == "06041" ~ "Marin, Napa, Sonoma, Solano",
-    survey_cycle == 2023 & home_county == "06055" ~ "Marin, Napa, Sonoma, Solano",
+    survey_cycle == 2023 & home_county == "06041" ~ "Marin, Sonoma, Napa, Solano",
+    survey_cycle == 2023 & home_county == "06055" ~ "Marin, Sonoma, Napa, Solano",
     survey_cycle == 2023 & home_county == "06075" ~ "San Francisco",
     survey_cycle == 2023 & home_county == "06081" ~ "San Mateo",
     survey_cycle == 2023 & home_county == "06085" ~ "Santa Clara",
-    survey_cycle == 2023 & home_county == "06095" ~ "Marin, Napa, Sonoma, Solano",
-    survey_cycle == 2023 & home_county == "06097" ~ "Marin, Napa, Sonoma, Solano",
+    survey_cycle == 2023 & home_county == "06095" ~ "Marin, Sonoma, Napa, Solano",
+    survey_cycle == 2023 & home_county == "06097" ~ "Marin, Sonoma, Napa, Solano",
     # 2019
     survey_cycle == 2019 & home_county_fips == "1" ~ "Alameda",
     survey_cycle == 2019 & home_county_fips == "13" ~ "Contra Costa",
-    survey_cycle == 2019 & home_county_fips == "41" ~ "Marin, Napa, Sonoma, Solano",
-    survey_cycle == 2019 & home_county_fips == "55" ~ "Marin, Napa, Sonoma, Solano",
+    survey_cycle == 2019 & home_county_fips == "41" ~ "Marin, Sonoma, Napa, Solano",
+    survey_cycle == 2019 & home_county_fips == "55" ~ "Marin, Sonoma, Napa, Solano",
     survey_cycle == 2019 & home_county_fips == "75" ~ "San Francisco",
     survey_cycle == 2019 & home_county_fips == "81" ~ "San Mateo",
     survey_cycle == 2019 & home_county_fips == "85" ~ "Santa Clara",
-    survey_cycle == 2019 & home_county_fips == "95" ~ "Marin, Napa, Sonoma, Solano",
-    survey_cycle == 2019 & home_county_fips == "97" ~ "Marin, Napa, Sonoma, Solano",
+    survey_cycle == 2019 & home_county_fips == "95" ~ "Marin, Sonoma, Napa, Solano",
+    survey_cycle == 2019 & home_county_fips == "97" ~ "Marin, Sonoma, Napa, Solano",
     TRUE ~ NA_character_  
   ))
 
+person_2019_2023_df <- person_2019_2023_df %>%
+  mutate(home_county_grouped_label2 = case_when(
+    # 2023
+    survey_cycle == 2023 & home_county == "06001" ~ "Alameda",
+    survey_cycle == 2023 & home_county == "06013" ~ "Contra Costa",
+    survey_cycle == 2023 & home_county == "06041" ~ "Marin & Sonoma",
+    survey_cycle == 2023 & home_county == "06055" ~ "Napa & Solano",
+    survey_cycle == 2023 & home_county == "06075" ~ "San Francisco",
+    survey_cycle == 2023 & home_county == "06081" ~ "San Mateo",
+    survey_cycle == 2023 & home_county == "06085" ~ "Santa Clara",
+    survey_cycle == 2023 & home_county == "06095" ~ "Napa & Solano",
+    survey_cycle == 2023 & home_county == "06097" ~ "Marin & Sonoma",
+    # 2019
+    survey_cycle == 2019 & home_county_fips == "1" ~ "Alameda",
+    survey_cycle == 2019 & home_county_fips == "13" ~ "Contra Costa",
+    survey_cycle == 2019 & home_county_fips == "41" ~ "Marin & Sonoma",
+    survey_cycle == 2019 & home_county_fips == "55" ~ "Napa & Solano",
+    survey_cycle == 2019 & home_county_fips == "75" ~ "San Francisco",
+    survey_cycle == 2019 & home_county_fips == "81" ~ "San Mateo",
+    survey_cycle == 2019 & home_county_fips == "85" ~ "Santa Clara",
+    survey_cycle == 2019 & home_county_fips == "95" ~ "Napa & Solano",
+    survey_cycle == 2019 & home_county_fips == "97" ~ "Marin & Sonoma",
+    TRUE ~ NA_character_  
+  ))
 
 # Label job_type
 person_2019_2023_df <- person_2019_2023_df %>%

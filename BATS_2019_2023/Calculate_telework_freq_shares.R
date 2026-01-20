@@ -124,6 +124,22 @@ calculate_telework_by_segment <- function(srv_design, segment_vars, segment_labe
     )  %>%
     mutate(segment_type = segment_label) 
 
+  results_detailed <- results_detailed %>%
+  mutate(
+    cv_flag = proportion_cv > 0.30,
+    sample_size_flag = n_unweighted < 30,
+    ci_width_flag = (proportion_upp - proportion_low) > 0.40,
+    extreme_values_flag = proportion_low < 0 | proportion_upp > 1,
+    suppress = cv_flag | sample_size_flag | ci_width_flag | extreme_values_flag,
+    estimate_reliability = case_when(
+      cv_flag ~ "Poor (High CV >30%)",
+      sample_size_flag ~ "Poor (Small sample n<30)",
+      ci_width_flag ~ "Poor (Wide CI >40pp)",
+      extreme_values_flag ~ "Poor (Invalid range)",
+      TRUE ~ "Acceptable"
+    )
+  )
+
   # Table 2: 3-category telework frequency by segment(s)
   results_3cat <- srv_design %>%
     group_by(survey_cycle, !!!segment_vars, telework_freq_jobtype3_temp) %>%
@@ -134,6 +150,21 @@ calculate_telework_by_segment <- function(srv_design, segment_vars, segment_labe
     )  %>%
     mutate(segment_type = segment_label) 
 
+  results_3cat <- results_3cat %>%
+  mutate(
+    cv_flag = proportion_cv > 0.30,
+    sample_size_flag = n_unweighted < 30,
+    ci_width_flag = (proportion_upp - proportion_low) > 0.40,
+    extreme_values_flag = proportion_low < 0 | proportion_upp > 1,
+    suppress = cv_flag | sample_size_flag | ci_width_flag | extreme_values_flag,
+    estimate_reliability = case_when(
+      cv_flag ~ "Poor (High CV >30%)",
+      sample_size_flag ~ "Poor (Small sample n<30)",
+      ci_width_flag ~ "Poor (Wide CI >40pp)",
+      extreme_values_flag ~ "Poor (Invalid range)",
+      TRUE ~ "Acceptable"
+    )
+  )
   # Table 3: WFH 2+ days share by segment(s)
   results_wfh2plus <- srv_design %>%
     group_by(survey_cycle, !!!segment_vars) %>%
@@ -147,6 +178,21 @@ calculate_telework_by_segment <- function(srv_design, segment_vars, segment_labe
     )  %>%
     mutate(segment_type = segment_label) 
   
+  results_wfh2plus <- results_wfh2plus %>%
+  mutate(
+    cv_flag = WFH2OrMoreDays_share_cv > 0.30,
+    sample_size_flag = n_total_unweighted < 30,
+    ci_width_flag = (WFH2OrMoreDays_share_upp - WFH2OrMoreDays_share_low) > 0.40,
+    extreme_values_flag = WFH2OrMoreDays_share_low < 0 | WFH2OrMoreDays_share_upp > 1,
+    suppress = cv_flag | sample_size_flag | ci_width_flag | extreme_values_flag,
+    estimate_reliability = case_when(
+      cv_flag ~ "Poor (High CV >30%)",
+      sample_size_flag ~ "Poor (Small sample n<30)",
+      ci_width_flag ~ "Poor (Wide CI >40pp)",
+      extreme_values_flag ~ "Poor (Invalid range)",
+      TRUE ~ "Acceptable"
+    )
+  )
   # Print results
   print(glue("\n=== Telework Frequency Shares (Detailed) by {segment_label} ==="))
   print(results_detailed, n = Inf)
@@ -261,33 +307,53 @@ county_employment_results <- calculate_telework_by_segment(
   "home_county_grouped_label x employment_label"
 )
 
+# By County (grouped label 2)
+county2_results <- calculate_telework_by_segment(srv_design, rlang::quos(home_county_grouped_label2), "home_county_grouped_label2")
+
+# By County x Income (grouped label 2)
+county2_income_results <- calculate_telework_by_segment(
+  srv_design, 
+  rlang::quos(home_county_grouped_label2, income_detailed_grouped), 
+  "home_county_grouped_label2 x income_detailed_grouped"
+)
+
+# By County x Education (grouped label 2)
+county2_education_results <- calculate_telework_by_segment(
+  srv_design,
+  rlang::quos(home_county_grouped_label2, education_grouped_label),
+  "home_county_grouped_label2 x education_grouped_label"
+)
+
+# By County x Employment (grouped label 2)
+county2_employment_results <- calculate_telework_by_segment(
+  srv_design,
+  rlang::quos(home_county_grouped_label2, employment_label),
+  "home_county_grouped_label2 x employment_label"
+)
+
 # -------------------------
 # CONSOLIDATE AND SAVE RESULTS
 # -------------------------
 
 # Helper function to rename segment column to "segment_value"
 rename_segment_col <- function(df) {
-  standard_cols <- c("survey_cycle", "telework_jobtype3_label", "telework_freq_jobtype3_temp",
-                     "n_unweighted", "n_weighted", "proportion", "proportion_se", 
-                     "proportion_low", "proportion_upp", "proportion_cv",
-                     "n_total_unweighted", "total_weighted", "n_WFH2OrMoreDays_unweighted",
-                     "WFH2OrMoreDays_weighted", "WFH2OrMoreDays_share", "WFH2OrMoreDays_share_se",
-                     "WFH2OrMoreDays_share_low", "WFH2OrMoreDays_share_upp", "WFH2OrMoreDays_share_cv",
-                     "segment_type", "segment_value")
+  # List of known segment variable names
+  segment_var_names <- c("employment_label", "gender_label", "income_detailed_grouped", 
+                         "home_county_grouped_label", "home_county_grouped_label2", 
+                         "education_grouped_label", "industry_label", "occupation_label")
   
   cols <- names(df)
-  segment_cols <- setdiff(cols, standard_cols)
+  segment_cols <- intersect(cols, segment_var_names)
   
-  # If multiple segment columns, combine them into one
+  # Keep segment columns as-is, but also create segment_value for backward compatibility
   if (length(segment_cols) > 0) {
     df <- df %>% 
-      unite("segment_value", all_of(segment_cols), sep = " | ", remove = TRUE)
+      unite("segment_value", all_of(segment_cols), sep = " | ", remove = FALSE)
   }
   
   return(df)
 }
 
-# Consolidate all detailed results
 # Consolidate all detailed results
 consolidated_detailed <- bind_rows(
   srv_results_telework_freq1,
@@ -295,13 +361,17 @@ consolidated_detailed <- bind_rows(
   rename_segment_col(gender_results$detailed),
   rename_segment_col(income_results$detailed),
   rename_segment_col(county_results$detailed),
+  rename_segment_col(county2_results$detailed),
   rename_segment_col(education_results$detailed),
   rename_segment_col(industry_results$detailed),
   rename_segment_col(occupation_results$detailed),
   # Add multi-dimensional results
   rename_segment_col(county_income_results$detailed),
   rename_segment_col(county_education_results$detailed),
-  rename_segment_col(county_employment_results$detailed)
+  rename_segment_col(county_employment_results$detailed),
+  rename_segment_col(county2_income_results$detailed),
+  rename_segment_col(county2_education_results$detailed),
+  rename_segment_col(county2_employment_results$detailed)
 )
 
 # Consolidate all 3-cat results
@@ -311,13 +381,17 @@ consolidated_3cat <- bind_rows(
   rename_segment_col(gender_results$three_cat),
   rename_segment_col(income_results$three_cat),
   rename_segment_col(county_results$three_cat),
+  rename_segment_col(county2_results$three_cat),
   rename_segment_col(education_results$three_cat),
   rename_segment_col(industry_results$three_cat),
   rename_segment_col(occupation_results$three_cat),
   # Add multi-dimensional results
   rename_segment_col(county_income_results$three_cat),
   rename_segment_col(county_education_results$three_cat),
-  rename_segment_col(county_employment_results$three_cat)
+  rename_segment_col(county_employment_results$three_cat),
+  rename_segment_col(county2_income_results$three_cat),
+  rename_segment_col(county2_education_results$three_cat),
+  rename_segment_col(county2_employment_results$three_cat)
 )
 
 # Consolidate all WFH 2+ days results
@@ -327,13 +401,17 @@ consolidated_wfh2plus <- bind_rows(
   rename_segment_col(gender_results$wfh2plus),
   rename_segment_col(income_results$wfh2plus),
   rename_segment_col(county_results$wfh2plus),
+  rename_segment_col(county2_results$wfh2plus),
   rename_segment_col(education_results$wfh2plus),
   rename_segment_col(industry_results$wfh2plus),
   rename_segment_col(occupation_results$wfh2plus),
   # Add multi-dimensional results
   rename_segment_col(county_income_results$wfh2plus),
   rename_segment_col(county_education_results$wfh2plus),
-  rename_segment_col(county_employment_results$wfh2plus)
+  rename_segment_col(county_employment_results$wfh2plus),
+  rename_segment_col(county2_income_results$wfh2plus),
+  rename_segment_col(county2_education_results$wfh2plus),
+  rename_segment_col(county2_employment_results$wfh2plus)
 )
 
 # Reorder columns for better readability
