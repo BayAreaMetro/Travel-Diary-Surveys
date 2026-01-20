@@ -105,19 +105,18 @@ srv_design <- person_2019_2023_df %>%
     weights = person_weight_rmove_only,
     strata =  stratification_var
   )
-
-
+  
 # -------------------------
-# FUNCTION: Calculate telework shares by demographic segment
+# ENHANCED FUNCTION: Calculate telework shares by one or more demographic segments
 # -------------------------
-calculate_telework_by_segment <- function(srv_design, segment_var, segment_label) {
+calculate_telework_by_segment <- function(srv_design, segment_vars, segment_label) {
   
   cat("\n")
   print(glue("=== Processing segmentation by: {segment_label} ==="))
 
-  # Table 1: Detailed telework frequency by segment
+  # Table 1: Detailed telework frequency by segment(s)
   results_detailed <- srv_design %>%
-    group_by(survey_cycle, {{segment_var}}, telework_jobtype3_label) %>%
+    group_by(survey_cycle, !!!segment_vars, telework_jobtype3_label) %>%
     summarize(
       n_unweighted = unweighted(n()),
       n_weighted = survey_total(vartype = NULL),
@@ -125,9 +124,9 @@ calculate_telework_by_segment <- function(srv_design, segment_var, segment_label
     )  %>%
     mutate(segment_type = segment_label) 
 
-  # Table 2: 3-category telework frequency by segment
+  # Table 2: 3-category telework frequency by segment(s)
   results_3cat <- srv_design %>%
-    group_by(survey_cycle, {{segment_var}}, telework_freq_jobtype3_temp) %>%
+    group_by(survey_cycle, !!!segment_vars, telework_freq_jobtype3_temp) %>%
     summarize(
       n_unweighted = unweighted(n()),
       n_weighted = survey_total(vartype = NULL),
@@ -135,9 +134,9 @@ calculate_telework_by_segment <- function(srv_design, segment_var, segment_label
     )  %>%
     mutate(segment_type = segment_label) 
 
-  # Table 3: WFH 2+ days share by segment
+  # Table 3: WFH 2+ days share by segment(s)
   results_wfh2plus <- srv_design %>%
-    group_by(survey_cycle, {{segment_var}}) %>%
+    group_by(survey_cycle, !!!segment_vars) %>%
     summarize(
       n_total_unweighted = unweighted(n()),
       total_weighted = survey_total(vartype = NULL),
@@ -214,26 +213,53 @@ print(srv_results_WFH2OrMoreDays_share, n = Inf)
 # -------------------------
 
 # By Employment Status
-employment_results <- calculate_telework_by_segment(srv_design, employment_label, "employment_label")
+#employment_results <- calculate_telework_by_segment(srv_design, employment_label, "employment_label")
+employment_results <- calculate_telework_by_segment(srv_design, rlang::quos(employment_label), "employment_label")
 
 # By Gender
-gender_results <- calculate_telework_by_segment(srv_design, gender_label, "gender_label")
+#gender_results <- calculate_telework_by_segment(srv_design, gender_label, "gender_label")
+gender_results <- calculate_telework_by_segment(srv_design, rlang::quos(gender_label), "gender_label")
 
 # By Income
-income_results <- calculate_telework_by_segment(srv_design, income_detailed_grouped, "income_detailed_grouped")
+#income_results <- calculate_telework_by_segment(srv_design, income_detailed_grouped, "income_detailed_grouped")
+income_results <- calculate_telework_by_segment(srv_design, rlang::quos(income_detailed_grouped), "income_detailed_grouped")
 
 # By County
-county_results <- calculate_telework_by_segment(srv_design, home_county_grouped_label, "home_county_grouped_label")
+#county_results <- calculate_telework_by_segment(srv_design, home_county_grouped_label, "home_county_grouped_label")
+county_results <- calculate_telework_by_segment(srv_design, rlang::quos(home_county_grouped_label), "home_county_grouped_label")
 
 # By Education
-education_results <- calculate_telework_by_segment(srv_design, education_grouped_label, "education_grouped_label")
+#education_results <- calculate_telework_by_segment(srv_design, education_grouped_label, "education_grouped_label")
+education_results <- calculate_telework_by_segment(srv_design, rlang::quos(education_grouped_label), "education_grouped_label")
 
 # By Industry (for 2023 only)
-industry_results <- calculate_telework_by_segment(srv_design, industry_label, "industry_label")
+#industry_results <- calculate_telework_by_segment(srv_design, industry_label, "industry_label")
+industry_results <- calculate_telework_by_segment(srv_design, rlang::quos(industry_label), "industry_label")
 
 # By Occupation (for 2023 only)
-occupation_results <- calculate_telework_by_segment(srv_design, occupation_label, "occupation_label")
+#occupation_results <- calculate_telework_by_segment(srv_design, occupation_label, "occupation_label")
+occupation_results <- calculate_telework_by_segment(srv_design, rlang::quos(occupation_label), "occupation_label")
 
+# By County x Income
+county_income_results <- calculate_telework_by_segment(
+  srv_design, 
+  rlang::quos(home_county_grouped_label, income_detailed_grouped), 
+  "home_county_grouped_label x income_detailed_grouped"
+)
+
+# By County x Education
+county_education_results <- calculate_telework_by_segment(
+  srv_design,
+  rlang::quos(home_county_grouped_label, education_grouped_label),
+  "home_county_grouped_label x education_grouped_label"
+)
+
+# By County x Employment
+county_employment_results <- calculate_telework_by_segment(
+  srv_design,
+  rlang::quos(home_county_grouped_label, employment_label),
+  "home_county_grouped_label x employment_label"
+)
 
 # -------------------------
 # CONSOLIDATE AND SAVE RESULTS
@@ -250,49 +276,64 @@ rename_segment_col <- function(df) {
                      "segment_type", "segment_value")
   
   cols <- names(df)
-  segment_col <- setdiff(cols, standard_cols)
+  segment_cols <- setdiff(cols, standard_cols)
   
-  if (length(segment_col) > 0 && segment_col[1] != "segment_value") {
-    df <- df %>% rename(segment_value = !!segment_col[1])
+  # If multiple segment columns, combine them into one
+  if (length(segment_cols) > 0) {
+    df <- df %>% 
+      unite("segment_value", all_of(segment_cols), sep = " | ", remove = TRUE)
   }
   
   return(df)
 }
 
 # Consolidate all detailed results
+# Consolidate all detailed results
 consolidated_detailed <- bind_rows(
-  srv_results_telework_freq1,  # Already has segment_value
+  srv_results_telework_freq1,
   rename_segment_col(employment_results$detailed),
   rename_segment_col(gender_results$detailed),
   rename_segment_col(income_results$detailed),
   rename_segment_col(county_results$detailed),
   rename_segment_col(education_results$detailed),
   rename_segment_col(industry_results$detailed),
-  rename_segment_col(occupation_results$detailed)
+  rename_segment_col(occupation_results$detailed),
+  # Add multi-dimensional results
+  rename_segment_col(county_income_results$detailed),
+  rename_segment_col(county_education_results$detailed),
+  rename_segment_col(county_employment_results$detailed)
 )
 
 # Consolidate all 3-cat results
 consolidated_3cat <- bind_rows(
-  srv_results_telework_freq2,  # Already has segment_value
+  srv_results_telework_freq2,
   rename_segment_col(employment_results$three_cat),
   rename_segment_col(gender_results$three_cat),
   rename_segment_col(income_results$three_cat),
   rename_segment_col(county_results$three_cat),
   rename_segment_col(education_results$three_cat),
   rename_segment_col(industry_results$three_cat),
-  rename_segment_col(occupation_results$three_cat)
+  rename_segment_col(occupation_results$three_cat),
+  # Add multi-dimensional results
+  rename_segment_col(county_income_results$three_cat),
+  rename_segment_col(county_education_results$three_cat),
+  rename_segment_col(county_employment_results$three_cat)
 )
 
 # Consolidate all WFH 2+ days results
 consolidated_wfh2plus <- bind_rows(
-  srv_results_WFH2OrMoreDays_share,  # Already has segment_value
+  srv_results_WFH2OrMoreDays_share,
   rename_segment_col(employment_results$wfh2plus),
   rename_segment_col(gender_results$wfh2plus),
   rename_segment_col(income_results$wfh2plus),
   rename_segment_col(county_results$wfh2plus),
   rename_segment_col(education_results$wfh2plus),
   rename_segment_col(industry_results$wfh2plus),
-  rename_segment_col(occupation_results$wfh2plus)
+  rename_segment_col(occupation_results$wfh2plus),
+  # Add multi-dimensional results
+  rename_segment_col(county_income_results$wfh2plus),
+  rename_segment_col(county_education_results$wfh2plus),
+  rename_segment_col(county_employment_results$wfh2plus)
 )
 
 # Reorder columns for better readability
@@ -311,6 +352,10 @@ write_csv(consolidated_detailed, glue("{working_dir}/telework_freq_DETAILED_all_
 write_csv(consolidated_3cat, glue("{working_dir}/telework_freq_MoreDETAILED_all_segments_{timestamp}.csv"))
 write_csv(consolidated_wfh2plus, glue("{working_dir}/WFH2OrMoreDays_all_segments_{timestamp}.csv"))
 
+# Save as RData files
+save(consolidated_detailed, file = glue("{working_dir}/telework_freq_DETAILED_all_segments_{timestamp}.RData"))
+save(consolidated_3cat, file = glue("{working_dir}/telework_freq_MoreDETAILED_all_segments_{timestamp}.RData"))
+save(consolidated_wfh2plus, file = glue("{working_dir}/WFH2OrMoreDays_all_segments_{timestamp}.RData"))
 
 # -------------------------
 # Summary message
