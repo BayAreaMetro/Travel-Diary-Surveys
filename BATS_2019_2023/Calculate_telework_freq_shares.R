@@ -270,6 +270,9 @@ gender_results <- calculate_telework_by_segment(srv_design, rlang::quos(gender_l
 #income_results <- calculate_telework_by_segment(srv_design, income_detailed_grouped, "income_detailed_grouped")
 income_results <- calculate_telework_by_segment(srv_design, rlang::quos(income_detailed_grouped), "income_detailed_grouped")
 
+# By Race/Ethnicity
+race_results <- calculate_telework_by_segment(srv_design, rlang::quos(race_eth), "race_eth")
+
 # By County
 #county_results <- calculate_telework_by_segment(srv_design, home_county_grouped_label, "home_county_grouped_label")
 county_results <- calculate_telework_by_segment(srv_design, rlang::quos(home_county_grouped_label), "home_county_grouped_label")
@@ -307,6 +310,20 @@ county_employment_results <- calculate_telework_by_segment(
   "home_county_grouped_label x employment_label"
 )
 
+# By County x Gender
+county_gender_results <- calculate_telework_by_segment(
+  srv_design,
+  rlang::quos(home_county_grouped_label, gender_label),
+  "home_county_grouped_label x gender_label"
+)
+
+# By County x Race/Ethnicity
+county_race_results <- calculate_telework_by_segment(
+  srv_design,
+  rlang::quos(home_county_grouped_label, race_eth),
+  "home_county_grouped_label x race_eth"
+)
+
 # By County (grouped label 2)
 county2_results <- calculate_telework_by_segment(srv_design, rlang::quos(home_county_grouped_label2), "home_county_grouped_label2")
 
@@ -331,6 +348,20 @@ county2_employment_results <- calculate_telework_by_segment(
   "home_county_grouped_label2 x employment_label"
 )
 
+# By County x Gender (grouped label 2)
+county2_gender_results <- calculate_telework_by_segment(
+  srv_design,
+  rlang::quos(home_county_grouped_label2, gender_label),
+  "home_county_grouped_label2 x gender_label"
+)
+
+# By County x Race/Ethnicity (grouped label 2)
+county2_race_results <- calculate_telework_by_segment(
+  srv_design,
+  rlang::quos(home_county_grouped_label2, race_eth),
+  "home_county_grouped_label2 x race_eth"
+)
+
 # -------------------------
 # CONSOLIDATE AND SAVE RESULTS
 # -------------------------
@@ -340,7 +371,7 @@ rename_segment_col <- function(df) {
   # List of known segment variable names
   segment_var_names <- c("employment_label", "gender_label", "income_detailed_grouped", 
                          "home_county_grouped_label", "home_county_grouped_label2", 
-                         "education_grouped_label", "industry_label", "occupation_label")
+                         "education_grouped_label", "industry_label", "occupation_label", "race_eth")
   
   cols <- names(df)
   segment_cols <- intersect(cols, segment_var_names)
@@ -360,6 +391,7 @@ consolidated_detailed <- bind_rows(
   rename_segment_col(employment_results$detailed),
   rename_segment_col(gender_results$detailed),
   rename_segment_col(income_results$detailed),
+  rename_segment_col(race_results$detailed), 
   rename_segment_col(county_results$detailed),
   rename_segment_col(county2_results$detailed),
   rename_segment_col(education_results$detailed),
@@ -369,9 +401,13 @@ consolidated_detailed <- bind_rows(
   rename_segment_col(county_income_results$detailed),
   rename_segment_col(county_education_results$detailed),
   rename_segment_col(county_employment_results$detailed),
+  rename_segment_col(county_gender_results$detailed),
+  rename_segment_col(county_race_results$detailed),
   rename_segment_col(county2_income_results$detailed),
   rename_segment_col(county2_education_results$detailed),
-  rename_segment_col(county2_employment_results$detailed)
+  rename_segment_col(county2_employment_results$detailed),
+  rename_segment_col(county2_gender_results$detailed),
+  rename_segment_col(county2_race_results$detailed)
 )
 
 # Consolidate all 3-cat results
@@ -380,18 +416,23 @@ consolidated_3cat <- bind_rows(
   rename_segment_col(employment_results$three_cat),
   rename_segment_col(gender_results$three_cat),
   rename_segment_col(income_results$three_cat),
+  rename_segment_col(race_results$three_cat),
   rename_segment_col(county_results$three_cat),
   rename_segment_col(county2_results$three_cat),
   rename_segment_col(education_results$three_cat),
   rename_segment_col(industry_results$three_cat),
   rename_segment_col(occupation_results$three_cat),
+  rename_segment_col(county_gender_results$three_cat),
+  rename_segment_col(county_race_results$three_cat),
   # Add multi-dimensional results
   rename_segment_col(county_income_results$three_cat),
   rename_segment_col(county_education_results$three_cat),
   rename_segment_col(county_employment_results$three_cat),
   rename_segment_col(county2_income_results$three_cat),
   rename_segment_col(county2_education_results$three_cat),
-  rename_segment_col(county2_employment_results$three_cat)
+  rename_segment_col(county2_employment_results$three_cat),
+  rename_segment_col(county2_gender_results$three_cat),
+  rename_segment_col(county2_race_results$three_cat)
 )
 
 # Consolidate all WFH 2+ days results
@@ -400,19 +441,41 @@ consolidated_wfh2plus <- bind_rows(
   rename_segment_col(employment_results$wfh2plus),
   rename_segment_col(gender_results$wfh2plus),
   rename_segment_col(income_results$wfh2plus),
+  rename_segment_col(race_results$wfh2plus), 
   rename_segment_col(county_results$wfh2plus),
   rename_segment_col(county2_results$wfh2plus),
   rename_segment_col(education_results$wfh2plus),
   rename_segment_col(industry_results$wfh2plus),
   rename_segment_col(occupation_results$wfh2plus),
+  rename_segment_col(county_gender_results$wfh2plus),
+  rename_segment_col(county_race_results$wfh2plus),  
   # Add multi-dimensional results
   rename_segment_col(county_income_results$wfh2plus),
   rename_segment_col(county_education_results$wfh2plus),
   rename_segment_col(county_employment_results$wfh2plus),
   rename_segment_col(county2_income_results$wfh2plus),
   rename_segment_col(county2_education_results$wfh2plus),
-  rename_segment_col(county2_employment_results$wfh2plus)
+  rename_segment_col(county2_employment_results$wfh2plus),
+  rename_segment_col(county2_gender_results$wfh2plus),
+  rename_segment_col(county2_race_results$wfh2plus)  
 )
+
+
+# Add formatted unweighted count string
+consolidated_detailed <- consolidated_detailed %>% 
+  mutate(
+    total_unweighted_str = paste0("N=", prettyNum(n_unweighted, big.mark = ",", scientific = FALSE))
+  )
+
+consolidated_3cat <- consolidated_3cat %>% 
+  mutate(
+    total_unweighted_str = paste0("N=", prettyNum(n_unweighted, big.mark = ",", scientific = FALSE))
+  )
+
+consolidated_wfh2plus <- consolidated_wfh2plus %>% 
+  mutate(
+    total_unweighted_str = paste0("N=", prettyNum(n_total_unweighted, big.mark = ",", scientific = FALSE))
+  )
 
 # Reorder columns for better readability
 consolidated_detailed <- consolidated_detailed %>%

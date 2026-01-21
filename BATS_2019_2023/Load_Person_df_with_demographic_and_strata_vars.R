@@ -35,7 +35,9 @@ person2023_path <- file.path(background_dataset_2023_dir, person2023_file)
 person2023_df <- read_csv(person2023_path)
 
 person2023_df <- person2023_df %>%
-  select(hh_id, person_id, person_weight_rmove_only, age, gender, employment, commute_freq, telework_freq, job_type, work_mode, education, industry, occupation, work_lat, work_lon) %>%
+  select(hh_id, person_id, person_weight_rmove_only, age, gender, employment, commute_freq, telework_freq, job_type, work_mode, education, industry, occupation, work_lat, work_lon,
+         ethnicity_1, ethnicity_2, ethnicity_3, ethnicity_4, ethnicity_997, ethnicity_999, ethnicity_other,
+         race_1, race_2, race_3, race_4, race_5, race_997, race_999) %>%
   rename(telework_freq2023=telework_freq) %>% # the 2023 coding has more categories than the 2019 coding
   mutate(survey_cycle = 2023)
 
@@ -65,7 +67,7 @@ person2019_df <- read_tsv(person2019_path)
 # because Wkday weights are zeroed where travel_date_dow > 4
 # based on this: https://github.com/BayAreaMetro/tnc_california_studies/blob/6486dffc1ca9c42e9ec682d054ce56ccff9bf370/8.1_PopSim_weighting/02_join_weights.R#L229
 person2019_df <- person2019_df %>%
-  select(hh_id, person_id, wt_sphone_wkday, age, gender, employment, telework_freq, job_type, education, work_lat, work_lon) %>%
+  select(hh_id, person_id, wt_sphone_wkday, age, gender, employment, telework_freq, job_type, education, work_lat, work_lon, raceeth_new_imputed) %>%
   mutate(survey_cycle = 2019) %>%
   rename(telework_freq2019=telework_freq) %>%
   rename(person_weight_rmove_only = wt_sphone_wkday)
@@ -479,8 +481,59 @@ person_2019_2023_df <- person_2019_2023_df %>%
     TRUE ~ as.character(job_type)
   ))
 
+#-----------------------------------------
+# Race and ethnicity
+#-----------------------------------------
+# race and ethnicity
+# for 2023
+person_2019_2023_df <- person_2019_2023_df %>%
+  mutate(
+    race_recode_2023 = case_when(
+      ethnicity_1==1 & race_5==1 & race_1==0 & race_2==0 & 
+        race_3==0 & race_4==0 & race_997==0                                              ~ "4. White (Non-Hispanic)",
+      ethnicity_1==1 & race_1==1 & race_5==0 & race_2==0 & 
+        race_3==0 & race_4==0 & race_997==0                                              ~ "2. Black (Non-Hispanic)",
+      ethnicity_1==1 & (race_3==1 | race_4==1) & race_5==0 & race_1==0 & 
+        race_2==0 & race_997==0                                                          ~ "3. Asian/Pacific Islander (Non-Hispanic)",
+      ethnicity_1==1                                                                     ~ "5. Other (Non-Hispanic)",
+      ethnicity_2==1 | ethnicity_3==1 | ethnicity_4==1 | ethnicity_997==1                ~ "1. Hispanic (All Races)",
+      ethnicity_999==1 | ethnicity_other==1                                              ~ "5. Other (Non-Hispanic)",
+      ethnicity_1==995 & ethnicity_2==995 & ethnicity_3==995 & ethnicity_4==995 &
+        ethnicity_997==995 & ethnicity_999==995 & race_1==995 & race_2==995 &
+        race_3==995 & race_4==995 & race_5==995 & race_997==995 & race_999==995          ~ NA_character_,
+      TRUE                                                                               ~ NA_character_
+    )
+  )
+
+# race and ethnicity
+# for 2019
+# In the BATS 2019 dataset, there are several race and ethnicity variables (raceeth_imputed, raceeth_new, raceeth_new_imputed)
+# raceeth_new_imputed appears to be the most finalized version, as it was the field used in the BATS 2019 freeway usage dashboard. 
+# https://github.com/BayAreaMetro/Travel-Diary-Surveys/blob/eabb4a2006121101245b3e43ade9388cbf38f438/TNC%202018-2019%20Survey/NextGen%20Freeway%20Work/TNC%20Survey%20Facility%20Margin%20of%20Error%20Calculations_All%20Facilities. r#L148
+
+person_2019_2023_df <- person_2019_2023_df %>%
+  mutate(
+    race_eth_label_2019 = case_when(
+      raceeth_new_imputed == 1 ~ "1. Hispanic (All Races)",
+      raceeth_new_imputed == 2 ~ "2. Black (Non-Hispanic)",
+      raceeth_new_imputed == 3 ~ "3. Asian/Pacific Islander (Non-Hispanic)",
+      raceeth_new_imputed == 4 ~ "4. White (Non-Hispanic)",
+      raceeth_new_imputed == 5 ~ "5. Other (Non-Hispanic)",
+      TRUE                     ~ NA_character_
+    )
+  )
+
+# Combine 2019 and 2023 race/ethnicity into one variable
+person_2019_2023_df <- person_2019_2023_df %>%
+  mutate(
+    race_eth = coalesce(race_recode_2023, race_eth_label_2019)
+  )
+
+
 
 # Write person_2019_2023_df  to csv for subsequent processes
 output_persons_csv <- glue("{working_dir}/person_2019_2023.csv")
 write.csv(person_2019_2023_df, file = output_persons_csv, row.names = FALSE)
 print(glue("Wrote {nrow(person_2019_2023_df)} rows to {output_persons_csv}"))
+
+sink()
