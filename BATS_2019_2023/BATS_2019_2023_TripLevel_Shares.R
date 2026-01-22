@@ -236,12 +236,18 @@ mode_summary <- summarize_for_attr(
                      "survey_cycle,income_detailed_grouped,adult_yn",
                      "survey_cycle,race_eth,adult_yn",
 #                     "survey_cycle,home_county_label,adult_yn",
+                    "survey_cycle,disability_status_label,adult_yn",
+                    "survey_cycle,disability_type_label,adult_yn",
                      "survey_cycle,home_county_label_grouped,adult_yn",
                      "survey_cycle,home_county_label_grouped,income_detailed_grouped,adult_yn",
                      "survey_cycle,home_county_label_grouped,race_eth,adult_yn",
+                    "survey_cycle,home_county_label_grouped,disability_status_label,adult_yn",
+                    "survey_cycle,home_county_label_grouped,disability_type_label,adult_yn",
                      "survey_cycle,home_county_label_grouped2,adult_yn",
                      "survey_cycle,home_county_label_grouped2,income_detailed_grouped,adult_yn",
                      "survey_cycle,home_county_label_grouped2,race_eth,adult_yn",
+                     "survey_cycle,home_county_label_grouped2,disability_status_label,adult_yn",
+                     "survey_cycle,home_county_label_grouped2,disability_type_label,adult_yn",
                      "survey_cycle,commute_cat,adult_yn")
 )
 
@@ -253,12 +259,18 @@ mode5cat_summary <- summarize_for_attr(
                      "survey_cycle,income_detailed_grouped,adult_yn",
                      "survey_cycle,race_eth,adult_yn",
 #                     "survey_cycle,home_county_label,adult_yn",
+                    "survey_cycle,disability_status_label,adult_yn",
+                    "survey_cycle,disability_type_label,adult_yn",
                      "survey_cycle,home_county_label_grouped,adult_yn",
                      "survey_cycle,home_county_label_grouped,income_detailed_grouped,adult_yn",
                      "survey_cycle,home_county_label_grouped,race_eth,adult_yn",
+                    "survey_cycle,home_county_label_grouped,disability_status_label,adult_yn",
+                    "survey_cycle,home_county_label_grouped,disability_type_label,adult_yn",
                      "survey_cycle,home_county_label_grouped2,adult_yn",
                      "survey_cycle,home_county_label_grouped2,income_detailed_grouped,adult_yn",
                      "survey_cycle,home_county_label_grouped2,race_eth,adult_yn",
+                     "survey_cycle,home_county_label_grouped2,disability_status_label,adult_yn",
+                     "survey_cycle,home_county_label_grouped2,disability_type_label,adult_yn",
                      "survey_cycle,commute_cat,adult_yn")
 )
 
@@ -267,13 +279,21 @@ dpurp_summary <- summarize_for_attr(
   dpurp_label,
   summary_levels = c("survey_cycle", "adult_yn", "commute_cat",
                      "survey_cycle,adult_yn", 
-#                     "survey_cycle,home_county_label,adult_yn",       
+                     "survey_cycle,income_detailed_grouped,adult_yn",
+                     "survey_cycle,race_eth,adult_yn",
+#                     "survey_cycle,home_county_label,adult_yn",
+                    "survey_cycle,disability_status_label,adult_yn",
+                    "survey_cycle,disability_type_label,adult_yn",
                      "survey_cycle,home_county_label_grouped,adult_yn",
                      "survey_cycle,home_county_label_grouped,income_detailed_grouped,adult_yn",
                      "survey_cycle,home_county_label_grouped,race_eth,adult_yn",
+                    "survey_cycle,home_county_label_grouped,disability_status_label,adult_yn",
+                    "survey_cycle,home_county_label_grouped,disability_type_label,adult_yn",
                      "survey_cycle,home_county_label_grouped2,adult_yn",
                      "survey_cycle,home_county_label_grouped2,income_detailed_grouped,adult_yn",
-                     "survey_cycle,home_county_label_grouped2,race_eth,adult_yn",                     
+                     "survey_cycle,home_county_label_grouped2,race_eth,adult_yn",
+                     "survey_cycle,home_county_label_grouped2,disability_status_label,adult_yn",
+                     "survey_cycle,home_county_label_grouped2,disability_type_label,adult_yn",
                      "survey_cycle,commute_cat,adult_yn")
 )
 
@@ -285,15 +305,20 @@ trip_dist_bin_summary <- summarize_for_attr(
                      "survey_cycle,income_detailed_grouped,adult_yn",
                      "survey_cycle,race_eth,adult_yn",
 #                     "survey_cycle,home_county_label,adult_yn",
+                    "survey_cycle,disability_status_label,adult_yn",
+                    "survey_cycle,disability_type_label,adult_yn",
                      "survey_cycle,home_county_label_grouped,adult_yn",
                      "survey_cycle,home_county_label_grouped,income_detailed_grouped,adult_yn",
                      "survey_cycle,home_county_label_grouped,race_eth,adult_yn",
+                    "survey_cycle,home_county_label_grouped,disability_status_label,adult_yn",
+                    "survey_cycle,home_county_label_grouped,disability_type_label,adult_yn",
                      "survey_cycle,home_county_label_grouped2,adult_yn",
                      "survey_cycle,home_county_label_grouped2,income_detailed_grouped,adult_yn",
                      "survey_cycle,home_county_label_grouped2,race_eth,adult_yn",
+                     "survey_cycle,home_county_label_grouped2,disability_status_label,adult_yn",
+                     "survey_cycle,home_county_label_grouped2,disability_type_label,adult_yn",
                      "survey_cycle,commute_cat,adult_yn")
 )
-
 
 # Function to replace NA values with descriptive labels
 replace_na_with_labels <- function(df) {
@@ -349,6 +374,20 @@ replace_na_with_labels <- function(df) {
       mutate(race_eth = if_else(is.na(race_eth), "All Race/Ethnicity Groups", race_eth))
   }
   
+  if ("disability_status_label" %in% names(result)) {
+  result <- result %>%
+    mutate(disability_status_label = if_else(is.na(disability_status_label), 
+                                              "All Disability Statuses", 
+                                              disability_status_label))
+  }
+
+  if ("disability_type_label" %in% names(result)) {
+  result <- result %>%
+    mutate(disability_type_label = if_else(is.na(disability_type_label), 
+                                            "All Disability Types", 
+                                            disability_type_label))
+  }
+
   if ("adult_yn" %in% names(result)) {
     result <- result %>%
       mutate(adult_yn = if_else(is.na(adult_yn), "All Ages", adult_yn))
@@ -387,6 +426,8 @@ full_summary <- full_summary %>%
     commute_cat,
     income_detailed_grouped,  
     race_eth,  
+    disability_status_label,    
+    disability_type_label,      
     #home_county_label,
     home_county_label_grouped,
     home_county_label_grouped2,
@@ -419,6 +460,8 @@ full_summary <- full_summary %>%
     commute_cat,
     income_detailed_grouped, 
     race_eth,
+    disability_status_label,    
+    disability_type_label,  
     #home_county_label,
     home_county_label_grouped,
     home_county_label_grouped2, 

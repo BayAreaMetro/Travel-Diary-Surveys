@@ -50,7 +50,8 @@ person2023_df <- person2023_df %>%
     hh_id, person_id, age, employment, telework_freq,
     ethnicity_1, ethnicity_2, ethnicity_3, ethnicity_4,
     ethnicity_997, ethnicity_999, ethnicity_other,
-    race_1, race_2, race_3, race_4, race_5, race_997, race_999
+    race_1, race_2, race_3, race_4, race_5, race_997, race_999,
+    disability, disability_followup_1, disability_followup_2, disability_followup_3, disability_followup_4, disability_followup_999
   ) %>%
   mutate(survey_cycle = 2023) %>%
   rename(hhno = hh_id) %>%
@@ -92,7 +93,7 @@ person2019_path <- file.path(background_dataset_2019_dir, person2019_file)
 person2019_df <- read_tsv(person2019_path)
 
 person2019_df <- person2019_df %>%
-  select(hh_id, person_id, age, employment, telework_freq, raceeth_new_imputed) %>%
+  select(hh_id, person_id, age, employment, telework_freq, raceeth_new_imputed, disability) %>%
   mutate(survey_cycle = 2019) %>%
   rename(hhno = hh_id) %>%
   mutate(pno = as.numeric(str_sub(person_id, -2, -1)))  
@@ -340,6 +341,60 @@ LinkedTrips_2019_2023_df <- LinkedTrips_2019_2023_df %>%
       crow_fly_miles < 5   ~ "1-5 miles",
       crow_fly_miles < 20  ~ "5-20 miles",          
       TRUE                 ~ ">20 miles"
+    )
+  )
+
+# label the disability status variable
+LinkedTrips_2019_2023_df <- LinkedTrips_2019_2023_df %>%
+  mutate(
+    disability_status_label = case_when(
+      disability == 0 ~ "0. No Disability",      
+      disability == 1 ~ "1. Has Disability",
+      disability == 995 ~ NA_character_,    # Missing
+      disability == 999 ~ NA_character_,    # Prefer not to answer
+      disability == -9998 ~ NA_character_,  # Not sure how this is different from missing/prefer not to answer. But it is in the 2019 data.
+      TRUE              ~ NA_character_
+    )
+  )
+
+# label the disability type variable
+# for 2023 (disability variables not available in 2019)
+LinkedTrips_2019_2023_df <- LinkedTrips_2019_2023_df %>%
+  mutate(
+    disability_type_label = case_when(
+      # No disability
+      disability == 0                                                           ~ "0. No Disability",
+      # Missing response at main disability question
+      disability == 995                                                         ~ NA_character_,
+      # Prefer not to answer at main disability question
+      disability == 999                                                         ~ NA_character_,
+      # Has disability but prefer not to specify type
+      disability == 1 & disability_followup_999 == 1                            ~ NA_character_,
+      # Specific disability types (checking each follow-up)
+      disability == 1 & disability_followup_1 == 1 & 
+        (disability_followup_2 %in% c(0, 995)) & 
+        (disability_followup_3 %in% c(0, 995)) & 
+        (disability_followup_4 %in% c(0, 995))                                  ~ "1.Deafness/difficulty hearing",
+      disability == 1 & disability_followup_2 == 1 & 
+        (disability_followup_1 %in% c(0, 995)) & 
+        (disability_followup_3 %in% c(0, 995)) & 
+        (disability_followup_4 %in% c(0, 995))                                  ~ "2. Blindness/difficulty seeing",
+      disability == 1 & disability_followup_3 == 1 & 
+        (disability_followup_1 %in% c(0, 995)) & 
+        (disability_followup_2 %in% c(0, 995)) & 
+        (disability_followup_4 %in% c(0, 995))                                  ~ "3. Other physical disability",
+      disability == 1 & disability_followup_4 == 1 & 
+        (disability_followup_1 %in% c(0, 995)) & 
+        (disability_followup_2 %in% c(0, 995)) & 
+        (disability_followup_3 %in% c(0, 995))                                  ~ "4. Other non-physical disability",
+      # Multiple disability types selected
+      disability == 1 & 
+        ((disability_followup_1 == 1) + (disability_followup_2 == 1) + 
+         (disability_followup_3 == 1) + (disability_followup_4 == 1)) > 1      ~ "5. Multiple disabilities",
+      # Disability = 1 but all follow-ups are 0 or 995 (data quality issue or missing)
+      disability == 1                                                           ~ "6. Has Disability (type not specified)",
+      # For 2019 records or other cases
+      TRUE                                                                      ~ NA_character_
     )
   )
 
