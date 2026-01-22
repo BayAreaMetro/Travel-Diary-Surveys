@@ -415,7 +415,8 @@ full_summary <- bind_rows(mode5cat_summary, mode_summary, dpurp_summary, trip_di
 # Add formatted unweighted count string
 full_summary <- full_summary %>% 
   mutate(
-    total_unweighted_str = paste0("N=", prettyNum(total_unweighted, big.mark = ",", scientific = FALSE))
+    total_unweighted_str = paste0("N=", prettyNum(total_unweighted, big.mark = ",", scientific = FALSE)),
+    unweighted_count_str = paste0("N=", prettyNum(unweighted_count, big.mark = ",", scientific = FALSE))
   )
 
 # reorder variables
@@ -442,7 +443,8 @@ full_summary <- full_summary %>%
     ci_lower,
     ci_upper,
     coeff_of_var,
-    unweighted_count,   
+    unweighted_count,
+    unweighted_count_str   
     weighted_count,
     total_unweighted,
     total_unweighted_str,

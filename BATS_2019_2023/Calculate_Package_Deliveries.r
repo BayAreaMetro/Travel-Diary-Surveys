@@ -3,6 +3,12 @@ library(readr)
 library(glue)
 library(tidyr)
 
+# Set working directory
+working_dir <- "M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Processed/BATS2019_2023_Analysis"
+
+# Set confidence level
+CONF_LEVEL <- 0.90
+
 # -----------
 # Read input
 # -----------
@@ -44,9 +50,77 @@ hh2019_df <- read_table(hh2019_path) %>%
  rename(stratification_var = sample_stratum)
 
 
+#-----------------------------------------
+# Handle home_county code inconsistencies
+#-----------------------------------------
+
+hh2023_df <- hh2023_df %>%
+  mutate(home_county_label = case_when(
+    home_county == "06001" ~ "Alameda County",
+    home_county == "06013" ~ "Contra Costa County",
+    home_county == "06041" ~ "Marin County",
+    home_county == "06055" ~ "Napa County",
+    home_county == "06075" ~ "San Francisco County",
+    home_county == "06081" ~ "San Mateo County",
+    home_county == "06085" ~ "Santa Clara County",
+    home_county == "06095" ~ "Solano County",
+    home_county == "06097" ~ "Sonoma County",
+    TRUE ~ NA_character_  
+  ))
+
+
+hh2019_df <- hh2019_df %>%
+  mutate(home_county_label = case_when(
+    home_county_fips == "1" ~ "Alameda County",
+    home_county_fips == "13" ~ "Contra Costa County",
+    home_county_fips == "41" ~ "Marin County",
+    home_county_fips == "55" ~ "Napa County",
+    home_county_fips == "75" ~ "San Francisco County",
+    home_county_fips == "81" ~ "San Mateo County",
+    home_county_fips == "85" ~ "Santa Clara County",
+    home_county_fips == "95" ~ "Solano County",
+    home_county_fips == "97" ~ "Sonoma County",
+    TRUE ~ NA_character_  
+  ))
+
+
+
 # Union the two cycles
 hh_2019_2023_df <- bind_rows(hh2019_df, hh2023_df)
 day_2019_2023_df <- bind_rows(day2019_df, day2023_df)
+
+
+#-----------------------------------------
+# Group the counties two ways
+#-----------------------------------------
+hh_2019_2023_df <- hh_2019_2023_df %>%
+  mutate(home_county_label_grouped = case_when(
+    home_county_label == "Alameda County"       ~ "Alameda",
+    home_county_label == "Contra Costa County"  ~ "Contra Costa",
+    home_county_label == "Marin County"         ~ "Marin, Sonoma, Napa, Solano",
+    home_county_label == "Napa County"          ~ "Marin, Sonoma, Napa, Solano",
+    home_county_label == "San Francisco County" ~ "San Francisco",
+    home_county_label == "San Mateo County"     ~ "San Mateo",
+    home_county_label == "Santa Clara County"   ~ "Santa Clara",
+    home_county_label == "Solano County"        ~ "Marin, Sonoma, Napa, Solano",
+    home_county_label == "Sonoma County"        ~ "Marin, Sonoma, Napa, Solano",
+    TRUE ~ NA_character_  
+  ))
+
+hh_2019_2023_df <- hh_2019_2023_df %>%
+  mutate(home_county_label_grouped2 = case_when(
+    home_county_label == "Alameda County"       ~ "Alameda",
+    home_county_label == "Contra Costa County"  ~ "Contra Costa",
+    home_county_label == "Marin County"         ~ "Marin & Sonoma",
+    home_county_label == "Napa County"          ~ "Napa & Solano",
+    home_county_label == "San Francisco County" ~ "San Francisco",
+    home_county_label == "San Mateo County"     ~ "San Mateo",
+    home_county_label == "Santa Clara County"   ~ "Santa Clara",
+    home_county_label == "Solano County"        ~ "Napa & Solano",
+    home_county_label == "Sonoma County"        ~ "Marin & Sonoma",
+    TRUE ~ NA_character_  
+  ))
+
 
 # -----------
 # Create unified weight variable
@@ -132,7 +206,43 @@ hh_2019_2023_df <- hh_2019_2023_df %>%
     TRUE ~ NA_character_  # For other survey cycles or other values
   ))
 
+# income_detailed is consistent across both cycles
+hh_2019_2023_df <- hh_2019_2023_df %>%
+  mutate(
+    income_detailed_label = case_when(
+      income_detailed == 1  ~ "1. Less than $15,000",
+      income_detailed == 2  ~ "2. $15,000-$24,999",
+      income_detailed == 3  ~ "3. $25,000-$34,999",
+      income_detailed == 4  ~ "4. $35,000-$49,999",
+      income_detailed == 5  ~ "5. $50,000-$74,999",
+      income_detailed == 6  ~ "6. $75,000-$99,999",
+      income_detailed == 7  ~ "7. $100,000-$149,999",
+      income_detailed == 8  ~ "8. $150,000-$199,999",
+      income_detailed == 9  ~ "9. $200,000-$249,999",
+      income_detailed == 10 ~ "10.$250,000 or more",
+      TRUE ~ NA_character_
+    )
+  )
 
+
+# income detailed (and then grouped)
+# grouping informed by the fact that median household income in 2023 is $128K in the Bay Area
+hh_2019_2023_df <- hh_2019_2023_df %>%
+  mutate(
+    income_detailed_grouped = case_when(
+      income_detailed == 1  ~ "1. Less than $50,000",
+      income_detailed == 2  ~ "1. Less than $50,000",
+      income_detailed == 3  ~ "1. Less than $50,000",
+      income_detailed == 4  ~ "1. Less than $50,000",
+      income_detailed == 5  ~ "2. $50,000-$99,999",
+      income_detailed == 6  ~ "2. $50,000-$99,999",
+      income_detailed == 7  ~ "3. $100,000-$199,999",
+      income_detailed == 8  ~ "3. $100,000-$199,999",
+      income_detailed == 9  ~ "4. $200,000 or more",
+      income_detailed == 10 ~ "4. $200,000 or more",
+      TRUE ~ NA_character_
+    )
+  )
 
 # -----------
 # if the deliveries were received on a travel day...
@@ -159,25 +269,16 @@ hh_2019_2023_df <- hh_2019_2023_df %>%
 #delivery_none:   None of the above
 
  
-#  filters rows where at least one delivery column equals 1
-#delivery_rows_df <- day_2019_2023_df %>%
-#  filter(
-#    (survey_cycle == 2023 & if_any(all_of(c('delivery_2', 'delivery_4', 'delivery_5', 
-#                                              'delivery_6', 'delivery_7', 'delivery_8', 'delivery_9')), 
-#                                    ~ . == 1)) |
-#    (survey_cycle == 2019 & if_any(all_of(c('delivery_home', 'delivery_work', 'delivery_locker', 
-#                                              'delivery_food', 'delivery_other')), 
-#                                    ~ . == 1))
-#  )
+
 
 # packages at home
-delivery_rows_df <- day_2019_2023_df %>%
-  filter(
-    (survey_cycle == 2023 & if_any(all_of(c('delivery_5', 'delivery_8')), 
-                                    ~ . == 1)) |
-    (survey_cycle == 2019 & if_any(all_of(c('delivery_home', 'delivery_other')), 
-                                    ~ . == 1))
-  )
+#delivery_rows_df <- day_2019_2023_df %>%
+#  filter(
+#    (survey_cycle == 2023 & if_any(all_of(c('delivery_5', 'delivery_8')), 
+#                                    ~ . == 1)) |
+#    (survey_cycle == 2019 & if_any(all_of(c('delivery_home', 'delivery_other')), 
+#                                    ~ . == 1))
+# )
 
 # food or groceries
 #delivery_rows_df <- day_2019_2023_df %>%
@@ -188,90 +289,35 @@ delivery_rows_df <- day_2019_2023_df %>%
 #                                    ~ . == 1))
 #  )
 
-
-# households that had a delivery
-delivery_households_df <- delivery_rows_df %>%
+# Create flags for both delivery types
+# Packages at home
+delivery_packages_df <- day_2019_2023_df %>%
+  filter(
+    (survey_cycle == 2023 & if_any(all_of(c('delivery_5', 'delivery_8')), ~ . == 1)) |
+    (survey_cycle == 2019 & if_any(all_of(c('delivery_home', 'delivery_other')), ~ . == 1))
+  ) %>%
   select(hh_id) %>%
   distinct() %>%
-  mutate(had_delivery = 1)
+  mutate(had_package_delivery = 1)
 
-# Merge with household data
+# Food or groceries
+delivery_food_df <- day_2019_2023_df %>%
+  filter(
+    (survey_cycle == 2023 & if_any(all_of(c('delivery_2', 'delivery_4')), ~ . == 1)) |
+    (survey_cycle == 2019 & if_any(all_of(c('delivery_food')), ~ . == 1))
+  ) %>%
+  select(hh_id) %>%
+  distinct() %>%
+  mutate(had_food_delivery = 1)
+
+# Merge both with household data
 hh_delivery_df <- hh_2019_2023_df %>%
-  left_join(delivery_households_df, by = "hh_id")
-
-# Check merge results (equivalent to indicator=True)
-table(is.na(hh_delivery_df$had_delivery))
-
-# Replace NA with 0 for had_delivery
-hh_delivery_df <- hh_delivery_df %>%
-  mutate(had_delivery = replace_na(had_delivery, 0))
-
-# -----------
-# Analysis: % of households that had a delivery
-# -----------
-
-# Unweighted counts and percentages
-delivery_summary_unweighted <- hh_delivery_df %>%
-  group_by(survey_cycle) %>%
-  summarise(
-    total_hh = n(),
-    hh_with_delivery = sum(had_delivery),
-    hh_no_delivery = sum(had_delivery == 0),
-    pct_with_delivery = round(100 * mean(had_delivery), 1)
+  left_join(delivery_packages_df, by = "hh_id") %>%
+  left_join(delivery_food_df, by = "hh_id") %>%
+  mutate(
+    had_package_delivery = replace_na(had_package_delivery, 0),
+    had_food_delivery = replace_na(had_food_delivery, 0)
   )
-
-print("Unweighted Delivery Rates by Survey Cycle:")
-print(delivery_summary_unweighted)
-
-# Overall unweighted
-overall_unweighted <- hh_delivery_df %>%
-  summarise(
-    total_hh = n(),
-    hh_with_delivery = sum(had_delivery),
-    pct_with_delivery = round(100 * mean(had_delivery), 1)
-  )
-
-print("Overall Unweighted Delivery Rate:")
-print(overall_unweighted)
-
-
-# Weighted percentages using unified hh_weight variable
-delivery_summary_weighted <- hh_delivery_df %>%
-  group_by(survey_cycle) %>%
-  summarise(
-    weighted_total_hh = sum(hh_weight),
-    weighted_hh_with_delivery = sum(had_delivery * hh_weight),
-    pct_with_delivery_weighted = round(100 * sum(had_delivery * hh_weight) / sum(hh_weight), 1)
-  )
-
-print("Weighted Delivery Rates by Survey Cycle:")
-print(delivery_summary_weighted)
-
-# Overall weighted
-overall_weighted <- hh_delivery_df %>%
-  summarise(
-    weighted_total_hh = sum(hh_weight),
-    weighted_hh_with_delivery = sum(had_delivery * hh_weight),
-    pct_with_delivery_weighted = round(100 * sum(had_delivery * hh_weight) / sum(hh_weight), 1)
-  )
-
-print("Overall Weighted Delivery Rate:")
-print(overall_weighted)
-
-
-# Combined summary table
-combined_summary <- bind_rows(
-  delivery_summary_unweighted %>% 
-    mutate(type = "Unweighted") %>%
-    select(survey_cycle, type, total_hh, hh_with_delivery, pct_with_delivery),
-  delivery_summary_weighted %>% 
-    mutate(type = "Weighted") %>%
-    rename(total_hh = weighted_total_hh, hh_with_delivery = weighted_hh_with_delivery) %>%
-    select(survey_cycle, type, total_hh, hh_with_delivery, pct_with_delivery = pct_with_delivery_weighted)
-)
-
-print("Combined Summary:")
-print(combined_summary)
 
 
 # -----------
@@ -284,42 +330,122 @@ hh_svy <- hh_delivery_df %>%
   as_survey_design(
     ids = hh_id,  
     weights = hh_weight,
-    strata =  stratification_var
+    strata = stratification_var
   )
 
-# Analysis by survey cycle
-delivery_svy_by_cycle <- hh_svy %>%
-  group_by(survey_cycle) %>%
-  summarise(
-    pct_with_delivery = survey_mean(had_delivery, vartype = c("se", "ci", "cv")) * 100
-  ) %>%
-  mutate(across(where(is.numeric), ~round(., 2)))
+# Function to analyze delivery type
+analyze_delivery_type <- function(hh_svy, delivery_var, delivery_label) {
+  # By cycle
+  by_cycle <- hh_svy %>%
+    group_by(survey_cycle) %>%
+    summarise(
+      pct_with_delivery = survey_mean(!!sym(delivery_var), vartype = c("se", "ci", "cv"), level = CONF_LEVEL),
+      n_weighted = n(),
+      n = unweighted(n())
+    ) %>%
+    mutate(income_detailed_grouped = "All Income Levels",
+           home_county_label_grouped = "Bay Area",
+           home_county_label_grouped2 = "Bay Area",
+           summary_level = "survey_cycle")
+  
+  # By cycle and income
+  by_income <- hh_svy %>%
+    group_by(survey_cycle, income_detailed_grouped) %>%
+    summarise(
+      pct_with_delivery = survey_mean(!!sym(delivery_var), vartype = c("se", "ci", "cv"), level = CONF_LEVEL),
+      n_weighted = n(),
+      n = unweighted(n())
+    ) %>%
+    mutate(home_county_label_grouped = "Bay Area",
+           home_county_label_grouped2 = "Bay Area",
+           summary_level = "survey_cycle,income_detailed_grouped")
 
-print("Survey-weighted Delivery Rates by Survey Cycle (with SE, CI, CV):")
-print(delivery_svy_by_cycle)
+  # By cycle and county grouping 1
+  by_county1 <- hh_svy %>%
+    group_by(survey_cycle, home_county_label_grouped) %>%
+    summarise(
+      pct_with_delivery = survey_mean(!!sym(delivery_var), vartype = c("se", "ci", "cv"), level = CONF_LEVEL),
+      n_weighted = n(),
+      n = unweighted(n())
+    ) %>%
+    mutate(income_detailed_grouped = "All Income Levels",
+           summary_level = "survey_cycle,home_county_label_grouped")
+  
+  # By cycle and county grouping 2
+  by_county2 <- hh_svy %>%
+    group_by(survey_cycle, home_county_label_grouped2) %>%
+    summarise(
+      pct_with_delivery = survey_mean(!!sym(delivery_var), vartype = c("se", "ci", "cv"), level = CONF_LEVEL),
+      n_weighted = n(),
+      n = unweighted(n())
+    ) %>%
+    mutate(income_detailed_grouped = "All Income Levels",
+           summary_level = "survey_cycle,home_county_label_grouped2")
+  
+  # By cycle, county grouping 1, and income
+  by_county1_income <- hh_svy %>%
+    group_by(survey_cycle, home_county_label_grouped, income_detailed_grouped) %>%
+    summarise(
+      pct_with_delivery = survey_mean(!!sym(delivery_var), vartype = c("se", "ci", "cv"), level = CONF_LEVEL),
+      n_weighted = n(),
+      n = unweighted(n())
+    ) %>%
+    mutate(summary_level = "survey_cycle,home_county_label_grouped,income_detailed_grouped")
+  
+  # By cycle, county grouping 2, and income
+  by_county2_income <- hh_svy %>%
+    group_by(survey_cycle, home_county_label_grouped2, income_detailed_grouped) %>%
+    summarise(
+      pct_with_delivery = survey_mean(!!sym(delivery_var), vartype = c("se", "ci", "cv"), level = CONF_LEVEL),
+      n_weighted = n(),
+      n = unweighted(n())
+    ) %>%
+    mutate(summary_level = "survey_cycle,home_county_label_grouped2,income_detailed_grouped")
+  
+  
+  # Combine
+  bind_rows(by_cycle, by_income, by_county1, by_county2, by_county1_income, by_county2_income) %>%
+    arrange(survey_cycle, home_county_label_grouped, home_county_label_grouped2, income_detailed_grouped) %>%
+    select(survey_cycle, home_county_label_grouped, home_county_label_grouped2, income_detailed_grouped, summary_level, everything()) %>%
+    mutate(delivery_type = delivery_label)
+}
 
-# -----------
-# Survey-weighted analysis by survey cycle and income
-# -----------
+# Run for both types
+packages_summary <- analyze_delivery_type(hh_svy, "had_package_delivery", "Packages at Home")
+food_summary <- analyze_delivery_type(hh_svy, "had_food_delivery", "Food or Groceries")
 
-# Analysis by survey cycle and income_label_3cat
-delivery_svy_by_cycle_income <- hh_svy %>%
-  group_by(survey_cycle, income_label_3cat) %>%
-  summarise(
-    pct_with_delivery = survey_mean(had_delivery, vartype = c("se", "ci", "cv")) * 100,
-    n = unweighted(n())  # Include unweighted sample size for reference
-  ) %>%
-  mutate(across(where(is.numeric), ~round(., 2)))
+# Combine both
+delivery_summary <- bind_rows(packages_summary, food_summary) %>%
+  select(delivery_type, everything())
 
-print("Survey-weighted Delivery Rates by Survey Cycle and Income (with SE, CI, CV):")
-print(delivery_svy_by_cycle_income)
+# Add formatted count string and reliability flags
+delivery_summary <- delivery_summary %>%
+  mutate(
+    total_unweighted_str = paste0("N=", prettyNum(n, big.mark = ",", scientific = FALSE)),
+    confidence_level = CONF_LEVEL,
+    cv_flag = pct_with_delivery_cv > 0.30,
+    sample_size_flag = n < 30,
+    ci_width_flag = (pct_with_delivery_upp - pct_with_delivery_low) > 0.40,
+    extreme_values_flag = pct_with_delivery_low < 0 | pct_with_delivery_upp > 1,
+    suppress = cv_flag | sample_size_flag | ci_width_flag | extreme_values_flag,
+    estimate_reliability = case_when(
+      cv_flag ~ "Poor (High CV >30%)",
+      sample_size_flag ~ "Poor (Small sample n<30)",
+      ci_width_flag ~ "Poor (Wide CI >40pp)",
+      extreme_values_flag ~ "Poor (Invalid range)",
+      TRUE ~ "Acceptable"
+    )
+  )
 
-# Create a cleaner table view
-delivery_svy_by_cycle_income_clean <- delivery_svy_by_cycle_income %>%
-  arrange(survey_cycle, income_label_3cat) %>%
-  select(survey_cycle, income_label_3cat, n, pct_with_delivery, 
-         pct_with_delivery_se, pct_with_delivery_low, pct_with_delivery_upp, 
-         pct_with_delivery_cv)
+# Generate timestamp
+timestamp <- format(Sys.time(), '%Y%m%d_%H%M%S')
 
-print("Formatted Results:")
-print(delivery_svy_by_cycle_income_clean)
+# Write CSV output
+output_csv <- glue("{working_dir}/summarize_Deliveries_{timestamp}.csv")
+write.csv(delivery_summary, file = output_csv, row.names = FALSE)
+print(glue("Wrote {nrow(delivery_summary)} rows to {output_csv}"))
+
+# Save RData output
+output_file <- glue("{working_dir}/summarize_Deliveries_{timestamp}.Rdata")
+save(delivery_summary, file = output_file)
+print(glue("Wrote {nrow(delivery_summary)} rows to {output_file}"))
