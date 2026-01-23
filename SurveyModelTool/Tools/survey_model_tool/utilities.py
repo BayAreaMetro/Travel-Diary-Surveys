@@ -12,8 +12,15 @@ from shapely.geometry import Point
 def convert_skim(config):
     print("Current working directory:", os.getcwd())
     if config['convert_skim']:
-        if not os.path.exists('temp'):
+        # Delete existing .parquet and .omx files in the temp directory to avoid stale files
+        if os.path.exists('temp'):
+            for file in os.listdir('temp'):
+                file_path = os.path.join('temp', file)
+                if os.path.isfile(file_path) and (file.endswith('.parquet') or file.endswith('.omx')):
+                    os.remove(file_path)
+        else:
             os.makedirs('temp')
+
         # Write your .s script to disk
         with open('temp\\skim_converter.s', 'w') as f:
             f.write('CONVERTMAT FROM="{}\\base\\hnets\\HWYSKMIZ.SKM" TO="{}\\temp\\HWYSKMIZ.omx" FORMAT=OMX COMPRESSION=7\n'.format(config['skim_dir'], os.getcwd()))
@@ -24,15 +31,15 @@ def convert_skim(config):
             f.write('CONVERTMAT FROM="{}\\base\\NMT\\NMTIZ.SKM" TO="{}\\temp\\NMTIZ.omx" FORMAT=OMX COMPRESSION=7\n'.format(config['skim_dir'], os.getcwd()))
 
         # Path to your executable
-        executable_path = r"C:\Program Files\Citilabs\CubeVoyager\VOYAGER.EXE"
+        executable_path = r"C:\\Program Files\\Citilabs\\CubeVoyager\\VOYAGER.EXE"
 
         # Run the executable with the script as an argument
-        result = subprocess.run([executable_path, 'temp\skim_converter.s',r'/start'], cwd=os.getcwd(), capture_output=True, text=True)
+        result = subprocess.run([executable_path, 'temp\\skim_converter.s', r'/start'], cwd=os.getcwd(), capture_output=True, text=True)
 
         # Print output and errors
         print(result.stdout)
         print(result.stderr)
-    elif not os.path.exists('temp\HWYSKMIZ.omx'):   
+    elif not os.path.exists('temp\\HWYSKMIZ.omx'):   
         raise FileNotFoundError("Skim conversion is enabled but the omx file does not exist.")   
     return
 
@@ -298,4 +305,4 @@ def compare_models(ref, ref_model, model_list, name_list= [0,1,2,3,4,5,6], ivt =
         compare.loc[('Model_Fit', 'Value of Time $/hr'), f'Value'] = ref.reset_index()[ref.reset_index().Parameter == ivt]['Value'].item()/ref.reset_index()[ref.reset_index().Parameter == 'coef_cost']['Value'].item()*.60
     except Exception as e:
         print(f"Error calculating 'Value of Time $/hr': {e}")
-    return compare[[col for col in compare if col.startswith('Value')  or 'Sig' in col]].rename(columns = {'Value':'Reference Value'}) 
+    return compare[[col for col in compare if col.startswith('Value')  or 'Sig' in col]].rename(columns = {'Value':'Reference Value'})
