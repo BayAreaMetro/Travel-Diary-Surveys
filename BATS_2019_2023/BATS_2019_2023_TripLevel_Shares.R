@@ -444,7 +444,7 @@ full_summary <- full_summary %>%
     ci_upper,
     coeff_of_var,
     unweighted_count,
-    unweighted_count_str   
+    unweighted_count_str,   
     weighted_count,
     total_unweighted,
     total_unweighted_str,

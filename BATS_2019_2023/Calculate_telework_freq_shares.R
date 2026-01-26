@@ -122,12 +122,16 @@ calculate_telework_by_segment <- function(srv_design, segment_vars, segment_labe
       n_weighted = survey_total(vartype = NULL),
       proportion = survey_prop(vartype = c("se", "ci", "cv"), level = CONF_LEVEL)
     )  %>%
+    group_by(survey_cycle, !!!segment_vars) %>%
+   mutate(n_total_unweighted = sum(n_unweighted),
+          total_weighted = sum(n_weighted)) %>%
+   ungroup() %>%
     mutate(segment_type = segment_label) 
 
   results_detailed <- results_detailed %>%
   mutate(
     cv_flag = proportion_cv > 0.30,
-    sample_size_flag = n_unweighted < 30,
+    sample_size_flag = n_total_unweighted < 30,
     ci_width_flag = (proportion_upp - proportion_low) > 0.40,
     extreme_values_flag = proportion_low < 0 | proportion_upp > 1,
     suppress = cv_flag | sample_size_flag | ci_width_flag | extreme_values_flag,
@@ -148,12 +152,16 @@ calculate_telework_by_segment <- function(srv_design, segment_vars, segment_labe
       n_weighted = survey_total(vartype = NULL),
       proportion = survey_prop(vartype = c("se", "ci", "cv"), level = CONF_LEVEL)
     )  %>%
+    group_by(survey_cycle, !!!segment_vars) %>%
+   mutate(n_total_unweighted = sum(n_unweighted),
+          total_weighted = sum(n_weighted)) %>%
+   ungroup() %>%
     mutate(segment_type = segment_label) 
 
   results_3cat <- results_3cat %>%
   mutate(
     cv_flag = proportion_cv > 0.30,
-    sample_size_flag = n_unweighted < 30,
+    sample_size_flag = n_total_unweighted < 30,
     ci_width_flag = (proportion_upp - proportion_low) > 0.40,
     extreme_values_flag = proportion_low < 0 | proportion_upp > 1,
     suppress = cv_flag | sample_size_flag | ci_width_flag | extreme_values_flag,
@@ -220,7 +228,11 @@ srv_results_telework_freq1 <- srv_design %>%
     n_weighted = survey_total(vartype = NULL),
     proportion = survey_prop(vartype = c("se", "ci", "cv"), level = CONF_LEVEL)
   )  %>%
-  mutate(segment_type = "Overall", segment_value = "All Workers")
+  group_by(survey_cycle) %>%
+  mutate(n_total_unweighted = sum(n_unweighted)) %>%
+  ungroup() %>%
+  mutate(segment_type = "Overall", segment_value = "All Workers", 
+        home_county_grouped_label = "Bay Area", home_county_grouped_label2 = "Bay Area")
 
 print("\n=== Telework Frequency Shares (Overall - Detailed) ===")
 print(srv_results_telework_freq1, n = Inf)
@@ -233,7 +245,11 @@ srv_results_telework_freq2 <- srv_design %>%
     n_weighted = survey_total(vartype = NULL),
     proportion = survey_prop(vartype = c("se", "ci", "cv"), level = CONF_LEVEL)
   ) %>%
-  mutate(segment_type = "Overall", segment_value = "All Workers")
+  group_by(survey_cycle) %>%
+  mutate(n_total_unweighted = sum(n_unweighted)) %>%
+  ungroup() %>%
+  mutate(segment_type = "Overall", segment_value = "All Workers",
+        home_county_grouped_label = "Bay Area", home_county_grouped_label2 = "Bay Area")
 
 print("\n=== Telework Frequency Shares (Overall - 3 Category) ===")
 print(srv_results_telework_freq2, n = Inf)
@@ -249,7 +265,8 @@ srv_results_WFH2OrMoreDays_share <- srv_design %>%
     WFH2OrMoreDays_share = survey_mean(telework_freq_3cat_label2 == "1. Work from home 2 or more days a week", 
                                        vartype = c("se", "ci", "cv"), level = CONF_LEVEL)
   ) %>%
-  mutate(segment_type = "Overall", segment_value = "All Workers")
+  mutate(segment_type = "Overall", segment_value = "All Workers",
+        home_county_grouped_label = "Bay Area", home_county_grouped_label2 = "Bay Area")
 
 print("\n=== Remote or Hybrid Worker Share (Overall) ===")
 print(srv_results_WFH2OrMoreDays_share, n = Inf)
@@ -368,18 +385,33 @@ county2_race_results <- calculate_telework_by_segment(
 
 # Helper function to rename segment column to "segment_value"
 rename_segment_col <- function(df) {
-  # List of known segment variable names
+  # List of known segment variable names (excluding county variables from segment_value)
   segment_var_names <- c("employment_label", "gender_label", "income_detailed_grouped", 
-                         "home_county_grouped_label", "home_county_grouped_label2", 
                          "education_grouped_label", "industry_label", "occupation_label", "race_eth")
   
   cols <- names(df)
-  segment_cols <- intersect(cols, segment_var_names)
   
-  # Keep segment columns as-is, but also create segment_value for backward compatibility
+  # Add county columns if BOTH are missing
+  if (!"home_county_grouped_label" %in% cols && !"home_county_grouped_label2" %in% cols) {
+    df <- df %>% mutate(
+      home_county_grouped_label = "Bay Area",
+      home_county_grouped_label2 = "Bay Area"
+    )
+  }
+  
+  # Now find segment columns 
+  cols <- names(df)
+  segment_cols <- intersect(segment_var_names, cols)
+  
+  # Keep segment columns as-is, but also create segment_value
   if (length(segment_cols) > 0) {
     df <- df %>% 
       unite("segment_value", all_of(segment_cols), sep = " | ", remove = FALSE)
+  } else {
+    # If no non-county segment variables, check if it's a single-dimension county analysis
+    if ("home_county_grouped_label" %in% cols || "home_county_grouped_label2" %in% cols) {
+      df <- df %>% mutate(segment_value = "All Workers")
+    }
   }
   
   return(df)
@@ -464,12 +496,14 @@ consolidated_wfh2plus <- bind_rows(
 # Add formatted unweighted count string
 consolidated_detailed <- consolidated_detailed %>% 
   mutate(
-    total_unweighted_str = paste0("N=", prettyNum(n_unweighted, big.mark = ",", scientific = FALSE))
+    n_unweighted_str = paste0("N=", prettyNum(n_unweighted, big.mark = ",", scientific = FALSE)),
+    total_unweighted_str = paste0("N=", prettyNum(n_total_unweighted, big.mark = ",", scientific = FALSE))
   )
 
 consolidated_3cat <- consolidated_3cat %>% 
   mutate(
-    total_unweighted_str = paste0("N=", prettyNum(n_unweighted, big.mark = ",", scientific = FALSE))
+   n_unweighted_str = paste0("N=", prettyNum(n_unweighted, big.mark = ",", scientific = FALSE)),
+   total_unweighted_str = paste0("N=", prettyNum(n_total_unweighted, big.mark = ",", scientific = FALSE))
   )
 
 consolidated_wfh2plus <- consolidated_wfh2plus %>% 

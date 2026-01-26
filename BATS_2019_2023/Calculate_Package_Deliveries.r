@@ -340,7 +340,7 @@ analyze_delivery_type <- function(hh_svy, delivery_var, delivery_label) {
     group_by(survey_cycle) %>%
     summarise(
       pct_with_delivery = survey_mean(!!sym(delivery_var), vartype = c("se", "ci", "cv"), level = CONF_LEVEL),
-      n_weighted = n(),
+      n_weighted = survey_total(vartype = NULL),
       n = unweighted(n())
     ) %>%
     mutate(income_detailed_grouped = "All Income Levels",
@@ -353,7 +353,7 @@ analyze_delivery_type <- function(hh_svy, delivery_var, delivery_label) {
     group_by(survey_cycle, income_detailed_grouped) %>%
     summarise(
       pct_with_delivery = survey_mean(!!sym(delivery_var), vartype = c("se", "ci", "cv"), level = CONF_LEVEL),
-      n_weighted = n(),
+      n_weighted = survey_total(vartype = NULL),
       n = unweighted(n())
     ) %>%
     mutate(home_county_label_grouped = "Bay Area",
@@ -365,7 +365,7 @@ analyze_delivery_type <- function(hh_svy, delivery_var, delivery_label) {
     group_by(survey_cycle, home_county_label_grouped) %>%
     summarise(
       pct_with_delivery = survey_mean(!!sym(delivery_var), vartype = c("se", "ci", "cv"), level = CONF_LEVEL),
-      n_weighted = n(),
+      n_weighted = survey_total(vartype = NULL),
       n = unweighted(n())
     ) %>%
     mutate(income_detailed_grouped = "All Income Levels",
@@ -376,7 +376,7 @@ analyze_delivery_type <- function(hh_svy, delivery_var, delivery_label) {
     group_by(survey_cycle, home_county_label_grouped2) %>%
     summarise(
       pct_with_delivery = survey_mean(!!sym(delivery_var), vartype = c("se", "ci", "cv"), level = CONF_LEVEL),
-      n_weighted = n(),
+      n_weighted = survey_total(vartype = NULL),
       n = unweighted(n())
     ) %>%
     mutate(income_detailed_grouped = "All Income Levels",
@@ -387,7 +387,7 @@ analyze_delivery_type <- function(hh_svy, delivery_var, delivery_label) {
     group_by(survey_cycle, home_county_label_grouped, income_detailed_grouped) %>%
     summarise(
       pct_with_delivery = survey_mean(!!sym(delivery_var), vartype = c("se", "ci", "cv"), level = CONF_LEVEL),
-      n_weighted = n(),
+      n_weighted = survey_total(vartype = NULL),
       n = unweighted(n())
     ) %>%
     mutate(summary_level = "survey_cycle,home_county_label_grouped,income_detailed_grouped")
@@ -397,7 +397,7 @@ analyze_delivery_type <- function(hh_svy, delivery_var, delivery_label) {
     group_by(survey_cycle, home_county_label_grouped2, income_detailed_grouped) %>%
     summarise(
       pct_with_delivery = survey_mean(!!sym(delivery_var), vartype = c("se", "ci", "cv"), level = CONF_LEVEL),
-      n_weighted = n(),
+      n_weighted = survey_total(vartype = NULL),
       n = unweighted(n())
     ) %>%
     mutate(summary_level = "survey_cycle,home_county_label_grouped2,income_detailed_grouped")
