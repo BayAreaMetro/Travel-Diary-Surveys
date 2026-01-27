@@ -34,13 +34,26 @@ class SurveyReader:
     
     def read_data(self):
         # Implement logic to read survey data from the specified file
-        self.trips = pd.read_csv(_join(self.config['survey_dir'], self.config['trip_file']))
-        self.person = person = pd.read_csv(_join(self.config['survey_dir'], self.config['person_file']))
-        self.hh = pd.read_csv(_join(self.config['survey_dir'], self.config['household_file']))
+        if 'trip_file' in self.config:
+            self.trips = pd.read_csv(_join(self.config['survey_dir'], self.config['trip_file']))
+        else:
+            raise ValueError("trip_file must be specified in the configuration.")
+        if 'person_file' in self.config:
+            self.person = pd.read_csv(_join(self.config['survey_dir'], self.config['person_file']))
+        else:
+            print("Warning: person_file not specified in config; person data will not be loaded.")
+        if 'household_file' in self.config:
+            self.hh = pd.read_csv(_join(self.config['survey_dir'], self.config['household_file']))
+        else:
+            print("Warning: household_file not specified in config; household data will not be loaded.")
         if 'day_file' in self.config:
             self.day = pd.read_csv(_join(self.config['survey_dir'], self.config['day_file']))
+        else:
+            print("Warning: day_file not specified in config; day data will not be loaded.")
         if 'tours_file' in self.config:
-            self.tours = tours = pd.read_csv(_join(self.config['survey_dir'], self.config['tours_file']))
+            self.tours = pd.read_csv(_join(self.config['survey_dir'], self.config['tours_file']))
+        else:
+            print("Warning: tours_file not specified in config; tours data will not be loaded.")
         return
 
     def load(self):
@@ -70,21 +83,25 @@ class SurveyReader:
         """Preprocess survey data according to the configuration settings. First add descriptive labels from the codebook. Geocode if config is set to True.
         apply data transformation as specified in preprocessor configurations."""
         #add descriptive labels to categorical variables
-        labels = pd.read_excel(_join(self.config['survey_dir'],self.config['codebook']),sheet_name = self.config['codebook_sheet'])
-        #FIXME: hardcoded column names in codebook; make them configurable?
-        grouped_labels = labels.groupby('variable')
-        value_maps ={var: dict(zip(group['value'], group['label']))
-            for var, group in grouped_labels}
+        if 'codebook' in self.config:
+            labels = pd.read_excel(_join(self.config['survey_dir'],self.config['codebook']),sheet_name = self.config['codebook_sheet'])
+            #FIXME: hardcoded column names in codebook; make them configurable?
+            grouped_labels = labels.groupby('variable')
+            value_maps ={var: dict(zip(group['value'], group['label']))
+                for var, group in grouped_labels}
 
-        for col, value_map in value_maps.items():
-            if col in self.trips.columns:
-                self.trips[col] = self.trips[col].map(value_map)
-            if col in self.person.columns:
-                self.person[col] = self.person[col].map(value_map)
-            if col in self.hh.columns:
-                self.hh[col] = self.hh[col].map(value_map)
-            if col in self.day.columns:
-                self.day[col] = self.day[col].map(value_map)
+            for col, value_map in value_maps.items():
+                if col in self.trips.columns:
+                    self.trips[col] = self.trips[col].map(value_map)
+                if self.person is not None:
+                    if col in self.person.columns:
+                        self.person[col] = self.person[col].map(value_map)
+                if self.hh is not None:
+                    if col in self.hh.columns:
+                        self.hh[col] = self.hh[col].map(value_map)
+                if self.day is not None:
+                    if col in self.day.columns:
+                        self.day[col] = self.day[col].map(value_map)
 
         #map survey locations to model TAZs
         trip_len = len(self.trips)
@@ -129,7 +146,7 @@ class SurveyReader:
         
         
         
-        if self.config['geocode'] == True:
+        if self.config['geocode'] == True and not self.config['obs']:
             #geocode home locations
             self.hh = map_point_to_reference(self.hh, point_field_name='HHTAZ', point_lat_col='home_lat', point_lon_col='home_lon',reference_field = 'TAZ', reference_gdf = taz)
 
