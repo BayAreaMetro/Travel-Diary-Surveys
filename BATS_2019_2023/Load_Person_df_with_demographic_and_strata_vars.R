@@ -357,6 +357,33 @@ person_2019_2023_df <- person_2019_2023_df %>%
   ))
 
 person_2019_2023_df <- person_2019_2023_df %>%
+  mutate(industry_grouped_label = case_when(
+    industry == 1 ~ "Group1. Agriculture, Forestry, Fishing, and Hunting / Mining, Quarrying, and Oil and Gas Extraction / Utilities / Construction",
+    industry == 2 ~ "Group1. Agriculture, Forestry, Fishing, and Hunting / Mining, Quarrying, and Oil and Gas Extraction / Utilities / Construction",
+    industry == 3 ~ "Group1. Agriculture, Forestry, Fishing, and Hunting / Mining, Quarrying, and Oil and Gas Extraction / Utilities / Construction",
+    industry == 4 ~ "Group1. Agriculture, Forestry, Fishing, and Hunting / Mining, Quarrying, and Oil and Gas Extraction / Utilities / Construction",
+    industry == 5 ~ "5. Manufacturing",
+    industry == 6 ~ "Group2. Transportation and Warehousing / Wholesale Trade",
+    industry == 7 ~ "7. Retail Trade",
+    industry == 8 ~ "Group2. Transportation and Warehousing / Wholesale Trade",
+    industry == 9 ~ "9. Information",
+    industry == 10 ~ "10. Finance and Insurance",
+    industry == 11 ~ "Group3. Real Estate and Rental and Leasing / Management of Companies and Enterprises",
+    industry == 12 ~ "12. Professional, Scientific, and Technical Services",
+    industry == 13 ~ "Group3. Real Estate and Rental and Leasing / Management of Companies and Enterprises",
+    industry == 14 ~ "Group4.  Administrative and Support and Waste Management and Remediation Services / Other Services (except Public Administration)",
+    industry == 15 ~ "15. Educational Services",
+    industry == 16 ~ "16. Health Care and Social Assistance",
+    industry == 17 ~ "17. Arts, Entertainment, and Recreation",
+    industry == 18 ~ "18. Accommodation and Food Services",
+    industry == 19 ~ "Group4.  Administrative and Support and Waste Management and Remediation Services / Other Services (except Public Administration)",
+    industry == 20 ~ "20. Public Administration",
+    #industry == 995 ~ "Missing Response",
+    #industry == 997 ~ "Other, please specify",
+    TRUE ~ NA_character_
+  ))
+
+person_2019_2023_df <- person_2019_2023_df %>%
   mutate(occupation_label = case_when(
     occupation == 1 ~ "1. Management",
     occupation == 2 ~ "2. Business and Financial Operations",
@@ -381,6 +408,36 @@ person_2019_2023_df <- person_2019_2023_df %>%
     occupation == 21 ~ "21. Production",
     occupation == 22 ~ "22. Transportation and Material Moving",
     occupation == 23 ~ "23. Military Specific",
+    #occupation == 995 ~ "Missing Response",
+    #occupation == 997 ~ "Other, please specify",
+    TRUE ~ NA_character_
+  ))
+
+person_2019_2023_df <- person_2019_2023_df %>%
+  mutate(occupation_grouped_label = case_when(
+    occupation == 1 ~ "1. Management",
+    occupation == 2 ~ "2. Business and Financial Operations",
+    occupation == 3 ~ "3. Computer and Mathematical",
+    occupation == 4 ~ "4. Architecture and Engineering",
+    occupation == 5 ~ "Group1. Life, Physical, and Social Science / Legal / Healthcare Support",
+    occupation == 6 ~ "Group2. Community and Social Service /  Personal Care and Service /  Protective Service",
+    occupation == 7 ~ "Group1. Life, Physical, and Social Science / Legal / Healthcare Support",
+    occupation == 8 ~ "8. Educational Instruction and Library",
+    occupation == 9 ~ "9. Arts, Design, Entertainment, Sports, and Media",
+    occupation == 10 ~ "10. Healthcare Practitioners and Technical",
+    occupation == 11 ~ "Group1. Life, Physical, and Social Science / Legal / Healthcare Support",
+    occupation == 12 ~ "Group2. Community and Social Service /  Personal Care and Service /  Protective Service",
+    occupation == 13 ~ "Group3. Food Preparation and Serving Related / Building and Grounds Cleaning and Maintenance",
+    occupation == 14 ~ "Group3. Food Preparation and Serving Related / Building and Grounds Cleaning and Maintenance",
+    occupation == 15 ~ "Group2. Community and Social Service /  Personal Care and Service /  Protective Service",
+    occupation == 16 ~ "16. Sales and Related",
+    occupation == 17 ~ "17. Office and Administrative Support",
+    occupation == 18 ~ "Group4. Transportation and Material Moving / Production / Construction and Extraction / Installation, Maintenance, and Repair / Farming, Fishing, and Forestry / Military Specific",
+    occupation == 19 ~ "Group4. Transportation and Material Moving / Production / Construction and Extraction / Installation, Maintenance, and Repair / Farming, Fishing, and Forestry / Military Specific",
+    occupation == 20 ~ "Group4. Transportation and Material Moving / Production / Construction and Extraction / Installation, Maintenance, and Repair / Farming, Fishing, and Forestry / Military Specific",
+    occupation == 21 ~ "Group4. Transportation and Material Moving / Production / Construction and Extraction / Installation, Maintenance, and Repair / Farming, Fishing, and Forestry / Military Specific",
+    occupation == 22 ~ "Group4. Transportation and Material Moving / Production / Construction and Extraction / Installation, Maintenance, and Repair / Farming, Fishing, and Forestry / Military Specific",
+    occupation == 23 ~ "Group4. Transportation and Material Moving / Production / Construction and Extraction / Installation, Maintenance, and Repair / Farming, Fishing, and Forestry / Military Specific",
     #occupation == 995 ~ "Missing Response",
     #occupation == 997 ~ "Other, please specify",
     TRUE ~ NA_character_

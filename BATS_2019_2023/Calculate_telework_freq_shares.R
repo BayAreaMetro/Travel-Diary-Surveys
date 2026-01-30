@@ -299,12 +299,12 @@ county_results <- calculate_telework_by_segment(srv_design, rlang::quos(home_cou
 education_results <- calculate_telework_by_segment(srv_design, rlang::quos(education_grouped_label), "education_grouped_label")
 
 # By Industry (for 2023 only)
-#industry_results <- calculate_telework_by_segment(srv_design, industry_label, "industry_label")
-industry_results <- calculate_telework_by_segment(srv_design, rlang::quos(industry_label), "industry_label")
+#industry_results <- calculate_telework_by_segment(srv_design, industry_grouped_label, "industry_grouped_label")
+industry_results <- calculate_telework_by_segment(srv_design, rlang::quos(industry_grouped_label), "industry_grouped_label")
 
 # By Occupation (for 2023 only)
-#occupation_results <- calculate_telework_by_segment(srv_design, occupation_label, "occupation_label")
-occupation_results <- calculate_telework_by_segment(srv_design, rlang::quos(occupation_label), "occupation_label")
+#occupation_results <- calculate_telework_by_segment(srv_design, occupation_grouped_label, "occupation_grouped_label")
+occupation_results <- calculate_telework_by_segment(srv_design, rlang::quos(occupation_grouped_label), "occupation_grouped_label")
 
 # By County x Income
 county_income_results <- calculate_telework_by_segment(
@@ -387,7 +387,7 @@ county2_race_results <- calculate_telework_by_segment(
 rename_segment_col <- function(df) {
   # List of known segment variable names (excluding county variables from segment_value)
   segment_var_names <- c("employment_label", "gender_label", "income_detailed_grouped", 
-                         "education_grouped_label", "industry_label", "occupation_label", "race_eth")
+                         "education_grouped_label", "industry_grouped_label", "occupation_grouped_label", "race_eth")
   
   cols <- names(df)
   
