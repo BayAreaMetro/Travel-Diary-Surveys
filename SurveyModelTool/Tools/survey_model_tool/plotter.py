@@ -1555,7 +1555,7 @@ class Plotter:
             ax.set_xticklabels(x_tick_labels, rotation=45, ha='right')
         else:
             ax.set_xticks(xs)
-
+            x_tick_labels = None #[str(x) for x in xs]  # Ensure labels are strings
         # Helper to compute weighted histogram density line
         def weighted_hist_density(x, w):
             hist, edges = np.histogram(x, bins=bins, weights=w, density=True)
@@ -1659,6 +1659,7 @@ class Plotter:
                 'title': plt_title or '',
                 'x_label': x_label or value_col,
                 'y_label': y_label or 'Density',
+                'x_tick_labels': x_tick_labels  # Save x-tick labels to the bokeh spec
             }
         except Exception:
             pass
@@ -2198,7 +2199,7 @@ class Plotter:
         p.xgrid.grid_line_color = None
         return p
 
-    def seaborn_to_bokeh_dist(self, fig, width=920, height=550):
+    def seaborn_to_bokeh_dist(self, fig, width=920, height=550, custom_xticks=None):
         """
         Convert a Matplotlib distribution plot (with _bokeh_spec type 'dist') to an interactive Bokeh plot.
         Draws multiple lines (one per hue/label) with tooltips.
@@ -2209,7 +2210,9 @@ class Plotter:
         spec = fig._bokeh_spec
         lines = spec.get('lines', [])
         palette = spec.get('palette') or list(self.default_palette)
-
+        if spec['x_tick_labels'] is not None:
+            custom_xticks = dict(zip(spec['lines'][0]['x'], spec['x_tick_labels']))
+        
         p = figure(
             height=height,
             width=width,
@@ -2255,6 +2258,12 @@ class Plotter:
         except Exception:
             pass
 
+        # Apply custom x-tick labels if provided
+        if custom_xticks:
+            from bokeh.models import FixedTicker
+            p.xaxis.ticker = FixedTicker(ticks=list(custom_xticks.keys()))
+            p.xaxis.major_label_overrides = custom_xticks
+            p.xaxis.major_label_orientation = 0.5  # Rotate labels by 0.5 radians (~28.65 degrees)
         return p
 
     
