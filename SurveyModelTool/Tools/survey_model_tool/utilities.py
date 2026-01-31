@@ -210,7 +210,7 @@ def apply_transformations(data, transform_file, config=None):
                 if data[col].dtype == object and data[col].isin(['True', 'False']).any():
                     data[col] = data[col].map({'True': True, 'False': False})
 
-            eval_globals = {"np": np, "pd": pd, "_extract_number": _extract_number, "_get_half_hour_bin": _get_half_hour_bin, "_get_half_hour_bin_label": _get_half_hour_bin_label}
+            eval_globals = {"np": np, "pd": pd, "_extract_number": _extract_number, "_get_half_hour_bin": _get_half_hour_bin, "_get_half_hour_bin_label": _get_half_hour_bin_label, "_obs_route_hierarchy": _obs_route_hierarchy}
             eval_locals = {'df': data, 'config': config}
             try:
                 condition = eval(row['condition'], eval_globals, eval_locals)
@@ -244,7 +244,7 @@ def apply_transformations(data, transform_file, config=None):
                 data.loc[condition, row['target']] = value[condition]
 
         elif action == 'assign':
-            eval_globals = {"np": np, "pd": pd, "_extract_number": _extract_number, "_get_half_hour_bin": _get_half_hour_bin, "_get_half_hour_bin_label": _get_half_hour_bin_label}
+            eval_globals = {"np": np, "pd": pd, "_extract_number": _extract_number, "_get_half_hour_bin": _get_half_hour_bin, "_get_half_hour_bin_label": _get_half_hour_bin_label,"_obs_route_hierarchy": _obs_route_hierarchy}
             eval_locals = {'df': data, 'config': config}
             value = eval(row['value'], eval_globals, eval_locals)
             data[row['target']] = value
@@ -290,6 +290,37 @@ def _get_half_hour_bin_label(hour, minute):
     if bin_hour == 0:
         display_hour = 12
     return f"{display_hour}:{bin_minute:02d}{suffix}"
+
+
+def _obs_route_hierarchy(row):
+    """Determine route type based on hierarchy from route codes in the row."""
+    route_codes = ['ROUTE','TRIP_FIRST_ROUTE[Code]',
+                    'TRIP_SECOND_ROUTE[Code]',
+                    'TRIP_THIRD_ROUTE[Code]',
+                    'TRIP_FOURTH_ROUTE[Code]',
+                    'TRIP_NEXT_ROUTE[Code]',
+                    'TRIP_AFTER_ROUTE[Code]',
+                    'TRIP_3RD_ROUTE[Code]',
+                    'TRIP_LAST4TH_RTE[Code]'
+                    ]
+    route_list = [row[col] for col in route_codes]
+    route_type = 'lcl'
+    for route in route_list:
+        if pd.isna(route):  # Skip NaN values
+            continue
+        if 'bax' in str(route).lower():
+            route_type = 'bart'
+            break
+        elif 'ctx' in str(route).lower() or 'acetrain' in str(route).lower():
+            route_type = 'cmr'
+            break
+        elif 'line' in str(route).lower() and 'vta' in str(route).lower():
+            route_type = 'lrt'
+            break
+        elif 'exp' in str(route).lower() or 'rapid' in str(route).lower():
+            route_type = 'exp'
+            break
+    return route_type
 
 def compare_models(ref, ref_model, model_list, name_list= [0,1,2,3,4,5,6], ivt = 'coef_ivt'):
     compare = ref_model.summary().data.add_suffix(f"_{name_list[0]}")
