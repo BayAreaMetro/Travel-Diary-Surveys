@@ -188,14 +188,21 @@ class ModeChoiceEstimator:
         #format data into IDCA
         # if len(self.data[self.config['choice_col']].unique()) == 1:
         #     raise ValueError("4. Only one choice in the data. Please check your data.")
-        self.data['case_id'] = self.data.reset_index().index + 1
+        # self.data['case_id'] = self.data.reset_index().index + 1
         alternatives = self.config['mode_choice_model_spec']['alternatives']
         self.data = self.data[self.data['{}_final'.format(self.config['choice_col'])].isin(alternatives)]
-        # Repeat each row for each alternative
-        n_rows = len(self.data)
-        self.data = self.data.loc[self.data.index.repeat(len(alternatives))].copy()
-        self.data['alternative'] = np.tile(alternatives, n_rows)
+        
+        
+        self.data['case_id'] = self.data.reset_index().index + 1
+        # alternatives = self.config['mode_choice_model_spec']['alternatives']
 
+        # Create a DataFrame with all combinations of case_id and alternatives
+        case_ids = self.data['case_id'].unique()
+        all_combinations = pd.MultiIndex.from_product([case_ids, alternatives], names=['case_id', 'alternative']).to_frame(index=False)
+
+        # Merge the original data with the all_combinations DataFrame
+        self.data = all_combinations.merge(self.data, on=['case_id'], how='left')
+        
         self.data.reset_index(drop=True, inplace=True)
         self.data['chose'] = self.data['alternative'] == self.data['{}_final'.format(self.config['choice_col'])]
         self.data['chose'] = self.data['chose'].astype(int)
@@ -216,7 +223,8 @@ class ModeChoiceEstimator:
         self.data['depart_hour'] = self.data['depart_datetime'].dt.hour
         self.data['period'] = 'offpeak'
         self.data.loc[self.data['depart_hour'].isin(self.config['peak_hours']), 'period'] = 'peak'
-
+        
+        
         self.data = self.data.merge(skim_map, on = ['alternative','period'], how = 'left')
         # Evaluate availability for each row if 'availability' column exists
         if 'availability' in self.data.columns:
