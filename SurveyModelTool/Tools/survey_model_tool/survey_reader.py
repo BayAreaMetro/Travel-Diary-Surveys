@@ -146,7 +146,7 @@ class SurveyReader:
         
         
         
-        if self.config['geocode'] == True and not self.config['obs']:
+        if self.config.get('geocode', False) and not self.config.get('obs', False):
             #geocode home locations
             self.hh = map_point_to_reference(self.hh, point_field_name='HHTAZ', point_lat_col='home_lat', point_lon_col='home_lon',reference_field = 'TAZ', reference_gdf = taz)
 
