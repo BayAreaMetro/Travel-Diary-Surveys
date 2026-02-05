@@ -20,7 +20,7 @@
     <ZoneBackgroundTransparency />
     <ZoneFriendlyName />
   </document-format-change-manifest>
-  <repository-location derived-from='http://localhost:9100/workbooks/BATS_2019_2023_Dashboard?rev=22.4' id='BATS_2019_2023_Dashboard' path='/workbooks' revision='22.4' />
+  <repository-location derived-from='http://localhost:9100/workbooks/BATS_2019_2023_Dashboard?rev=23.6' id='BATS_2019_2023_Dashboard' path='/workbooks' revision='23.6' />
   <preferences>
     <preference name='ui.encoding.shelf.height' value='24' />
     <preference name='ui.shelf.height' value='26' />
@@ -5288,7 +5288,7 @@
             <zone forceUpdate='true' h='3250' id='901' type-v2='text' w='98400' x='800' y='44875'>
               <formatted-text>
                 <run fontalignment='1'>For explanatory notes on sample size, weighting and statistical reliability, please refer to the </run>
-                <run fontalignment='1' fontcolor='#4996b2' hyperlink='tabdoc:load-url url=&amp;quot;https://public.tableau.com/app/profile/bayareametro/viz/BATS_2019_2023_Dashboard/FrequentlyAskedQuestions&amp;quot;'>FAQ page</run>
+                <run fontalignment='1' fontcolor='#4996b2' hyperlink='tabdoc:load-url url=&amp;quot;https://bats2019-2023.mtcanalytics.org/?embedId=dashboard&amp;amp;amp;tab=FrequentlyAskedQuestions&amp;quot;'>FAQ page</run>
                 <run fontalignment='1'>.</run>
               </formatted-text>
               <zone-style>
@@ -5612,7 +5612,7 @@
             <zone forceUpdate='true' h='3250' id='1076' type-v2='text' w='98400' x='800' y='68875'>
               <formatted-text>
                 <run>For explanatory notes on sample size, weighting and statistical reliability, please refer to the </run>
-                <run hyperlink='tabdoc:load-url url=&amp;quot;https://public.tableau.com/app/profile/bayareametro/viz/BATS_2019_2023_Dashboard/FrequentlyAskedQuestions&amp;quot;'>FAQ page</run>
+                <run fontcolor='#4996b2' hyperlink='tabdoc:load-url url=&amp;quot;https://bats2019-2023.mtcanalytics.org/?embedId=dashboard&amp;amp;amp;tab=FrequentlyAskedQuestions&amp;quot;'>FAQ page</run>
                 <run>.</run>
               </formatted-text>
               <zone-style>
@@ -6105,7 +6105,7 @@
                     </zone>
                     <zone forceUpdate='true' h='20750' id='1132' type-v2='text' w='48300' x='50900' y='52250'>
                       <formatted-text>
-                        <run fontsize='11'>The 2019 and 2023 survey used a very similar approach with the same smartphone app but the former was smaller — the 2019 survey was about two-thirds the size of 2023. Nevertheless, the consistency in methods allows us to make direct comparisons between 2019 and 2023. We invite you to explore the comparison using this interactive dashboard. Click the tabs at the top to browse through the pages.</run>
+                        <run fontsize='11'>The 2019 and 2023 survey used a very similar approach with the same smartphone app but the former was smaller — the 2019 survey was about two-thirds the size of 2023. Nevertheless, the consistency in methods allows us to make direct comparisons between 2019 and 2023. We invite you to explore the comparison using this interactive dashboard. Use the controls in the left-hand panel to navigate through the pages.</run>
                         <run>Æ&#10;</run>
                         <run>Æ&#10;</run>
                       </formatted-text>
@@ -6121,8 +6121,8 @@
               </zone>
               <zone forceUpdate='true' h='4125' id='1131' type-v2='text' w='98400' x='800' y='73000'>
                 <formatted-text>
-                  <run fontalignment='1' fontsize='9'>Additional details about the Bay Area Travel Study are available on the </run>
-                  <run fontalignment='1' fontsize='9' hyperlink='tabdoc:load-url url=&amp;quot;https://public.tableau.com/app/profile/bayareametro/viz/BATS_2019_2023_Dashboard/FrequentlyAskedQuestions#1&amp;quot;'>FAQ page</run>
+                  <run fontalignment='1' fontsize='9'>Additional details about the Bay Area Travel Study are available on </run>
+                  <run fontalignment='1' fontcolor='#4996b2' fontsize='9' hyperlink='tabdoc:load-url url=&amp;quot;https://bats2019-2023.mtcanalytics.org/?embedId=dashboard&amp;amp;amp;tab=FrequentlyAskedQuestions&amp;quot;'>the FAQ page</run>
                   <run fontalignment='1' fontsize='9'>.</run>
                 </formatted-text>
                 <zone-style>
@@ -6263,7 +6263,7 @@
             <zone forceUpdate='true' h='3250' id='688' type-v2='text' w='98400' x='800' y='61000'>
               <formatted-text>
                 <run>For explanatory notes on sample size, weighting and statistical reliability, please refer to the </run>
-                <run fontcolor='#4996b2' hyperlink='tabdoc:load-url url=&amp;quot;https://public.tableau.com/app/profile/bayareametro/viz/BATS_2019_2023_Dashboard/FrequentlyAskedQuestions&amp;quot;'>FAQ page</run>
+                <run fontcolor='#4996b2' hyperlink='tabdoc:load-url url=&amp;quot;https://bats2019-2023.mtcanalytics.org/?embedId=dashboard&amp;amp;amp;tab=FrequentlyAskedQuestions&amp;quot;'>FAQ page</run>
                 <run>.</run>
               </formatted-text>
               <zone-style>
@@ -6402,7 +6402,7 @@
               <zone forceUpdate='true' h='1444' id='886' type-v2='text' w='98400' x='800' y='38221'>
                 <formatted-text>
                   <run fontalignment='1'>For explanatory notes on sample size, weighting and statistical reliability, please refer to the </run>
-                  <run fontalignment='1' fontcolor='#4996b2' hyperlink='tabdoc:load-url url=&amp;quot;https://public.tableau.com/app/profile/bayareametro/viz/BATS_2019_2023_Dashboard/FrequentlyAskedQuestions&amp;quot;'>FAQ page</run>
+                  <run fontalignment='1' fontcolor='#4996b2' hyperlink='tabdoc:load-url url=&amp;quot;https://bats2019-2023.mtcanalytics.org/?embedId=dashboard&amp;amp;amp;tab=FrequentlyAskedQuestions&amp;quot;'>FAQ page</run>
                   <run fontalignment='1'>.</run>
                 </formatted-text>
                 <zone-style>
@@ -6539,7 +6539,7 @@
             <zone forceUpdate='true' h='3250' id='886' type-v2='text' w='98400' x='800' y='49875'>
               <formatted-text>
                 <run>For explanatory notes on sample size, weighting and statistical reliability, please refer to the </run>
-                <run fontcolor='#4996b2' hyperlink='tabdoc:load-url url=&amp;quot;https://public.tableau.com/app/profile/bayareametro/viz/BATS_2019_2023_Dashboard/FrequentlyAskedQuestions&amp;quot;'>FAQ page</run>
+                <run fontcolor='#4996b2' hyperlink='tabdoc:load-url url=&amp;quot;https://bats2019-2023.mtcanalytics.org/?embedId=dashboard&amp;amp;amp;tab=FrequentlyAskedQuestions&amp;quot;'>FAQ page</run>
                 <run>.</run>
               </formatted-text>
               <zone-style>
@@ -6686,7 +6686,7 @@
             <zone forceUpdate='true' h='3250' id='1074' type-v2='text' w='98400' x='800' y='54750'>
               <formatted-text>
                 <run>For explanatory notes on sample size, weighting and statistical reliability, please refer to the </run>
-                <run fontcolor='#4996b2' hyperlink='tabdoc:load-url url=&amp;quot;https://public.tableau.com/app/profile/bayareametro/viz/BATS_2019_2023_Dashboard/FrequentlyAskedQuestions&amp;quot;'>FAQ page</run>
+                <run fontcolor='#4996b2' hyperlink='tabdoc:load-url url=&amp;quot;https://bats2019-2023.mtcanalytics.org/?embedId=dashboard&amp;amp;amp;tab=FrequentlyAskedQuestions&amp;quot;'>FAQ page</run>
                 <run>.</run>
               </formatted-text>
               <zone-style>
@@ -6719,7 +6719,7 @@
   <windows saved-dpi-scale-factor='1.5' source-height='199'>
     <window class='dashboard' maximized='true' name='Introduction' tab-color='#dec77b'>
       <viewpoints />
-      <active id='-1' />
+      <active id='15' />
       <simple-id uuid='{08185EF0-FDF3-4E3A-93BC-8A0D1A43220B}' />
     </window>
     <window class='dashboard' name='Mode Share' tab-color='#dec77b'>
@@ -6732,7 +6732,7 @@
           </highlight>
         </viewpoint>
       </viewpoints>
-      <active id='685' />
+      <active id='688' />
       <simple-id uuid='{66448BCD-672F-44A1-8A1D-8F31534BCD75}' />
     </window>
     <window class='dashboard' name='Trip Rate' tab-color='#dec77b'>
@@ -6743,21 +6743,21 @@
           </highlight>
         </viewpoint>
       </viewpoints>
-      <active id='-1' />
+      <active id='886' />
       <simple-id uuid='{2BAB85F0-C580-4B0F-9FC7-94F693990D1D}' />
     </window>
     <window class='dashboard' name='Trip Purpose' tab-color='#dec77b'>
       <viewpoints>
         <viewpoint name='Trip rate (by purpose)' />
       </viewpoints>
-      <active id='882' />
+      <active id='886' />
       <simple-id uuid='{DD2F4B55-2A6B-4E96-B049-9BA41898BD0F}' />
     </window>
     <window class='dashboard' name='Average Trip Length' tab-color='#dec77b'>
       <viewpoints>
         <viewpoint name='Trip len (by county x generic segment)' />
       </viewpoints>
-      <active id='-1' />
+      <active id='901' />
       <simple-id uuid='{065CC1B5-4E2B-46BD-BC44-29B73F1CB401}' />
     </window>
     <window class='dashboard' name='Work From Home' tab-color='#dec77b'>
@@ -6768,14 +6768,14 @@
           </highlight>
         </viewpoint>
       </viewpoints>
-      <active id='1070' />
+      <active id='1074' />
       <simple-id uuid='{EA016A44-7774-4F97-A26B-4CEBCB459E44}' />
     </window>
     <window class='dashboard' name='Home Delivery' tab-color='#dec77b'>
       <viewpoints>
         <viewpoint name='sDelivery (by income)' />
       </viewpoints>
-      <active id='1069' />
+      <active id='-1' />
       <simple-id uuid='{B04B749B-7C54-4136-8F60-0778C6D6B4F6}' />
     </window>
     <window class='dashboard' name='FAQ' tab-color='#dec77b'>
@@ -7593,7 +7593,7 @@
       AXsX9+6+gbvxIgdbM6wtL+Hx13OhtZ6fvf5jvM0DJ+o0Hm4QRVFkfXEWc10zLmd189nT118L
       6HgIHYPBiCBKGA6t1AajqSbm+2gZdocDkcwJmtToteusLS+xJkuMDF3kSTiurL02NU3T6Ag7
       0X1GuhsYD4NTzlIBlldWqDucUDy+OkqlHPenlpAzW7T3jmAWQVdF6oNBpsbGCbU2kEiVGOxr
-      Ymp2GeQsw8PD3L07hsWgYnI30qTtUDIHaTIkWNg+oNEfoLg6x+xe8hC/AAAf5UlEQVSGj3xs
+      Ymp2GeQsw8PD3L07hsWgYnI30qTtUDIHaTIkWNg+oNEfoLg6x+xe8hC/AAAgAElEQVSGj3xs
       kxvXR1Cze1gdXpptKXaSMm0+I8vLy7isFjKKhllTuXilm5Xl3YeKHbnII9eYamrbkcUpvIEm
       Uuvzpw8AURT54he/yM2bN/nWt77FT37yExKJRE0m5fhm9ej9o8dO/EsfcWCdFmvw6DFBELDZ
       bAwNDfHZz36WT3/600+YYUyEQnVIhqqSXSgUqp1x281sR+I1gdxQKITDCJhga3kdzC7qPRZA
@@ -7688,64 +7688,65 @@
       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
-      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
-      pvlfsZpT60GFGvQAAAAASUVORK5CYII=
+      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
     </thumbnail>
   </thumbnails>
 </workbook>
