@@ -20,7 +20,7 @@
     <ZoneBackgroundTransparency />
     <ZoneFriendlyName />
   </document-format-change-manifest>
-  <repository-location derived-from='http://localhost:9100/workbooks/BATS_2019_2023_Dashboard?rev=23.6' id='BATS_2019_2023_Dashboard' path='/workbooks' revision='23.6' />
+  <repository-location derived-from='http://localhost:9100/workbooks/BATS_2019_2023_Dashboard?rev=24.3' id='BATS_2019_2023_Dashboard' path='/workbooks' revision='24.3' />
   <preferences>
     <preference name='ui.encoding.shelf.height' value='24' />
     <preference name='ui.shelf.height' value='26' />
@@ -5288,7 +5288,7 @@
             <zone forceUpdate='true' h='3250' id='901' type-v2='text' w='98400' x='800' y='44875'>
               <formatted-text>
                 <run fontalignment='1'>For explanatory notes on sample size, weighting and statistical reliability, please refer to the </run>
-                <run fontalignment='1' fontcolor='#4996b2' hyperlink='tabdoc:load-url url=&amp;quot;https://bats2019-2023.mtcanalytics.org/?embedId=dashboard&amp;tab=FrequentlyAskedQuestions&amp;quot;'>FAQ page</run>
+                <run fontalignment='1' hyperlink='tabdoc:load-url url=&amp;quot;https://bats2019-2023.mtcanalytics.org/?embedId=dashboard&amp;amp;amp;tab=FrequentlyAskedQuestions&amp;quot;'>FAQ page</run>
                 <run fontalignment='1'>.</run>
               </formatted-text>
               <zone-style>
@@ -5611,9 +5611,9 @@
             </zone>
             <zone forceUpdate='true' h='3250' id='1076' type-v2='text' w='98400' x='800' y='68875'>
               <formatted-text>
-                <run>For explanatory notes on sample size, weighting and statistical reliability, please refer to the </run>
-                <run fontcolor='#4996b2' hyperlink='tabdoc:load-url url=&amp;quot;https://bats2019-2023.mtcanalytics.org/?embedId=dashboard&amp;tab=FrequentlyAskedQuestions&amp;quot;'>FAQ page</run>
-                <run>.</run>
+                <run fontalignment='1'>For explanatory notes on sample size, weighting and statistical reliability, please refer to the </run>
+                <run fontalignment='1' hyperlink='tabdoc:load-url url=&amp;quot;https://bats2019-2023.mtcanalytics.org/?embedId=dashboard&amp;amp;amp;tab=FrequentlyAskedQuestions&amp;quot;'>FAQ page</run>
+                <run fontalignment='1'>.</run>
               </formatted-text>
               <zone-style>
                 <format attr='border-color' value='#000000' />
@@ -6151,7 +6151,7 @@
           <format attr='text-align' value='center' />
         </style-rule>
       </style>
-      <size maxheight='800' maxwidth='1000' minheight='800' minwidth='1000' sizing-mode='fixed' />
+      <size maxheight='1000' maxwidth='1000' minheight='1000' minwidth='1000' sizing-mode='fixed' />
       <datasources>
         <datasource name='Parameters' />
       </datasources>
@@ -6181,9 +6181,9 @@
       </datasource-dependencies>
       <zones>
         <zone h='100000' id='16' type-v2='layout-basic' w='100000' x='0' y='0'>
-          <zone friendly-name='Banner with MTC logo' h='98000' id='15' param='vert' type-v2='layout-flow' w='98400' x='800' y='1000'>
-            <zone fixed-size='60' h='7500' id='56' is-fixed='true' param='horz' type-v2='layout-flow' w='98400' x='800' y='1000'>
-              <zone fixed-size='192' h='7500' id='54' is-fixed='true' is-scaled='1' param='M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Processed/BATS2019_2023_Analysis/Tableau_/BATS_2019_2023_Dashboard.twb Files/Image/MTC Stacked Color.png' type-v2='bitmap' w='20000' x='800' y='1000'>
+          <zone friendly-name='Banner with MTC logo' h='98400' id='15' param='vert' type-v2='layout-flow' w='98400' x='800' y='800'>
+            <zone fixed-size='60' h='6000' id='56' is-fixed='true' param='horz' type-v2='layout-flow' w='98400' x='800' y='800'>
+              <zone fixed-size='192' h='6000' id='54' is-fixed='true' is-scaled='1' param='M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Processed/BATS2019_2023_Analysis/Tableau_/BATS_2019_2023_Dashboard.twb Files/Image/MTC Stacked Color.png' type-v2='bitmap' w='20000' x='800' y='800'>
                 <zone-style>
                   <format attr='border-color' value='#000000' />
                   <format attr='border-style' value='none' />
@@ -6191,7 +6191,7 @@
                   <format attr='margin' value='4' />
                 </zone-style>
               </zone>
-              <zone forceUpdate='true' h='7500' id='57' type-v2='text' w='78400' x='20800' y='1000'>
+              <zone forceUpdate='true' h='6000' id='57' type-v2='text' w='78400' x='20800' y='800'>
                 <formatted-text>
                   <run bold='true' fontalignment='1' fontsize='20'>Bay Area Travel Study 2019 and 2023</run>
                 </formatted-text>
@@ -6203,8 +6203,8 @@
                 </zone-style>
               </zone>
             </zone>
-            <zone fixed-size='193' h='24125' id='686' is-fixed='true' param='horz' type-v2='layout-flow' w='98400' x='800' y='8500'>
-              <zone forceUpdate='true' h='24125' id='17' type-v2='text' w='52400' x='800' y='8500'>
+            <zone fixed-size='193' h='19300' id='686' is-fixed='true' param='horz' type-v2='layout-flow' w='98400' x='800' y='6800'>
+              <zone forceUpdate='true' h='19300' id='17' type-v2='text' w='52400' x='800' y='6800'>
                 <formatted-text>
                   <run>At the Bay Area level, mode shares were relatively stable between 2019 and 2023. Driving alone and driving with others remained the dominant travel modes, with only small changes over time. Transit’s overall share was also largely unchanged.  The only statistically significant shift is walking. The share of trips made on foot increased from about 14 percent in 2019 to 17 percent in 2023. </run>
                   <run>Æ&#10;</run>
@@ -6218,7 +6218,7 @@
                   <format attr='margin' value='4' />
                 </zone-style>
               </zone>
-              <zone custom-title='true' fixed-size='222' h='24125' id='685' is-fixed='true' mode='compact' param='[Parameters].[home_county_label_grouped Parameter]' type-v2='paramctrl' w='23000' x='53200' y='8500'>
+              <zone custom-title='true' fixed-size='222' h='19300' id='685' is-fixed='true' mode='compact' param='[Parameters].[home_county_label_grouped Parameter]' type-v2='paramctrl' w='23000' x='53200' y='6800'>
                 <formatted-text>
                   <run>Select the County of Residence</run>
                 </formatted-text>
@@ -6229,7 +6229,7 @@
                   <format attr='margin' value='4' />
                 </zone-style>
               </zone>
-              <zone custom-title='true' fixed-size='222' h='24125' id='680' is-fixed='true' mode='list' param='[Parameters].[Parameter 2]' type-v2='paramctrl' w='23000' x='76200' y='8500'>
+              <zone custom-title='true' fixed-size='222' h='19300' id='680' is-fixed='true' mode='list' param='[Parameters].[Parameter 2]' type-v2='paramctrl' w='23000' x='76200' y='6800'>
                 <formatted-text>
                   <run>Select a Segment</run>
                 </formatted-text>
@@ -6241,8 +6241,8 @@
                 </zone-style>
               </zone>
             </zone>
-            <zone h='24375' id='492' param='horz' type-v2='layout-flow' w='98400' x='800' y='32625'>
-              <zone h='24375' id='679' name='Mode Share (by county x generic segment)' show-caption='true' w='98400' x='800' y='32625'>
+            <zone h='19500' id='492' param='horz' type-v2='layout-flow' w='98400' x='800' y='26100'>
+              <zone h='19500' id='679' name='Mode Share (by county x generic segment)' show-caption='true' w='98400' x='800' y='26100'>
                 <layout-cache fixed-size-h='187' minwidth='363' type-h='fixed' type-w='scalable' />
                 <zone-style>
                   <format attr='border-color' value='#000000' />
@@ -6252,7 +6252,7 @@
                 </zone-style>
               </zone>
             </zone>
-            <zone fixed-size='24' h='4000' id='684' is-fixed='true' leg-item-layout='horz' leg-item-order='reversed' name='Mode Share (by county x generic segment)' pane-specification-id='1' param='[federated.0xoayln03vb0p6118tldw1uzbm5c].[none:Calculation_979814411772002306:nk]' show-title='false' type-v2='color' w='98400' x='800' y='57000'>
+            <zone fixed-size='24' h='3200' id='684' is-fixed='true' leg-item-layout='horz' leg-item-order='reversed' name='Mode Share (by county x generic segment)' pane-specification-id='1' param='[federated.0xoayln03vb0p6118tldw1uzbm5c].[none:Calculation_979814411772002306:nk]' show-title='false' type-v2='color' w='98400' x='800' y='45600'>
               <zone-style>
                 <format attr='border-color' value='#000000' />
                 <format attr='border-style' value='none' />
@@ -6260,11 +6260,11 @@
                 <format attr='margin' value='4' />
               </zone-style>
             </zone>
-            <zone forceUpdate='true' h='3250' id='688' type-v2='text' w='98400' x='800' y='61000'>
+            <zone forceUpdate='true' h='2600' id='688' type-v2='text' w='98400' x='800' y='48800'>
               <formatted-text>
-                <run>For explanatory notes on sample size, weighting and statistical reliability, please refer to the </run>
-                <run fontcolor='#4996b2' hyperlink='tabdoc:load-url url=&amp;quot;https://bats2019-2023.mtcanalytics.org/?embedId=dashboard&amp;tab=FrequentlyAskedQuestions&amp;quot;'>FAQ page</run>
-                <run>.</run>
+                <run fontalignment='1'>For explanatory notes on sample size, weighting and statistical reliability, please refer to the </run>
+                <run fontalignment='1' hyperlink='tabdoc:load-url url=&amp;quot;https://bats2019-2023.mtcanalytics.org/?embedId=dashboard&amp;amp;amp;tab=FrequentlyAskedQuestions&amp;quot;'>FAQ page</run>
+                <run fontalignment='1'>.</run>
               </formatted-text>
               <zone-style>
                 <format attr='border-color' value='#000000' />
@@ -6538,9 +6538,9 @@
             </zone>
             <zone forceUpdate='true' h='3250' id='886' type-v2='text' w='98400' x='800' y='49875'>
               <formatted-text>
-                <run>For explanatory notes on sample size, weighting and statistical reliability, please refer to the </run>
-                <run fontcolor='#4996b2' hyperlink='tabdoc:load-url url=&amp;quot;https://bats2019-2023.mtcanalytics.org/?embedId=dashboard&amp;tab=FrequentlyAskedQuestions&amp;quot;'>FAQ page</run>
-                <run>.</run>
+                <run fontalignment='1'>For explanatory notes on sample size, weighting and statistical reliability, please refer to the </run>
+                <run fontalignment='1' hyperlink='tabdoc:load-url url=&amp;quot;https://bats2019-2023.mtcanalytics.org/?embedId=dashboard&amp;amp;amp;tab=FrequentlyAskedQuestions&amp;quot;'>FAQ page</run>
+                <run fontalignment='1'>.</run>
               </formatted-text>
               <zone-style>
                 <format attr='border-color' value='#000000' />
@@ -6567,7 +6567,7 @@
           <format attr='text-align' value='center' />
         </style-rule>
       </style>
-      <size maxheight='800' maxwidth='1000' minheight='800' minwidth='1000' sizing-mode='fixed' />
+      <size maxheight='1000' maxwidth='1000' minheight='1000' minwidth='1000' sizing-mode='fixed' />
       <datasources>
         <datasource name='Parameters' />
       </datasources>
@@ -6601,9 +6601,9 @@
       </datasource-dependencies>
       <zones>
         <zone h='100000' id='16' type-v2='layout-basic' w='100000' x='0' y='0'>
-          <zone friendly-name='Banner with MTC logo' h='98000' id='15' param='vert' type-v2='layout-flow' w='98400' x='800' y='1000'>
-            <zone fixed-size='60' h='7500' id='56' is-fixed='true' param='horz' type-v2='layout-flow' w='98400' x='800' y='1000'>
-              <zone fixed-size='192' h='7500' id='54' is-fixed='true' is-scaled='1' param='M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Processed/BATS2019_2023_Analysis/Tableau_/BATS_2019_2023_Dashboard.twb Files/Image/MTC Stacked Color.png' type-v2='bitmap' w='20000' x='800' y='1000'>
+          <zone friendly-name='Banner with MTC logo' h='98400' id='15' param='vert' type-v2='layout-flow' w='98400' x='800' y='800'>
+            <zone fixed-size='60' h='6000' id='56' is-fixed='true' param='horz' type-v2='layout-flow' w='98400' x='800' y='800'>
+              <zone fixed-size='192' h='6000' id='54' is-fixed='true' is-scaled='1' param='M:/Data/HomeInterview/Bay Area Travel Study 2023/Data/Processed/BATS2019_2023_Analysis/Tableau_/BATS_2019_2023_Dashboard.twb Files/Image/MTC Stacked Color.png' type-v2='bitmap' w='20000' x='800' y='800'>
                 <zone-style>
                   <format attr='border-color' value='#000000' />
                   <format attr='border-style' value='none' />
@@ -6611,7 +6611,7 @@
                   <format attr='margin' value='4' />
                 </zone-style>
               </zone>
-              <zone forceUpdate='true' h='7500' id='57' type-v2='text' w='78400' x='20800' y='1000'>
+              <zone forceUpdate='true' h='6000' id='57' type-v2='text' w='78400' x='20800' y='800'>
                 <formatted-text>
                   <run bold='true' fontalignment='1' fontsize='20'>Bay Area Travel Study 2019 and 2023</run>
                 </formatted-text>
@@ -6623,8 +6623,8 @@
                 </zone-style>
               </zone>
             </zone>
-            <zone fixed-size='193' h='24125' id='1069' is-fixed='true' param='horz' type-v2='layout-flow' w='98400' x='800' y='8500'>
-              <zone fixed-size='734' forceUpdate='true' h='24125' id='17' is-fixed='true' type-v2='text' w='48400' x='800' y='8500'>
+            <zone fixed-size='193' h='19300' id='1069' is-fixed='true' param='horz' type-v2='layout-flow' w='98400' x='800' y='6800'>
+              <zone fixed-size='734' forceUpdate='true' h='19300' id='17' is-fixed='true' type-v2='text' w='48400' x='800' y='6800'>
                 <formatted-text>
                   <run>In 2019, about 64 percent of workers in the region worked fully on-site. By 2023, that share had fallen to 46 percent. This shift reflects a major structural change in how the region functions day to day.</run>
                   <run>Æ&#10;</run>
@@ -6641,7 +6641,7 @@
                   <format attr='margin' value='4' />
                 </zone-style>
               </zone>
-              <zone custom-title='true' fixed-size='222' h='24125' id='678' is-fixed='true' mode='compact' param='[Parameters].[home_county_label_grouped Parameter]' type-v2='paramctrl' w='23000' x='49200' y='8500'>
+              <zone custom-title='true' fixed-size='222' h='19300' id='678' is-fixed='true' mode='compact' param='[Parameters].[home_county_label_grouped Parameter]' type-v2='paramctrl' w='23000' x='49200' y='6800'>
                 <formatted-text>
                   <run>Select the County of Residence</run>
                 </formatted-text>
@@ -6652,7 +6652,7 @@
                   <format attr='margin' value='4' />
                 </zone-style>
               </zone>
-              <zone custom-title='true' fixed-size='262' h='24125' id='1072' is-fixed='true' mode='list' param='[Parameters].[Parameter 1]' type-v2='paramctrl' w='27000' x='72200' y='8500'>
+              <zone custom-title='true' fixed-size='262' h='19300' id='1072' is-fixed='true' mode='list' param='[Parameters].[Parameter 1]' type-v2='paramctrl' w='27000' x='72200' y='6800'>
                 <formatted-text>
                   <run>Segment a segment</run>
                 </formatted-text>
@@ -6664,8 +6664,8 @@
                 </zone-style>
               </zone>
             </zone>
-            <zone h='18625' id='21' param='horz' type-v2='layout-flow' w='98400' x='800' y='32625'>
-              <zone fixed-size='695' h='18625' id='1070' is-fixed='true' name='sWFH freq (by segment)' w='98400' x='800' y='32625'>
+            <zone h='14900' id='21' param='horz' type-v2='layout-flow' w='98400' x='800' y='26100'>
+              <zone fixed-size='695' h='14900' id='1070' is-fixed='true' name='sWFH freq (by segment)' w='98400' x='800' y='26100'>
                 <layout-cache fixed-size-h='141' minwidth='352' type-h='fixed' type-w='scalable' />
                 <zone-style>
                   <format attr='border-color' value='#000000' />
@@ -6675,7 +6675,7 @@
                 </zone-style>
               </zone>
             </zone>
-            <zone h='3500' id='1071' leg-item-layout='horz' name='sWFH freq (by segment)' pane-specification-id='7' param='[federated.1rjipm31bo2xir1b3bgk818t8m9b].[none:Calculation_0001062333534259:nk]' show-title='false' type-v2='color' w='98400' x='800' y='51250'>
+            <zone h='2800' id='1071' leg-item-layout='horz' name='sWFH freq (by segment)' pane-specification-id='7' param='[federated.1rjipm31bo2xir1b3bgk818t8m9b].[none:Calculation_0001062333534259:nk]' show-title='false' type-v2='color' w='98400' x='800' y='41000'>
               <zone-style>
                 <format attr='border-color' value='#000000' />
                 <format attr='border-style' value='none' />
@@ -6683,11 +6683,11 @@
                 <format attr='margin' value='4' />
               </zone-style>
             </zone>
-            <zone forceUpdate='true' h='3250' id='1074' type-v2='text' w='98400' x='800' y='54750'>
+            <zone forceUpdate='true' h='2600' id='1074' type-v2='text' w='98400' x='800' y='43800'>
               <formatted-text>
-                <run>For explanatory notes on sample size, weighting and statistical reliability, please refer to the </run>
-                <run fontcolor='#4996b2' hyperlink='tabdoc:load-url url=&amp;quot;https://bats2019-2023.mtcanalytics.org/?embedId=dashboard&amp;tab=FrequentlyAskedQuestions&amp;quot;'>FAQ page</run>
-                <run>.</run>
+                <run fontalignment='1'>For explanatory notes on sample size, weighting and statistical reliability, please refer to the </run>
+                <run fontalignment='1' hyperlink='tabdoc:load-url url=&amp;quot;https://bats2019-2023.mtcanalytics.org/?embedId=dashboard&amp;amp;amp;tab=FrequentlyAskedQuestions&amp;quot;'>FAQ page</run>
+                <run fontalignment='1'>.</run>
               </formatted-text>
               <zone-style>
                 <format attr='border-color' value='#000000' />
@@ -6696,7 +6696,7 @@
                 <format attr='margin' value='4' />
               </zone-style>
             </zone>
-            <zone h='2250' id='1075' type-v2='text' w='98400' x='800' y='58000'>
+            <zone h='1800' id='1075' type-v2='text' w='98400' x='800' y='46400'>
               <zone-style>
                 <format attr='border-color' value='#000000' />
                 <format attr='border-style' value='none' />
@@ -6716,10 +6716,10 @@
       <simple-id uuid='{6F3BF859-D4EA-4FBB-8FE0-939015571A0A}' />
     </dashboard>
   </dashboards>
-  <windows saved-dpi-scale-factor='1.5' source-height='199'>
+  <windows saved-dpi-scale-factor='1.5' source-height='135'>
     <window class='dashboard' maximized='true' name='Introduction' tab-color='#dec77b'>
       <viewpoints />
-      <active id='15' />
+      <active id='-1' />
       <simple-id uuid='{08185EF0-FDF3-4E3A-93BC-8A0D1A43220B}' />
     </window>
     <window class='dashboard' name='Mode Share' tab-color='#dec77b'>
@@ -6775,7 +6775,7 @@
       <viewpoints>
         <viewpoint name='sDelivery (by income)' />
       </viewpoints>
-      <active id='-1' />
+      <active id='1076' />
       <simple-id uuid='{B04B749B-7C54-4136-8F60-0778C6D6B4F6}' />
     </window>
     <window class='dashboard' name='FAQ' tab-color='#dec77b'>
