@@ -25,6 +25,7 @@ class ModeChoiceEstimator:
         self.idca_utility_function = 'None'
         self.comparison = None
         self.spec_sheet = spec_sheet
+        self._eval_cache = {}
 
     def _load_config(self, config_path):
         # Accepts a single path or a list of paths
@@ -111,11 +112,14 @@ class ModeChoiceEstimator:
         raise ValueError(f"Value {value} not found in dictionary.")
 
     def _safe_eval(self, expr, row, config):
-        # Replace config keys in the expression with their values
-        for key, value in config.items():
-            if isinstance(value, (int, float)):
-                expr = expr.replace(key, str(value))
-        return eval(expr, {}, row.to_dict())
+        cache_key = expr
+        if cache_key not in self._eval_cache:
+            # Replace config keys in the expression with their values
+            for key, value in config.items():
+                if isinstance(value, (int, float)):
+                    expr = expr.replace(key, str(value))
+            self._eval_cache[cache_key] = compile(expr, '<string>', 'eval')
+        return eval(self._eval_cache[cache_key], {}, row.to_dict())
     
     def _create_comparison(self):
         if self.model is None:
@@ -236,7 +240,7 @@ class ModeChoiceEstimator:
         else:
             self.data['available'] = True  # Default: all available
 
-        for attr in ['dist','time', 'cost', 'wait', 'xfer', 'wlktm','pnr_node']:
+        for attr in ['dist','time', 'cost', 'wait', 'xfer', 'wlktm','drtm','pnr_node']:
             col_name = f'skim_{attr}'
             conversion_col = f'conversion_{attr}'
             debug_col = f'debug_{attr}'
