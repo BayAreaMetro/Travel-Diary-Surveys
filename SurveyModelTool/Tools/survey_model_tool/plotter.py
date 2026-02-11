@@ -1437,7 +1437,7 @@ class Plotter:
             from bokeh.io import save
             from bokeh.resources import INLINE
             filename = html_filename if html_filename is not None else "dashboard.html"
-            save(tabs, filename=filename, resources=INLINE, title="Mode Share Dashboard")
+            save(tabs, filename=filename, resources=INLINE, title=filename.strip('.html'))
 
 
 
