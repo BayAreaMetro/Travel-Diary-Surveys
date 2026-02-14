@@ -185,7 +185,8 @@ class ModeChoiceEstimator:
         del los
         self.data['ATERM'] = self.data['ATERM']/100
         self.data['PTERM'] = self.data['PTERM']/100
-        self.data['total_parking_cost'] = self.data['parking_cost'] * self.data['dwell_mins']/60/100 #convert cents/min to dollars/hr
+        self.data['parking_cost'] = self.data['parking_cost']/100
+        self.data['total_parking_cost'] = self.data['parking_cost'] * self.data['dwell_mins']/60 #convert cents/min to dollars/hr
         if len(self.data) != trip_len:
             raise ValueError(f"Geocoding APTerm failed: expected {trip_len} rows, got {len(self.data)}")#geocode special destinations
 
