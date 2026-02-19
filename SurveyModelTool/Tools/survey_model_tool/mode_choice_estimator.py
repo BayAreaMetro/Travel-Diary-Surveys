@@ -15,7 +15,7 @@ from . import utilities
 
 
 class ModeChoiceEstimator:
-    def __init__(self, data, config_path, spec_sheet=None):
+    def __init__(self, data, config_path, spec_file = None, spec_sheet=None):
         self.data = data.copy()
         self.config = self._load_config(config_path)
         self.model = None
@@ -24,6 +24,7 @@ class ModeChoiceEstimator:
         self.idco_utility_functions = {}
         self.idca_utility_function = 'None'
         self.comparison = None
+        self.spec_file = spec_file
         self.spec_sheet = spec_sheet
         self._eval_cache = {}
 
@@ -51,7 +52,7 @@ class ModeChoiceEstimator:
 
 
     def _create_utility_functions(self, alternatives, alt_codes):
-        util_spec_path = self.config['spec']
+        util_spec_path = self.spec_file if self.spec_file is not None else self.config['spec']
         if self.spec_sheet is not None:
             util_sheet = self.spec_sheet
         else:
@@ -159,7 +160,7 @@ class ModeChoiceEstimator:
             util_sheet = self.spec_sheet
         else:
             util_sheet = self.config.get('spec_sheet', None)
-        util_spec_path = self.config['spec']
+        util_spec_path = self.spec_file if self.spec_file is not None else self.config['spec']
         if util_spec_path is not None:
             ext = os.path.splitext(util_spec_path)[1].lower()
             if ext in ['.xls', '.xlsx']:
