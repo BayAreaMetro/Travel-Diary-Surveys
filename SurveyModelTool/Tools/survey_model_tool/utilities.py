@@ -39,9 +39,41 @@ def convert_skim(config):
         # Print output and errors
         print(result.stdout)
         print(result.stderr)
-    elif not os.path.exists('temp\\HWYSKMIZ.omx'):   
+    elif not os.path.exists('temp\\NMTIZ.SKM.omx'):   
         raise FileNotFoundError("Skim conversion is enabled but the omx file does not exist.")   
     return
+
+
+def convert_mode_choice(config):
+    print("Current working directory:", os.getcwd())
+    # Delete existing .parquet and .omx files in the temp directory to avoid stale files
+    if os.path.exists('temp\\mode_choice'):
+        for file in os.listdir('temp\\mode_choice'):
+            file_path = os.path.join('temp\\mode_choice', file)
+            if os.path.isfile(file_path) and (file.endswith('.parquet') or file.endswith('.omx')):
+                os.remove(file_path)
+    else:
+        os.makedirs('temp\\mode_choice')
+
+    # Write your .s script to disk
+    with open('temp\\mode_choice\\mode_choice_converter.s', 'w') as f:
+        for file in config['mode_choice_files']:
+            f.write('CONVERTMAT FROM="{}\\base\\modechoice\\{}" TO="{}\\temp\\mode_choice\\{}.omx" FORMAT=OMX COMPRESSION=7\n'.format(config['model_dir'], file, os.getcwd(), file.split('.')[0]))
+        
+    # Path to your executable
+    executable_path = r"C:\\Program Files\\Citilabs\\CubeVoyager\\VOYAGER.EXE"
+
+    # Run the executable with the script as an argument
+    result = subprocess.run([executable_path, 'temp\\mode_choice\\mode_choice_converter.s', r'/start'], cwd=os.getcwd(), capture_output=True, text=True)
+
+    # Print output and errors
+    print(result.stdout)
+    print(result.stderr)
+    for i in range(len(config['mode_choice_files'])):
+        if not os.path.exists('temp\\mode_choice\\{}.omx'.format(config['mode_choice_files'][i].split('.')[0])):   
+            raise FileNotFoundError("Mode Choice omx file does not exist.")   
+    return
+
 
 def import_skim(file = None, skim_dict = None, prefix = None):
     
@@ -60,7 +92,10 @@ def import_skim(file = None, skim_dict = None, prefix = None):
             df.columns.name = 'destination'
             df = df.stack().reset_index()
             print("Processing {} matrix:".format(file), matrix_name)
-            df.columns = ['origin','destination','{}{}'.format(prefix, skim_dict[matrix_name])]
+            if skim_dict and matrix_name in skim_dict:
+                df.columns = ['origin','destination','{}{}'.format(prefix, skim_dict[matrix_name])]
+            else:
+                df.columns = ['origin','destination','{}'.format(matrix_name)]
             if i ==0:
                 skm = df
             else:

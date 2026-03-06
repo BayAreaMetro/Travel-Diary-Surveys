@@ -1,26 +1,24 @@
+from . import utilities
+
 class ModelReader:
-    def __init__(self, file_path):
-        self.file_path = file_path
-        self.data = None
+    def __init__(self, config_path):
+        self.config = self._load_config(config_path)
+    
+    
+    def _load_config(self, config_path):
+        # Accepts a single path or a list of paths
+        if isinstance(config_path, (list, tuple)):
+            merged_config = {}
+            for path in config_path:
+                with open(path, 'r') as f:
+                    config = yaml.safe_load(f)
+                    merged_config.update(config)
+            return merged_config
+        else:
+            with open(config_path, 'r') as f:
+                return yaml.safe_load(f)
 
-    def load(self):
-        self.read_data()
-        self.preprocess_data()
+    def summarize_mode_choice(self):
+        utilities.convert_mode_choice(self.config)
         
-    def read_data(self):
-        # Implement logic to read model data from the specified file
         pass
-
-    def preprocess_data(self):
-        # Implement logic to preprocess the model data for analysis
-        pass
-
-    def get_trip_lengths_by_purpose(self):
-        # Implement logic to summarize trip lengths by purpose
-        pass
-
-    def get_work_trips_by_income(self):
-        # Implement logic to summarize work trips by income rate
-        pass
-
-    # Add more methods as needed for additional summarization functions
