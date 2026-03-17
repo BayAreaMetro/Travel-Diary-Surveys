@@ -25,12 +25,13 @@ class ModelReader:
 
     # ...existing code...
     # ...existing code...
-    def summarize_mode_choice(self, out_dir=None, max_workers=8):
+    def summarize_mode_choice(self, out_dir=None, max_workers=8,convert_cube_files = True):
         import os
         import concurrent.futures
         import numpy as np
 
-        utilities.convert_mode_choice(self.config)
+        if convert_cube_files:
+            utilities.convert_mode_choice(self.config)
         # purps = [file.split('MC')[0] for file in self.config['mode_choice_files']]
         purps = list(dict.fromkeys(file.split('MC')[0] for file in self.config['mode_choice_files']))
         print(purps)
