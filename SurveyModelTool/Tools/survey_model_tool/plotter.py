@@ -1822,7 +1822,7 @@ class Plotter:
     
 
 
-    def seaborn_to_bokeh_hue(self, fig, width=920, height=550):
+    def seaborn_to_bokeh_hue(self, fig, width=920, height=550, whiskers=True):
         """
         Convert a Seaborn/Matplotlib grouped bar chart (with _bokeh_spec attribute)
         into an interactive Bokeh figure.
@@ -1915,9 +1915,10 @@ class Plotter:
         )
         # Add error bars (whiskers) if available, and ensure they are drawn on top of bars
         from bokeh.models import Whisker, LabelSet
-        if any(lower_bounds) and any(upper_bounds):
-            whisker = Whisker(source=source, base='x', upper='upper', lower='lower', line_width=2, line_color='black', level='overlay')
-            p.add_layout(whisker)
+        if whiskers:
+            if any(lower_bounds) and any(upper_bounds):
+                whisker = Whisker(source=source, base='x', upper='upper', lower='lower', line_width=2, line_color='black', level='overlay')
+                p.add_layout(whisker)
             # Optionally, add whisker annotations (upper and lower)
             # label_upper = LabelSet(x='x', y='upper', text='upper', level='glyph', source=source,
             #                       render_mode='canvas', text_font_size='8pt', text_align='center', y_offset=2)
@@ -2270,7 +2271,7 @@ class Plotter:
     def plot_grouped_bar_with_dropdown(
         self, df, group_col, value_col, dropdown_col, hue_col=None,
         axis_order=None, hue_order=None, plt_title=None, x_label=None, y_label=None,
-        palette=None, reliability_col='est_reliability'
+        palette=None, reliability_col='est_reliability', whiskers = True
     ):
         """
         Create a grouped (or simple) bar chart with a dropdown to toggle categories (e.g., trip purpose).
@@ -2405,8 +2406,9 @@ class Plotter:
         # Add whiskers (error bars) if available
         from bokeh.models import Whisker
         # Always add whisker, and ensure it updates with the source
-        whisker = Whisker(source=source, base='x', upper='upper', lower='lower', line_width=2, line_color='black', level='overlay')
-        p.add_layout(whisker)
+        if whiskers:
+            whisker = Whisker(source=source, base='x', upper='upper', lower='lower', line_width=2, line_color='black', level='overlay')
+            p.add_layout(whisker)
         p.xaxis.major_label_orientation = 1
         p.xaxis.axis_label = x_label
         p.yaxis.axis_label = y_label if y_label else 'Share'
