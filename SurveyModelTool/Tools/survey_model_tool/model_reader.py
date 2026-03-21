@@ -74,6 +74,15 @@ class ModelReader:
         # return list of chunk files (fast to read later with pyarrow/dask)
         return out_paths
 
+
+    def model_trips(self, convert_cube_files = True, append_skim = False):
+        paths = self.summarize_mode_choice(convert_cube_files=convert_cube_files)
+        df = pd.concat([pd.read_parquet(path) for path in paths], ignore_index=True)
+        if append_skim:
+            skim_df = utilities.import_all_skims(self.config)
+            df = df.merge(skim_df[['OTAZ','DTAZ','OP_Dr_Dist']].rename(columns={'OP_Dr_Dist': 'skim_dist','OTAZ':'origin','DTAZ':'destination'}), on=['origin', 'destination'],  how='left')
+        return df
+    
     def read_whhaown(self):
         df = pd.read_csv(os.path.join(self.config['model_dir'],self.config['whhaown']), delim_whitespace=True)
 
