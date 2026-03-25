@@ -2751,7 +2751,7 @@ class Plotter:
             summary_list = [pop_div, hh_div, trip_div]
         return summary_list
 
-    def stat_bubble(self, label, value, value_display = ',', icon_svg=None):
+    def stat_bubble(self, label, value, value_display = ",", icon_svg=None):
         from bokeh.models import Div
         bubble_styles = {
             "height": "80px",
@@ -2769,15 +2769,15 @@ class Plotter:
         if icon_svg:
             html = f'''
                 <div style="display:flex;align-items:center;gap:16px;">
-                <svg width="36" height="36" fill="#4CB4E7">{icon_svg}</svg>
-                <span>{label}: {value:value_display}</span>
+                    <svg width="36" height="36" fill="#4CB4E7" {icon_svg}
+                    <span>{label}: {value:{value_display}}</span>
                 </div>
-                '''
+            '''
         else:
             html = f'''
                 <div style="display:flex;align-items:center;gap:16px;">
-                <svg width="36" height="36" fill="#4CB4E7"></svg>
-                <span>{label}: {value:value_display}</span>
+                    <svg width="36" height="36" fill="#4CB4E7"></svg>
+                    <span>{label}: {value:{value_display}}</span>
                 </div>
-                '''
+            '''
         return Div(text=html, styles=bubble_styles, sizing_mode='stretch_width')
