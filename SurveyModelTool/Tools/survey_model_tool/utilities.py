@@ -7,6 +7,7 @@ import gc
 from scipy.stats import chi2
 import geopandas as gpd
 from shapely.geometry import Point
+import yaml
 
 def convert_skim(config):
     print("Current working directory:", os.getcwd())
@@ -392,33 +393,3 @@ def compare_models(ref, ref_model, model_list, name_list= [0,1,2,3,4,5,6], ivt =
     except Exception as e:
         print(f"Error calculating 'Value of Time $/hr': {e}")
     return compare[[col for col in compare if col.startswith('Value')  or 'Sig' in col]].rename(columns = {'Value':'Reference Value'})
-
-
-import os
-
-def format_model_for_cube(compare_df, output_folder, model_name = 'hbw'):
-    """Format model comparison DataFrame for Cube input and save as CSV."""
-    output_folder = os.fspath(output_folder)
-
-    coefs = compare_df.reset_index()
-    coefs = coefs[coefs.Category != 'Model_Fit']
-    coefs = coefs[coefs.Category != 'ASC']
-    coefs = coefs[['Parameter', 'Value']].set_index('Parameter').T
-    coefs = pd.concat([coefs] * 2958, ignore_index=True)
-    coefs['Z'] = range(1, 2959)
-    coefs.to_csv(os.path.join(output_folder, f'{model_name}_model_coefs.prn'),
-                 sep='\t', index=False)
-
-    with open(os.path.join(output_folder, f'{model_name}_coef_cube_format.txt'), 'w') as f:
-        f.write(', '.join(f"{col}=#{i+1}" for i, col in enumerate(coefs.columns)))
-
-    asc = compare_df.reset_index()
-    asc = asc[asc.Category == 'ASC']
-    asc = asc[['Parameter', 'Value']].set_index('Parameter').T
-    asc = pd.concat([asc] * 2958, ignore_index=True)
-    asc['Z'] = range(1, 2959)
-    asc.to_csv(os.path.join(output_folder, f'{model_name}_model_ascs.prn'),
-               sep='\t', index=False)
-
-    with open(os.path.join(output_folder, f'{model_name}_asc_cube_format.txt'), 'w') as f:
-        f.write(', '.join(f"{col}=#{i+1}" for i, col in enumerate(asc.columns)))

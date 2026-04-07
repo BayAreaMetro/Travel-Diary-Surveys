@@ -1,6 +1,7 @@
 import yaml
 import geopandas as gpd
 import os
+from shapely.ops import unary_union
 _join = os.path.join
 class GeoCrosswalker:
     def __init__(self, config_file):
@@ -252,6 +253,80 @@ class GeoCrosswalker:
             axis=1
         )
         return gdf_to_clip
+
+    def remove_overlaps_small_share(self, gdf: gpd.GeoDataFrame, id_col: str):
+        """
+        Remove overlapping areas by subtracting the intersection from the polygon
+        that has the smaller share of the overlap (intersection area / polygon area).
+
+        Parameters
+        ----------
+        gdf : GeoDataFrame
+            Input polygons (assumed valid; ideally in an equal-area CRS).
+        id_col : str
+            Column with unique polygon IDs.
+
+        Returns
+        -------
+        GeoDataFrame
+            Polygons with overlaps removed based on smallest share rule.
+        """
+        # Ensure we only have id + geometry
+        base = gdf[[id_col, "geometry"]].copy()
+
+        # Precompute areas (used for share comparisons)
+        base["__area__"] = base.geometry.area
+        area_map = dict(zip(base[id_col], base["__area__"]))
+
+        # Build left/right for overlay
+        left = base.rename(columns={id_col: "left_id"})[["left_id", "geometry"]]
+        right = base.rename(columns={id_col: "right_id"})[["right_id", "geometry"]]
+
+        # Pairwise intersections
+        inter = gpd.overlay(left, right, how="intersection")
+
+        # Drop self-intersections
+        inter = inter[inter["left_id"] != inter["right_id"]].copy()
+
+        if inter.empty:
+            # No overlaps; return original
+            return gdf
+
+        # Deduplicate symmetric pairs (A,B) vs (B,A)
+        inter["pair_key"] = inter.apply(
+            lambda r: tuple(sorted((r["left_id"], r["right_id"]))), axis=1
+        )
+        inter = inter.drop_duplicates(subset=["pair_key"])
+
+        # Compute intersection areas and shares
+        inter["int_area"] = inter.geometry.area
+        inter["left_share"] = inter["int_area"] / inter["left_id"].map(area_map)
+        inter["right_share"] = inter["int_area"] / inter["right_id"].map(area_map)
+
+        # Decide which polygon loses the overlap (smaller share)
+        inter["loser_id"] = inter.apply(
+            lambda r: r["left_id"] if r["left_share"] < r["right_share"] else r["right_id"], axis=1
+        )
+
+        # Collect all overlap geometries to remove per loser_id
+        to_remove = (
+            inter.groupby("loser_id")["geometry"]
+                .apply(lambda geoms: unary_union(list(geoms)))
+        )
+
+        # Apply difference per loser_id
+        cleaned = base.copy()
+        remove_map = dict(to_remove)
+        cleaned["geometry"] = cleaned.apply(
+            lambda r: r["geometry"].difference(remove_map.get(r[id_col], None))
+                    if r[id_col] in remove_map else r["geometry"],
+            axis=1
+        )
+
+        # Return with original columns (except helper area)
+        cleaned = cleaned.drop(columns=["__area__"])
+        # Reattach other original columns (if any) by id
+        return cleaned
 
 # Example usage:
 # crosswalker = GeoCrosswalker('path_to_config.yml')
