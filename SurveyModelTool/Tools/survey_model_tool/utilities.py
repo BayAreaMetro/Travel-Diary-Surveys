@@ -2,7 +2,6 @@ import pandas as pd
 import numpy as np
 import openmatrix as omx
 import os
-import functools
 import subprocess
 import gc
 from scipy.stats import chi2
@@ -78,8 +77,9 @@ def convert_mode_choice(config):
 def import_skim(file = None, skim_dict = None, prefix = None):
     
     with omx.open_file(file, 'r') as f:
-        for i,matrix_name in enumerate(f.list_matrices()):  # Choose the matrix you want
-            mat = f[matrix_name][:]  # Read the matrix as a numpy array
+        dfs = []
+        for i, matrix_name in enumerate(f.list_matrices()):  # Choose the matrix you want
+            mat = f[matrix_name][:].astype(np.float32)  # Use float32 to save memory
 
             # If there is a mapping (e.g., 'ZONE'), get the zone labels
             if 'ZONE' in f.list_mappings():
@@ -96,10 +96,20 @@ def import_skim(file = None, skim_dict = None, prefix = None):
                 df.columns = ['origin','destination','{}{}'.format(prefix, skim_dict[matrix_name])]
             else:
                 df.columns = ['origin','destination','{}'.format(matrix_name)]
-            if i ==0:
-                skm = df
-            else:
-                skm = skm.merge(df, on = ['origin','destination'], how='outer')
+            dfs.append(df)
+            del mat  # Free memory immediately
+            gc.collect()
+        
+        if dfs:
+            # Concatenate all DataFrames at once for better performance
+            skm = pd.concat([df.set_index(['origin','destination']) for df in dfs], axis=1).reset_index()
+            # Ensure float32 to save memory
+            float_cols = skm.select_dtypes(include=[np.float64]).columns
+            skm[float_cols] = skm[float_cols].astype(np.float32)
+            del dfs
+            gc.collect()
+        else:
+            skm = pd.DataFrame()
     return skm
 
 
@@ -123,11 +133,21 @@ def import_all_skims(config):
             df = pd.read_parquet(file)
         else:
             df = import_skim(file=file.replace('.parquet', '.omx'), skim_dict=skim_dict, prefix=prefix)
-            df.to_parquet(file)
+            df.to_parquet(file, compression='snappy')  # Add compression for smaller file size
         df['OTAZ'] = df['origin'] + 1
         df['DTAZ'] = df['destination'] + 1
         skim_dfs.append(df.drop(columns=['origin', 'destination']))
-    merged_skims = functools.reduce(lambda left, right: pd.merge(left, right, on=['OTAZ', 'DTAZ'], how='outer'), skim_dfs)
+    
+    # Use concat instead of merge for better performance and memory usage
+    gc.collect()  # Force garbage collection before large operation
+    merged_skims = pd.concat([df.set_index(['OTAZ','DTAZ']) for df in skim_dfs], axis=1)
+    # Add OTAZ and DTAZ as columns without copying data
+    merged_skims['OTAZ'] = merged_skims.index.get_level_values(0)
+    merged_skims['DTAZ'] = merged_skims.index.get_level_values(1)
+    merged_skims = merged_skims.reset_index(drop=True)
+    # Ensure float32 to save memory
+    float_cols = merged_skims.select_dtypes(include=[np.float64]).columns
+    merged_skims[float_cols] = merged_skims[float_cols].astype(np.float32)
     del skim_dfs
     gc.collect()
     return merged_skims
@@ -372,3 +392,33 @@ def compare_models(ref, ref_model, model_list, name_list= [0,1,2,3,4,5,6], ivt =
     except Exception as e:
         print(f"Error calculating 'Value of Time $/hr': {e}")
     return compare[[col for col in compare if col.startswith('Value')  or 'Sig' in col]].rename(columns = {'Value':'Reference Value'})
+
+
+import os
+
+def format_model_for_cube(compare_df, output_folder, model_name = 'hbw'):
+    """Format model comparison DataFrame for Cube input and save as CSV."""
+    output_folder = os.fspath(output_folder)
+
+    coefs = compare_df.reset_index()
+    coefs = coefs[coefs.Category != 'Model_Fit']
+    coefs = coefs[coefs.Category != 'ASC']
+    coefs = coefs[['Parameter', 'Value']].set_index('Parameter').T
+    coefs = pd.concat([coefs] * 2958, ignore_index=True)
+    coefs['Z'] = range(1, 2959)
+    coefs.to_csv(os.path.join(output_folder, f'{model_name}_model_coefs.prn'),
+                 sep='\t', index=False)
+
+    with open(os.path.join(output_folder, f'{model_name}_coef_cube_format.txt'), 'w') as f:
+        f.write(', '.join(f"{col}=#{i+1}" for i, col in enumerate(coefs.columns)))
+
+    asc = compare_df.reset_index()
+    asc = asc[asc.Category == 'ASC']
+    asc = asc[['Parameter', 'Value']].set_index('Parameter').T
+    asc = pd.concat([asc] * 2958, ignore_index=True)
+    asc['Z'] = range(1, 2959)
+    asc.to_csv(os.path.join(output_folder, f'{model_name}_model_ascs.prn'),
+               sep='\t', index=False)
+
+    with open(os.path.join(output_folder, f'{model_name}_asc_cube_format.txt'), 'w') as f:
+        f.write(', '.join(f"{col}=#{i+1}" for i, col in enumerate(asc.columns)))
