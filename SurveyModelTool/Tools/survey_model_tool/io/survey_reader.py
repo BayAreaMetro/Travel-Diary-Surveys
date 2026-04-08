@@ -10,9 +10,8 @@ import seaborn as sns
 import subprocess
 import functools
 import openmatrix as omx
-from . import utilities
-from .utilities import map_point_to_reference
-from .utilities import apply_transformations
+from survey_model_tool.services.utilities import map_point_to_reference
+from  survey_model_tool.services.utilities import apply_transformations
 
 class SurveyReader:
     def __init__(self, config):

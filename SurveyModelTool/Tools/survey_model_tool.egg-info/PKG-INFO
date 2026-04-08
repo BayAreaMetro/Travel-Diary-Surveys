@@ -3,7 +3,7 @@ Name: survey_model_tool
 Version: 0.1.0
 Summary: A tool to read and summarize survey and model data, format for estimation, and create visualizations
 Home-page: https://github.com/vta/Modeling_Warehouse/tree/main/BATS%20Analysis/Pipeline/pipeline
-Author: Your Name
+Author: Hannah Carson
 Author-email: hannah.carson@vta.org
 Classifier: Programming Language :: Python :: 3
 Classifier: License :: OSI Approved :: MIT License

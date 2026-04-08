@@ -2739,3 +2739,25 @@ class Plotter:
                 </div>
             '''
         return Div(text=html, styles=bubble_styles, sizing_mode='stretch_width')
+    
+    
+
+            
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    

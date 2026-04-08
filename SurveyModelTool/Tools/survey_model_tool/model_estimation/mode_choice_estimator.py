@@ -11,7 +11,7 @@ import os
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.metrics import confusion_matrix
-from . import utilities
+from survey_model_tool.services.utilities import import_all_skims, apply_transformations
 
 
 class ModeChoiceEstimator:
@@ -212,7 +212,7 @@ class ModeChoiceEstimator:
         self.data.reset_index(drop=True, inplace=True)
         self.data['chose'] = self.data['alternative'] == self.data['{}_final'.format(self.config['choice_col'])]
         self.data['chose'] = self.data['chose'].astype(int)
-        merged_skims = utilities.import_all_skims(self.config)
+        merged_skims = import_all_skims(self.config)
         self.data = self.data.merge(merged_skims, on=['OTAZ', 'DTAZ'], how='left')
         # if len(self.data['{}_final'.format(self.config['choice_col'])].unique()) == 1:
         #     raise ValueError("2. Only one choice in the data. Please check your data.")
@@ -285,7 +285,7 @@ class ModeChoiceEstimator:
         
         # print(self.data[self.data.trip_id ==2300470601052][['alternative','available','OTAZ','DTAZ','total_parking_cost']+[col for col in self.data.columns if 'skim_cost' in col]])
         # print("Using utility method")
-        self.data = utilities.apply_transformations(self.data, self.config['data_transforms_file'], self.config)
+        self.data = apply_transformations(self.data, self.config['data_transforms_file'], self.config)
         
        
         # Remove cases where chosen alternative is not available

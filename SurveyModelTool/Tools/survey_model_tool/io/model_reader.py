@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from . import utilities
+from  survey_model_tool.services.utilities import convert_mode_choice, import_all_skims, import_skim    
 import yaml
 import os
 
@@ -31,7 +31,7 @@ class ModelReader:
         import numpy as np
 
         if convert_cube_files:
-            utilities.convert_mode_choice(self.config)
+            convert_mode_choice(self.config)
         # purps = [file.split('MC')[0] for file in self.config['mode_choice_files']]
         purps = list(dict.fromkeys(file.split('MC')[0] for file in self.config['mode_choice_files']))
         print(purps)
@@ -53,7 +53,7 @@ class ModelReader:
 
         def _read_and_process(spec):
             period, path, purp, income = spec
-            df = utilities.import_skim(file=path)
+            df = import_skim(file=path)
             df['income_bin'] = income if income is not None else np.nan
             df['purp'] = purp
             df['origin'] = df['origin'] + 1
@@ -79,7 +79,7 @@ class ModelReader:
         paths = self.summarize_mode_choice(convert_cube_files=convert_cube_files)
         df = pd.concat([pd.read_parquet(path) for path in paths], ignore_index=True)
         if append_skim:
-            skim_df = utilities.import_all_skims(self.config)
+            skim_df = import_all_skims(self.config)
             df = df.merge(skim_df[['OTAZ','DTAZ','OP_Dr_Dist']].rename(columns={'OP_Dr_Dist': 'skim_dist','OTAZ':'origin','DTAZ':'destination'}), on=['origin', 'destination'],  how='left')
         return df
     
