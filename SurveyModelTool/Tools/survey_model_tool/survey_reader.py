@@ -84,7 +84,13 @@ class SurveyReader:
         apply data transformation as specified in preprocessor configurations."""
         #add descriptive labels to categorical variables
         if 'codebook' in self.config:
-            labels = pd.read_excel(_join(self.config['survey_dir'],self.config['codebook']),sheet_name = self.config['codebook_sheet'])
+            if self.config['codebook'].endswith('.xlsx'):
+                labels = pd.read_excel(_join(self.config['survey_dir'],self.config['codebook']),sheet_name = self.config['codebook_sheet'])
+                labels.columns = [col.lower() for col in labels.columns]
+            else:
+                labels = pd.read_csv(_join(self.config['survey_dir'],self.config['codebook']))
+                labels.columns = [col.lower() for col in labels.columns]
+
             #FIXME: hardcoded column names in codebook; make them configurable?
             grouped_labels = labels.groupby('variable')
             value_maps ={var: dict(zip(group['value'], group['label']))
