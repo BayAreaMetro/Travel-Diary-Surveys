@@ -366,8 +366,9 @@ class SurveyModelSummarizer:
             pop = pop.copy()
 
         if person_group_col is None:
-            person_group_col = ['gender']
-            print(f"No grouping columns specified. Defaulting to {person_group_col}")
+            person_group_col = ['gen_pop']
+            pop['gen_pop'] = 'Total Population'
+            trip_data['gen_pop'] = 'Total Population'
         if trip_group_col is None:
             group_list = person_group_col
         else:

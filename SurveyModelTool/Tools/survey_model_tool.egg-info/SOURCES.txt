@@ -15,6 +15,10 @@ survey_model_tool/io/model_reader.py
 survey_model_tool/io/survey_reader.py
 survey_model_tool/model_estimation/__init__.py
 survey_model_tool/model_estimation/mode_choice_estimator.py
+survey_model_tool/sections/__init__.py
+survey_model_tool/sections/day_pattern.py
+survey_model_tool/sections/mode_share.py
+survey_model_tool/sections/summary.py
 survey_model_tool/services/__init__.py
 survey_model_tool/services/geo_crosswalker.py
 survey_model_tool/services/summarizers.py
