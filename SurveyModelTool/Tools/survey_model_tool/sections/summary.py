@@ -72,40 +72,48 @@ class SummarySectionBuilder:
 
 
         try:
-            hh_by_income = self.plotter.plot_share_hue(
-                df=self.survey.hh, group_cols=[self.config['global']['columns']['income_label']], share_is_bin=False,
+            hh_by_income = self.plotter.plot_share(
+                df=self.survey.hh[self.survey.hh[self.config['global']['columns']['income_label']].isin(self.config['global']['orders']['income_order'])], group_cols=[self.config['global']['columns']['income_label']], 
                 axis_order=self.config['global']['orders']['income_order'], weight_col=self.config['global']['weights']['hh'],
-                x_label='Household Income', plt_title='Household Distribution by Income',                
+                x_label='Household Income',y_label = 'Share of Households', plt_title='Household Distribution by Income',                
             )
         except Exception as e:
             print(f"Skipping hh_by_income due to error: {e}")
-        try:            hh_by_vehicles = self.plotter.plot_share_hue(
-                df=self.survey.hh, group_cols=[self.config['global']['columns']['auto_own']], share_is_bin=False,
+        try:            hh_by_vehicles = self.plotter.plot_share(
+                df=self.survey.hh, group_cols=[self.config['global']['columns']['auto_own']], 
                 axis_order=self.config['global']['orders']['auto_own_order'], weight_col=self.config['global']['weights']['hh'],
-                x_label='Number of Vehicles', plt_title='Household Distribution by Number of Vehicles',                
+                x_label='Number of Vehicles', y_label='Share of Households', plt_title='Household Distribution by Number of Vehicles',                
             )
         except Exception as e:
             print(f"Skipping hh_by_vehicles due to error: {e}")
 
-        try:            hh_by_size = self.plotter.plot_share_hue(
-                df=self.survey.hh, group_cols=[self.config['global']['columns']['auto_own']], share_is_bin=False,
-                axis_order=self.config['global']['orders']['hhsize_order'], weight_col=self.config['global']['weights']['hh'],
-                x_label='Household Size', plt_title='Household Distribution by Size',                
+        try:            hh_by_size = self.plotter.plot_share(
+                df=self.survey.hh, group_cols=[self.config['global']['columns']['hh_size']], 
+                axis_order=self.config['global']['orders']['hh_size_order'], weight_col=self.config['global']['weights']['hh'],
+                x_label='Household Size', y_label='Share of Households', plt_title='Household Distribution by Size',                
             )
         except Exception as e:
             print(f"Skipping hh_by_size due to error: {e}")
         
-        
+        try:            hh_by_workers = self.plotter.plot_share(
+                df=self.survey.hh, group_cols=[self.config['global']['columns']['hh_workers']], 
+                axis_order=self.config['global']['orders']['hh_workers_order'], weight_col=self.config['global']['weights']['hh'],
+                x_label='Household Workers', y_label='Share of Households', plt_title='Household Distribution by Number of Workers',                
+            )
+        except Exception as e:
+            print(f"Skipping hh_by_workers due to error: {e}")
         try:
             hh_summary = self.config['sections']['overview']['text']['hh_summary_1']
         except:
             hh_summary = "Household Characteristics"
 
         hh_row_1 = [h for h in [hh_by_income, hh_by_vehicles] if h is not None]
+        hh_row_2 = [h for h in [hh_by_size, hh_by_workers] if h is not None]
         if hh_row_1:
             overview_column.append([hh_summary])
             overview_column.append(hh_row_1)
-        
+        if hh_row_2:
+            overview_column.append(hh_row_2)
 
 
         return overview_column
