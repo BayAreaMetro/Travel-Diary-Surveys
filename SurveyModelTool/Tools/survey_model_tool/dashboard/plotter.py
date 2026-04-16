@@ -16,6 +16,8 @@ from bokeh.models import ColumnDataSource, HoverTool, FactorRange, Select, Custo
 from bokeh.plotting import figure   
 from bokeh.layouts import column
 import scipy
+from itertools import islice, cycle
+
 
 # Default palette used when none is provided
 DEFAULT_PALETTE = ['#00CFBB','#417178','#AEE9E8',
@@ -445,6 +447,7 @@ class Plotter:
             fig._bokeh_spec = spec
         except Exception:
             pass
+        plt.close(fig)
         return fig
     
     
@@ -568,8 +571,8 @@ class Plotter:
 
         return grouped[group_cols + ['share', 'standard_error', 'ci', 'lower_bound', 'upper_bound', 'cv', 'est_reliability']]
 
-    def plot_share_hue(self, df = None, group_cols = ['income_broad','managed_lane_use'], hue = None, share_is_bin =False, weight_col = 'trip_weight',
-                        axis_order = None, sub_axis_order = None,
+    def plot_share_hue(self, df = None, group_col = 'income_broad', hue_col = None, share_is_bin =False, weight_col = 'trip_weight',
+                        axis_order = None, hue_order = None,
                         plt_title = None, x_label = None, y_label = None, ax = None, rel_legend = True, palette = None):
         # Calculate weighted sums by income and managed lane use
         hatch_map = {
@@ -582,41 +585,39 @@ class Plotter:
         else:
             filtered_trips = df.copy()
         if axis_order is None:
-            axis_order = df[group_cols[0]].unique().tolist()
-        if sub_axis_order is None:
-            sub_axis_order = df[group_cols[1]].unique().tolist()
-        if hue is None:
-            hue = group_cols[1]
+            axis_order = df[group_col].unique().tolist()
+        if hue_order is None:
+            hue_order = df[hue_col].unique().tolist()
         if x_label is None:
-            x_label = group_cols[0].replace('_', ' ').title()
+            x_label = group_col.replace('_', ' ').title()
 
         # If share_is_bin is True, we will plot the share of each bin within the main group
         hue_is_tot = False
         if share_is_bin:
-            weighted_tot = group_cols[0]
+            weighted_tot = group_col
             hue_is_tot = True
             if y_label is None:
-                y_label = 'Share of Trips in each {}'.format(group_cols[0].replace('_', ' ').title())
+                y_label = 'Share of Trips in each {}'.format(group_col.replace('_', ' ').title())
             if palette is None:
                 palette = self.default_palette
             if plt_title is None:
-                plt_title = f"Share of {group_cols[1].replace('_', ' ').title()} in each {group_cols[0].replace('_', ' ').title()}"    
+                plt_title = f"Share of {hue_col.replace('_', ' ').title()} in each {group_col.replace('_', ' ').title()}"    
         else:
-            weighted_tot = group_cols[1]
+            weighted_tot = hue_col
             if y_label is None:
                 y_label = 'Share of Trips'
             if palette is None:
                 palette = self.default_palette
             if plt_title is None:
-                plt_title = f"{group_cols[0].replace('_', ' ').title()} Distribution by {group_cols[1].replace('_', ' ').title()}"    
+                plt_title = f"{group_col.replace('_', ' ').title()} Distribution by {hue_col.replace('_', ' ').title()}"    
 
         # --- Ensure all combinations exist using MultiIndex ---
         # Get all possible values for each group column
-        all_groups = [axis_order if group_cols[0] == 'income_broad' else sorted(filtered_trips[group_cols[0]].unique())]
-        all_groups += [sorted(filtered_trips[group_cols[1]].unique())]
-        all_combos = pd.MultiIndex.from_product(all_groups, names=group_cols)
+        all_groups = [axis_order if group_col == 'income_broad' else sorted(filtered_trips[group_col].unique())]
+        all_groups += [sorted(filtered_trips[hue_col].unique())]
+        all_combos = pd.MultiIndex.from_product(all_groups, names=[group_col, hue_col])
         # Group and aggregate, then reindex to fill missing combos with zero
-        weighted = filtered_trips.groupby(group_cols)[weight_col].sum().reindex(all_combos, fill_value=0).reset_index()
+        weighted = filtered_trips.groupby([group_col, hue_col])[weight_col].sum().reindex(all_combos, fill_value=0).reset_index()
         # Calculate total weighted trips per income group
         totals = weighted.groupby(weighted_tot)[weight_col].sum().reset_index()
         totals = totals.rename(columns={weight_col: 'total_weight'})
@@ -625,18 +626,18 @@ class Plotter:
         weighted['share'] = weighted[weight_col] / weighted['total_weight']
         order = axis_order
 
-        raw_counts = filtered_trips.groupby(group_cols).size().reindex(all_combos, fill_value=0).reset_index(name='count')
+        raw_counts = filtered_trips.groupby([group_col, hue_col]).size().reindex(all_combos, fill_value=0).reset_index(name='count')
         print("Number of Survey Records")
-        print(raw_counts.pivot(index=group_cols[0], columns=group_cols[1], values='count').fillna(0).reindex(order))
+        print(raw_counts.pivot(index=group_col, columns=hue_col, values='count').fillna(0).reindex(order))
 
         results = self._weighted_share_se(
             df=filtered_trips,
-            group_cols=group_cols,
+            group_cols=[group_col, hue_col],
             weight_col=weight_col,
             hue_is_tot=hue_is_tot
         )
-        results[group_cols[0]] = pd.Categorical(results[group_cols[0]], categories=order, ordered=True)
-        results = results.sort_values(by=group_cols).reset_index(drop=True)
+        results[group_col] = pd.Categorical(results[group_col], categories=order, ordered=True)
+        results = results.sort_values(by=[group_col, hue_col]).reset_index(drop=True)
         # --- End MultiIndex step ---
 
         # Plot normalized shares
@@ -644,10 +645,10 @@ class Plotter:
             fig, ax = plt.subplots(figsize=(10, 5))
         sns.barplot(
             data=weighted,
-            x=group_cols[0],
+            x=group_col,
             y='share',
-            hue=hue,
-            hue_order=sub_axis_order,
+            hue=hue_col,
+            hue_order=hue_order,
             order=order,
             ax=ax,
             palette=palette
@@ -655,13 +656,13 @@ class Plotter:
         hue_order = [t.get_text() for t in ax.get_legend().texts]
         # Get the data used for plotting
         plot_data = weighted.copy()
-        plot_data[group_cols[0]] = plot_data[group_cols[0]].astype(str)
-        plot_data[group_cols[1]] = plot_data[group_cols[1]].astype(str)
+        plot_data[group_col] = plot_data[group_col].astype(str)
+        plot_data[hue_col] = plot_data[hue_col].astype(str)
 
         hatches = []
         
-        for val in sub_axis_order:
-            hatches = hatches + list(results[results[group_cols[1]] == val].est_reliability.map(hatch_map))
+        for val in hue_order:
+            hatches = hatches + list(results[results[hue_col] == val].est_reliability.map(hatch_map))
 
         # Loop through bars and match to data by position
         num_main = len(axis_order)
@@ -678,7 +679,7 @@ class Plotter:
             # print(f"Bar {i}: main_cat={main_cat}, hue_cat={hue_cat}")
 
             # Convert hue_cat to boolean if needed
-            if pd.api.types.is_bool_dtype(results[group_cols[1]]):
+            if pd.api.types.is_bool_dtype(results[hue_col]):
                 if hue_cat == "True":
                     hue_val_match = True
                 elif hue_cat == "False":
@@ -747,41 +748,41 @@ class Plotter:
             except Exception:
                 pass
         combined_handles = hue_handles + (reliability_patches if rel_legend else [])
-        ax.legend(handles=combined_handles, loc='upper left', bbox_to_anchor=(1, 1), title=hue.replace('_', ' ').title())
+        ax.legend(handles=combined_handles, loc='upper left', bbox_to_anchor=(1, 1), title=hue_col.replace('_', ' ').title())
         # Attach Bokeh spec for interactive conversion in dashboard (include reliability)
 
         try:
             # Add error bars to bokeh spec for plot_share_hue only
-            data_for_spec = results[[group_cols[0], group_cols[1], 'share', 'lower_bound', 'upper_bound']].copy()
-            rel_cols = [group_cols[0], group_cols[1], 'est_reliability']
+            data_for_spec = results[[group_col, hue_col, 'share', 'lower_bound', 'upper_bound']].copy()
+            rel_cols = [group_col, hue_col, 'est_reliability']
             rel_map = results[rel_cols].rename(columns={'est_reliability': 'reliability'})
-            data_for_spec = data_for_spec.merge(rel_map, on=[group_cols[0], group_cols[1]], how='left')
+            data_for_spec = data_for_spec.merge(rel_map, on=[group_col, hue_col], how='left')
             # Build a palette list for the hue values
             from matplotlib.colors import to_hex
             if palette is None:
-                from itertools import islice, cycle
-                hue_colors = list(islice(cycle(self.default_palette), len(sub_axis_order)))
+                hue_colors = list(islice(cycle(self.default_palette), len(hue_order)))
             elif isinstance(palette, str):
-                hue_colors = sns.color_palette(palette, n_colors=len(sub_axis_order))
+                hue_colors = sns.color_palette(palette, n_colors=len(hue_order))
             else:
                 hue_colors = palette
             palette_hex = [to_hex(c) for c in hue_colors]
             fig._bokeh_spec = {
                 'type': 'grouped_bar',
-                'group_col': group_cols[0],
-                'hue_col': hue,
-                'axis_order': order,
-                'hue_order': sub_axis_order,
+                'group_col': group_col,
+                'hue_col': hue_col,
+                'axis_order': axis_order,
+                'hue_order': hue_order,
                 'data': data_for_spec.to_dict('records'),
                 'palette': palette_hex,
                 'title': plt_title or '',
-                'x_label': x_label or group_cols[0],
+                'x_label': x_label or group_col.replace('_', ' ').title(),
                 'y_label': y_label or 'Share of Trips',
             }
         except Exception:
             pass
         # if ax is None:
         #     plt.show()
+        plt.close(fig)
         return fig
 
 
@@ -917,15 +918,25 @@ class Plotter:
             gw = gw.merge(rel_map, on=group_cols[0], how='left')
             # Build a palette for Bokeh (list of hex colors)
             from matplotlib.colors import to_hex
+            
+            
             if palette is None:
-                # Use first color of default palette
-                color_list = [self.default_palette[0]]
+                # Cycle default palette to match number of categories
+                color_list = list(islice(cycle(self.default_palette), len(axis_order)))
+
             elif isinstance(palette, str):
-                color_list = [sns.color_palette(palette, n_colors=1)[0]]
+                # Named seaborn palette
+                color_list = sns.color_palette(palette, n_colors=len(axis_order))
+
             else:
-                # assume list/tuple of colors; take at least one
-                color_list = [palette[0]] if len(palette) > 0 else [self.default_palette[0]]
+                # List/tuple of colors: cycle or truncate to length
+                if len(palette) < len(axis_order):
+                    color_list = list(islice(cycle(palette), len(axis_order)))
+                else:
+                    color_list = list(palette[:len(axis_order)])
+
             palette_hex = [to_hex(c) for c in color_list]
+
             fig._bokeh_spec = {
                 'type': 'bar',
                 'group_col': group_cols[0],
@@ -940,6 +951,7 @@ class Plotter:
             pass
         # if ax is None:
         #     plt.show()
+        plt.close(fig)
         return fig
 
     def plot_share_pie(self, df=None, group_col='income_broad', weight_col='trip_weight', axis_order=None, plt_title=None, legend_loc='best', legend_bbox=None, figsize=(8, 8), palette=None):
@@ -983,6 +995,7 @@ class Plotter:
             ax.legend(wedges, axis_order, loc=legend_loc, bbox_to_anchor=legend_bbox)
         plt.tight_layout()
         # plt.show()
+        plt.close(fig)
         return fig
 
     def show_side_by_side(self, fig1, fig2, figsize=(16, 8), titles=(None, None)):
@@ -1021,6 +1034,7 @@ class Plotter:
             axes[1].set_title(titles[1])
         plt.tight_layout()
         # plt.show()
+        plt.close(fig)
         return fig
 
     def plot_concentric_pie(self,
@@ -1176,7 +1190,7 @@ class Plotter:
         })
         summary_df = summary_df.sort_values(by=col1, ascending=False)
         display(summary_df.style.format({col: "{:.1%}" for col in summary_df.columns[1:]}))
-
+        plt.close(fig)
         return fig
 
 
@@ -1663,7 +1677,7 @@ class Plotter:
             }
         except Exception:
             pass
-
+        plt.close(fig)
         return fig
 
     def plot_stacked_bar(self, df=None, group_col=None, stack_col=None, weight_col='trip_weight', add_ref = False,axis_order=None, stack_order=None, plt_title=None, x_label=None, y_label='Share of Trips', ax=None, rel_legend=True, palette=None):
@@ -1818,6 +1832,7 @@ class Plotter:
             }
         except Exception:
             pass
+        plt.close(fig)
         return fig
     
 
@@ -2732,7 +2747,7 @@ class Plotter:
         if icon_svg == 'hhsize':
             icon_svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640"><!--!Font Awesome Free v7.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2026 Fonticons, Inc.--><path d="M334.3 51.4C325.3 46.9 314.7 46.9 305.7 51.4L49.7 179.4C33.9 187.3 27.5 206.5 35.4 222.3C43.3 238.1 62.5 244.5 78.3 236.6L320 115.8L561.7 236.6C577.5 244.5 596.7 238.1 604.6 222.3C612.5 206.5 606.1 187.3 590.3 179.4L334.3 51.4zM320 336C350.9 336 376 310.9 376 280C376 249.1 350.9 224 320 224C289.1 224 264 249.1 264 280C264 310.9 289.1 336 320 336zM320 384C267 384 224 427 224 480L224 512C224 529.7 238.3 544 256 544L384 544C401.7 544 416 529.7 416 512L416 480C416 427 373 384 320 384zM192 320C192 293.5 170.5 272 144 272C117.5 272 96 293.5 96 320C96 346.5 117.5 368 144 368C170.5 368 192 346.5 192 320zM544 320C544 293.5 522.5 272 496 272C469.5 272 448 293.5 448 320C448 346.5 469.5 368 496 368C522.5 368 544 346.5 544 320zM144 400C99.8 400 64 435.8 64 480L64 513.1C64 530.1 77.8 544 94.9 544L182.7 544C178.4 534.2 176 523.4 176 512L176 464C176 445.6 179.5 428 185.8 411.8C173.6 404.3 159.3 400 144 400zM457.4 544L545.2 544C562.2 544 576.1 530.2 576.1 513.1L576.1 480C576.1 435.8 540.3 400 496.1 400C480.8 400 466.5 404.3 454.3 411.8C460.6 428 464.1 445.6 464.1 464L464.1 512C464.1 523.4 461.7 534.2 457.4 544z"/></svg>'
             value_display = ",.2f"
-            
+
         bubble_styles = {
             "height": "80px",
             "display": "flex",
