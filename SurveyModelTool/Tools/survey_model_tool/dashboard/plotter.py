@@ -1704,10 +1704,8 @@ class Plotter:
             else:
                 filtered_trips = df.copy()
         if axis_order is None:
-            if add_ref:
-                axis_order = ['Total'] +filtered_trips[group_col].unique().tolist()
-            else:
-                axis_order = filtered_trips[group_col].unique().tolist()
+            axis_order = filtered_trips[group_col].unique().tolist()
+            
         elif add_ref:
             axis_order = ['Total'] + axis_order
         if stack_order is None:

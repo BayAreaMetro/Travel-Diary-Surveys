@@ -164,7 +164,7 @@ class ModeShareSectionBuilder:
         
         try:
             fig_by_auto = self.plotter.plot_share_hue(
-                df=self.data, group_col=self.config['global']['columns']['mode'],hue_col = self.config['global']['columns']['auto_own'], share_is_bin=False,
+                df=self.data[~self.data[self.config['global']['columns']['auto_own']].isna()], group_col=self.config['global']['columns']['mode'],hue_col = self.config['global']['columns']['auto_own'], share_is_bin=False,
                 hue_order=self.config['global']['orders']['auto_own_order'], weight_col=self.config['global']['weights']['trip'],
                 x_label='Trip Mode', plt_title='Mode Share by Auto Ownership {}'.format(self.compare_order[0]),
                 axis_order=self.config['global']['orders']['mode_order']
@@ -174,7 +174,7 @@ class ModeShareSectionBuilder:
         if self.compare and self.survey2 is not None:
             try:
                 fig_by_auto_2 = self.plotter.plot_share_hue(
-                    df=self.data2, group_col=self.config['global']['columns']['mode'], hue_col=self.config['global']['columns']['auto_own'], share_is_bin=False,
+                    df=self.data2[~self.data2[self.config['global']['columns']['auto_own']].isna()], group_col=self.config['global']['columns']['mode'], hue_col=self.config['global']['columns']['auto_own'], share_is_bin=False,
                     hue_order=self.config['global']['orders']['auto_own_order'], weight_col=self.config['global']['weights']['trip'],
                     x_label='Trip Mode', plt_title='Mode Share by Auto Ownership {}'.format(self.compare_order[1]),
                     axis_order=self.config['global']['orders']['mode_order']
@@ -222,7 +222,7 @@ class ModeShareSectionBuilder:
                 print(f"Skipping fig_by_distance_stack_2 due to error: {e}")
         try:
             fig_by_dist = self.plotter.plot_dist(
-                df=self.data.dropna(subset=[self.config['global']['columns']['distance_crop']]), x_label='Distance (mi)',
+                df=self.data.dropna(subset=[self.config['global']['columns']['distance']]), x_label='Distance (mi)',
                 value_col='Distance', hue_order=self.config['global']['orders']['mode_order'], plt_title='Trip Distance Distribution by Mode {}'.format(self.compare_order[0]),
                 weight_col=self.config['global']['weights']['trip'], hue=self.config['global']['columns']['mode']
             )
@@ -232,7 +232,7 @@ class ModeShareSectionBuilder:
         if self.compare and self.survey2 is not None:
             try:
                 fig_by_dist_2 = self.plotter.plot_dist(
-                    df=self.data2.dropna(subset=[self.config['global']['columns']['distance_crop']]), x_label='Distance (mi)',
+                    df=self.data2.dropna(subset=[self.config['global']['columns']['distance']]), x_label='Distance (mi)',
                     value_col='Distance', hue_order=self.config['global']['orders']['mode_order'], plt_title='Trip Distance Distribution by Mode {}'.format(self.compare_order[1]),
                     weight_col=self.config['global']['weights']['trip'], hue=self.config['global']['columns']['mode']
                 )
