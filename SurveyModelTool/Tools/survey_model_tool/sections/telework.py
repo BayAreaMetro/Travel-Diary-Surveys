@@ -161,10 +161,11 @@ class TeleworkSectionBuilder:
 
 
         try:
-            fig_telework_age_stack = self.plotter.plot_stacked_bar(df=self.survey.person[self.survey.person[self.config['global']['columns']['worker_flag']] ==1], 
+            fig_telework_age_stack = self.plotter.plot_stacked_bar(df=self.survey.person[(self.survey.person[self.config['global']['columns']['age']].isin(self.config['global']['orders']['age_order'])) & (self.survey.person[self.config['global']['columns']['worker_flag']] ==1)],  
                                                                         weight_col = self.config['global']['weights']['person'],
                                                                         group_col = self.config['global']['columns']['age'],
                                                                         stack_col = self.config['global']['columns']['teleworker_flag'],
+                                                                        axis_order = self.config['global']['orders']['age_order'],
                                                                         stack_order = self.config['global']['orders']['teleworker'],
                                                                         add_ref = True, x_label = 'Person Type', y_label = "Share of Workers",
                                                                         plt_title = "Telwork Status by Income {}".format(self.compare_order[0])
@@ -174,10 +175,11 @@ class TeleworkSectionBuilder:
         
         if self.compare and self.survey2 is not None:
             try:
-                fig_telework_age_stack2 = self.plotter.plot_stacked_bar(df=self.survey2.person[self.survey2.person[self.config['global']['columns']['worker_flag']] ==1], 
+                fig_telework_age_stack2 = self.plotter.plot_stacked_bar(df=self.survey2.person[(self.survey2.person[self.config['global']['columns']['age']].isin(self.config['global']['orders']['age_order'])) & (self.survey2.person[self.config['global']['columns']['worker_flag']] ==1)], 
                                                                             weight_col = self.config['global']['weights']['person'],
                                                                             group_col = self.config['global']['columns']['age'],
                                                                             stack_col = self.config['global']['columns']['teleworker_flag'],
+                                                                            axis_order = self.config['global']['orders']['age_order'],
                                                                             stack_order = self.config['global']['orders']['teleworker'],
                                                                             add_ref = True, x_label = 'Person Type', y_label = "Share of Workers",
                                                                             plt_title = "Telwork Status by Income {}".format(self.compare_order[1])
@@ -205,7 +207,7 @@ class TeleworkSectionBuilder:
                                                                                 value_col=self.config['global']['columns']['distance'], 
                                                                                 plt_title= "Trip Distance by Purpose and Telecommute Flag {}".format(self.compare_order[1]),
                                                                                 weight_col = self.config['global']['weights']['trip'])
-            except:
+            except Exception as e:
                 print(f"Skipping fig_telework_dist_purp2 due to error: {e}")
 
 
