@@ -1,4 +1,4 @@
 """Plot primitives and dashboard rendering."""
-from . import ModeChoiceEstimator
+from .mode_choice_estimator import ModeChoiceEstimator
 
 __all__ = ["ModeChoiceEstimator"]
