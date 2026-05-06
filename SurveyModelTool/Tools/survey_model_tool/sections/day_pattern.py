@@ -28,7 +28,6 @@ class DayPatternSectionBuilder:
         self.compare_order = ['', '']
         if self.survey2 is not None and self.compare:
             self.data2 = self.survey2.trips.merge(self.survey2.hh, how = 'left', on=[self.config['global']['id']['hh']]).merge(self.survey2.person, how = 'left', on=[self.config['global']['id']['hh'], self.config['global']['id']['person']])
-            self.data2 = self.data2[self.data2[self.config['global']['columns']['mode']].isin(self.config['global']['orders']['mode_order'])]  # Filter out rows with NA mode  
             self.compare_col = self.config['global'].get('compare_col', None)
             self.compare_order = [self.data[self.compare_col].iloc[0], self.data2[self.compare_col].iloc[0]]
 

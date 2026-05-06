@@ -81,6 +81,7 @@ class TeleworkSectionBuilder:
             fig_telework_county_stack = self.plotter.plot_stacked_bar(df=self.survey.person[self.survey.person[self.config['global']['columns']['worker_flag']] ==1].merge(self.survey.hh[[self.config['global']['id']['hh'], self.config['global']['columns']['home_county']]], how = 'left', on = self.config['global']['id']['hh']), 
                                                                         weight_col = self.config['global']['weights']['person'],
                                                                         group_col = self.config['global']['columns']['home_county'],
+                                                                        axis_order = self.config['global']['orders']['county'],    
                                                                         stack_col = self.config['global']['columns']['teleworker_flag'],
                                                                         stack_order = self.config['global']['orders']['teleworker'],
                                                                          x_label = 'Person Type', y_label = "Share of Workers",
@@ -95,6 +96,7 @@ class TeleworkSectionBuilder:
                 fig_telework_county_stack2 = self.plotter.plot_stacked_bar(df=self.survey2.person[self.survey.person[self.config['global']['columns']['worker_flag']] ==1].merge(self.survey2.hh[[self.config['global']['id']['hh'], self.config['global']['columns']['home_county']]], how = 'left', on = self.config['global']['id']['hh']), 
                                                                             weight_col = self.config['global']['weights']['person'],
                                                                             group_col = self.config['global']['columns']['home_county'],
+                                                                            axis_order = self.config['global']['orders']['county'],    
                                                                             stack_col = self.config['global']['columns']['teleworker_flag'],
                                                                             stack_order = self.config['global']['orders']['teleworker'],
                                                                              x_label = 'Person Type', y_label = "Share of Workers",
@@ -108,6 +110,7 @@ class TeleworkSectionBuilder:
             fig_telework_income_stack = self.plotter.plot_stacked_bar(df=self.survey.person[self.survey.person[self.config['global']['columns']['worker_flag']] ==1].merge(self.survey.hh[[self.config['global']['id']['hh'], self.config['global']['columns']['income_label']]], how = 'left', on = self.config['global']['id']['hh']),  
                                                                         weight_col = self.config['global']['weights']['person'],
                                                                         group_col = self.config['global']['columns']['income_label'],
+                                                                        axis_order = self.config['global']['orders']['income_order'],
                                                                         stack_col = self.config['global']['columns']['teleworker_flag'],
                                                                         stack_order = self.config['global']['orders']['teleworker'],
                                                                         add_ref = True, x_label = 'Person Type', y_label = "Share of Workers",
@@ -121,6 +124,7 @@ class TeleworkSectionBuilder:
                 fig_telework_income_stack2 = self.plotter.plot_stacked_bar(df=self.survey2.person[self.survey2.person[self.config['global']['columns']['worker_flag']] ==1].merge(self.survey2.hh[[self.config['global']['id']['hh'], self.config['global']['columns']['income_label']]], how = 'left', on = self.config['global']['id']['hh']), 
                                                                             weight_col = self.config['global']['weights']['person'],
                                                                             group_col = self.config['global']['columns']['income_label'],
+                                                                            axis_order = self.config['global']['orders']['income_order'],
                                                                             stack_col = self.config['global']['columns']['teleworker_flag'],
                                                                             stack_order = self.config['global']['orders']['teleworker'],
                                                                             add_ref = True, x_label = 'Person Type', y_label = "Share of Workers",
@@ -137,6 +141,7 @@ class TeleworkSectionBuilder:
                                                                         group_col = self.config['global']['columns']['gender'],
                                                                         stack_col = self.config['global']['columns']['teleworker_flag'],
                                                                         stack_order = self.config['global']['orders']['teleworker'],
+                                                                        axis_order = self.config['global']['orders']['gender'],
                                                                         add_ref = True, x_label = 'Person Type', y_label = "Share of Workers",
                                                                         plt_title = "Telwork Status by Gender {}".format(self.compare_order[0])
                                                                      )
@@ -150,6 +155,7 @@ class TeleworkSectionBuilder:
                                                                             group_col = self.config['global']['columns']['gender'],
                                                                             stack_col = self.config['global']['columns']['teleworker_flag'],
                                                                             stack_order = self.config['global']['orders']['teleworker'],
+                                                                            axis_order = self.config['global']['orders']['gender'],
                                                                             add_ref = True, x_label = 'Person Type', y_label = "Share of Workers",
                                                                             plt_title = "Telwork Status by Gender {}".format(self.compare_order[1])
                                                                         )
@@ -193,6 +199,7 @@ class TeleworkSectionBuilder:
             fig_telework_dist_purp = self.plotter.plot_grouped_dist_with_dropdown(df=self.data[(self.data[self.config['global']['columns']['worker_flag']] ==1)], 
                                                                              dropdown_col=self.config['global']['columns']['purpose'], 
                                                                              hue_col = self.config['global']['columns']['telecommute_flag'],
+                                                                             hue_order = ['Yes','No'],
                                                                              value_col=self.config['global']['columns']['distance'], 
                                                                              plt_title= "Trip Distance by Purpose and Telecommute Flag {}".format(self.compare_order[0]),
                                                                              weight_col = self.config['global']['weights']['trip'])
@@ -204,6 +211,7 @@ class TeleworkSectionBuilder:
                 fig_telework_dist_purp2 = self.plotter.plot_grouped_dist_with_dropdown(df=self.data2[(self.data2[self.config['global']['columns']['worker_flag']] ==1)], 
                                                                                 dropdown_col=self.config['global']['columns']['purpose'], 
                                                                                 hue_col = self.config['global']['columns']['telecommute_flag'],
+                                                                                hue_order = ['Yes','No'],   
                                                                                 value_col=self.config['global']['columns']['distance'], 
                                                                                 plt_title= "Trip Distance by Purpose and Telecommute Flag {}".format(self.compare_order[1]),
                                                                                 weight_col = self.config['global']['weights']['trip'])
