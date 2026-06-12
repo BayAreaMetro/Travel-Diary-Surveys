@@ -104,7 +104,7 @@ class GeoCrosswalker:
             joined = joined[[id_columns[i], id_columns[i + 1]]]
 
             # Ensure all base geographies are preserved in the output
-            joined = smaller_layer.merge(joined, on=id_columns[i], how='left')
+            joined = smaller_layer[[id_columns[i]]].merge(joined, on=id_columns[i], how='left')
 
             # Update crosswalk for the next iteration
             crosswalk = joined if crosswalk is None else crosswalk.merge(joined, on=id_columns[i], how='left')

@@ -266,7 +266,11 @@ def apply_transformations(data, transform_file, config=None):
                 if data[col].dtype == object and data[col].isin(['True', 'False']).any():
                     data[col] = data[col].map({'True': True, 'False': False})
 
-            eval_globals = {"np": np, "pd": pd, "_extract_number": _extract_number, "_get_half_hour_bin": _get_half_hour_bin, "_get_half_hour_bin_label": _get_half_hour_bin_label, "_obs_route_hierarchy": _obs_route_hierarchy}
+            eval_globals = {"np": np, "pd": pd, "_extract_number": _extract_number, 
+                            "_get_half_hour_bin": _get_half_hour_bin, 
+                            "_get_half_hour_bin_label": _get_half_hour_bin_label,
+                            "_get_hour_bin": _get_hour_bin, 
+                            "_get_hour_bin_label": _get_hour_bin_label, "_obs_route_hierarchy": _obs_route_hierarchy}
             eval_locals = {'df': data, 'config': config}
             try:
                 condition = eval(row['condition'], eval_globals, eval_locals)
@@ -300,7 +304,11 @@ def apply_transformations(data, transform_file, config=None):
                 data.loc[condition, row['target']] = value[condition]
 
         elif action == 'assign':
-            eval_globals = {"np": np, "pd": pd, "_extract_number": _extract_number, "_get_half_hour_bin": _get_half_hour_bin, "_get_half_hour_bin_label": _get_half_hour_bin_label,"_obs_route_hierarchy": _obs_route_hierarchy}
+            eval_globals = {"np": np, "pd": pd, "_extract_number": _extract_number, 
+                            "_get_half_hour_bin": _get_half_hour_bin, 
+                            "_get_half_hour_bin_label": _get_half_hour_bin_label,
+                            "_get_hour_bin": _get_hour_bin, 
+                            "_get_hour_bin_label": _get_hour_bin_label,"_obs_route_hierarchy": _obs_route_hierarchy}
             eval_locals = {'df': data, 'config': config}
             value = eval(row['value'], eval_globals, eval_locals)
             data[row['target']] = value
@@ -347,6 +355,36 @@ def _get_half_hour_bin_label(hour, minute):
         display_hour = 12
     return f"{display_hour}:{bin_minute:02d}{suffix}"
 
+def _get_hour_bin(hour, minute):
+    """
+    Returns the hour (0–23) corresponding to the start of the half-hour bin
+    for a given hour and minute. Bin 1 starts at 3:00am.
+    """
+    total_minutes = hour * 60 + minute
+    minutes_since_3am = (total_minutes - 180) % 1440
+    bin_start_minutes = (minutes_since_3am // 30) * 30 + 180
+    bin_start_minutes %= 1440
+    bin_hour = bin_start_minutes // 60
+    return bin_hour
+
+def _get_hour_bin_label(hour, minute):
+    """
+    Returns the hour label (e.g., '3am', '2pm') corresponding to the start
+    of the half-hour bin for a given hour and minute. Bin 1 starts at 3:00am.
+    """
+    total_minutes = hour * 60 + minute
+    minutes_since_3am = (total_minutes - 180) % 1440
+    bin_start_minutes = (minutes_since_3am // 30) * 30 + 180
+    bin_start_minutes %= 1440
+
+    bin_hour = bin_start_minutes // 60
+
+    suffix = 'am' if bin_hour < 12 or bin_hour == 24 else 'pm'
+    display_hour = bin_hour if 1 <= bin_hour <= 12 else (bin_hour - 12 if bin_hour > 12 else 12)
+    if bin_hour == 0:
+        display_hour = 12
+
+    return f"{display_hour}{suffix}"
 
 def _obs_route_hierarchy(row):
     """Determine route type based on hierarchy from route codes in the row."""

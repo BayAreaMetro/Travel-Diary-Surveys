@@ -6,6 +6,9 @@ class TeleworkSectionBuilder:
         self.plotter = plotter
         self.summarizer = summarizer
         self.survey = survey
+        self.person = self.survey.person.copy()
+        self.person2 = None
+        
         self.survey2 = survey2
         self.compare_col = None
         self.compare_order = ['','']
@@ -15,18 +18,23 @@ class TeleworkSectionBuilder:
                 self.config = yaml.safe_load(f)
         else:
             self.config = config
-
+        
         self.data = self.survey.trips.merge(self.survey.hh, how = 'left', on=[self.config['global']['id']['hh']]).merge(self.survey.person, how = 'left', on=[self.config['global']['id']['hh'], self.config['global']['id']['person']]).merge(self.survey.day, how = 'left', on = [self.config['global']['id']['hh'],self.config['global']['id']['person'],self.config['global']['id']['day']])
+       
         self.compare = self.config['global'].get('compare', False)
         self.data2 = None
         if self.compare and self.survey2 is None:
             raise ValueError("Comparison is enabled in config but survey2 is not provided.")
         if self.survey2 is not None and self.compare:
             self.data2 = self.survey2.trips.merge(self.survey2.hh, how = 'left', on=[self.config['global']['id']['hh']]).merge(self.survey2.person, how = 'left', on=[self.config['global']['id']['hh'], self.config['global']['id']['person']]).merge(self.survey2.day, how = 'left', on = [self.config['global']['id']['hh'],self.config['global']['id']['person'],self.config['global']['id']['day']])
+            
+           
             self.compare_col = self.config['global'].get('compare_col', None)
+            
             self.compare_order = [self.data[self.compare_col].iloc[0], self.data2[self.compare_col].iloc[0]]
-            self.survey.person[self.compare_col] = self.compare_order[0]
-            self.survey2.person[self.compare_col] = self.compare_order[1]
+            self.person[self.compare_col] = self.compare_order[0]
+            self.person2 = self.survey2.person.copy()
+            self.person2[self.compare_col] = self.compare_order[1]
 
     def build(self, ):
         """
@@ -51,7 +59,7 @@ class TeleworkSectionBuilder:
 
         # --- Figures (with error handling) ---
         try:
-            fig_telework_ptype_stack = self.plotter.plot_stacked_bar(df=self.survey.person[self.survey.person[self.config['global']['columns']['worker_flag']] ==1], 
+            fig_telework_ptype_stack = self.plotter.plot_stacked_bar(df=self.person[self.person[self.config['global']['columns']['worker_flag']] ==1], 
                                                                         weight_col = self.config['global']['weights']['person'],
                                                                         group_col = self.config['global']['columns']['person_type'],
                                                                         stack_col = self.config['global']['columns']['teleworker_flag'],
@@ -65,7 +73,7 @@ class TeleworkSectionBuilder:
 
         if self.compare and self.survey2 is not None:
             try:
-                fig_telework_ptype_stack2 = self.plotter.plot_stacked_bar(df=self.survey2.person[self.survey2.person[self.config['global']['columns']['worker_flag']] ==1], 
+                fig_telework_ptype_stack2 = self.plotter.plot_stacked_bar(df=self.person2[self.person2[self.config['global']['columns']['worker_flag']] ==1], 
                                                                             weight_col = self.config['global']['weights']['person'],
                                                                             group_col = self.config['global']['columns']['person_type'],
                                                                             stack_col = self.config['global']['columns']['teleworker_flag'],
@@ -78,7 +86,7 @@ class TeleworkSectionBuilder:
                 print(f"Skipping fig_telework_ptype_stack2 due to error: {e}")
             
         try:
-            fig_telework_county_stack = self.plotter.plot_stacked_bar(df=self.survey.person[self.survey.person[self.config['global']['columns']['worker_flag']] ==1].merge(self.survey.hh[[self.config['global']['id']['hh'], self.config['global']['columns']['home_county']]], how = 'left', on = self.config['global']['id']['hh']), 
+            fig_telework_county_stack = self.plotter.plot_stacked_bar(df=self.person[self.person[self.config['global']['columns']['worker_flag']] ==1].merge(self.survey.hh[[self.config['global']['id']['hh'], self.config['global']['columns']['home_county']]], how = 'left', on = self.config['global']['id']['hh']), 
                                                                         weight_col = self.config['global']['weights']['person'],
                                                                         group_col = self.config['global']['columns']['home_county'],
                                                                         axis_order = self.config['global']['orders']['county'],    
@@ -93,7 +101,7 @@ class TeleworkSectionBuilder:
 
         if self.compare and self.survey2 is not None:
             try:
-                fig_telework_county_stack2 = self.plotter.plot_stacked_bar(df=self.survey2.person[self.survey.person[self.config['global']['columns']['worker_flag']] ==1].merge(self.survey2.hh[[self.config['global']['id']['hh'], self.config['global']['columns']['home_county']]], how = 'left', on = self.config['global']['id']['hh']), 
+                fig_telework_county_stack2 = self.plotter.plot_stacked_bar(df=self.person2[self.person2[self.config['global']['columns']['worker_flag']] ==1].merge(self.survey2.hh[[self.config['global']['id']['hh'], self.config['global']['columns']['home_county']]], how = 'left', on = self.config['global']['id']['hh']), 
                                                                             weight_col = self.config['global']['weights']['person'],
                                                                             group_col = self.config['global']['columns']['home_county'],
                                                                             axis_order = self.config['global']['orders']['county'],    
@@ -107,7 +115,7 @@ class TeleworkSectionBuilder:
                 print(f"Skipping fig_telework_county_stack2 due to error: {e}")
         
         try:
-            fig_telework_income_stack = self.plotter.plot_stacked_bar(df=self.survey.person[self.survey.person[self.config['global']['columns']['worker_flag']] ==1].merge(self.survey.hh[[self.config['global']['id']['hh'], self.config['global']['columns']['income_label']]], how = 'left', on = self.config['global']['id']['hh']),  
+            fig_telework_income_stack = self.plotter.plot_stacked_bar(df=self.person[self.person[self.config['global']['columns']['worker_flag']] ==1].merge(self.survey.hh[[self.config['global']['id']['hh'], self.config['global']['columns']['income_label']]], how = 'left', on = self.config['global']['id']['hh']),  
                                                                         weight_col = self.config['global']['weights']['person'],
                                                                         group_col = self.config['global']['columns']['income_label'],
                                                                         axis_order = self.config['global']['orders']['income_order'],
@@ -121,7 +129,7 @@ class TeleworkSectionBuilder:
         
         if self.compare and self.survey2 is not None:
             try:
-                fig_telework_income_stack2 = self.plotter.plot_stacked_bar(df=self.survey2.person[self.survey2.person[self.config['global']['columns']['worker_flag']] ==1].merge(self.survey2.hh[[self.config['global']['id']['hh'], self.config['global']['columns']['income_label']]], how = 'left', on = self.config['global']['id']['hh']), 
+                fig_telework_income_stack2 = self.plotter.plot_stacked_bar(df=self.person2[self.person2[self.config['global']['columns']['worker_flag']] ==1].merge(self.survey2.hh[[self.config['global']['id']['hh'], self.config['global']['columns']['income_label']]], how = 'left', on = self.config['global']['id']['hh']), 
                                                                             weight_col = self.config['global']['weights']['person'],
                                                                             group_col = self.config['global']['columns']['income_label'],
                                                                             axis_order = self.config['global']['orders']['income_order'],
@@ -136,7 +144,7 @@ class TeleworkSectionBuilder:
         
 
         try:
-            fig_telework_gender_stack = self.plotter.plot_stacked_bar(df=self.survey.person[self.survey.person[self.config['global']['columns']['worker_flag']] ==1], 
+            fig_telework_gender_stack = self.plotter.plot_stacked_bar(df=self.person[self.person[self.config['global']['columns']['worker_flag']] ==1], 
                                                                         weight_col = self.config['global']['weights']['person'],
                                                                         group_col = self.config['global']['columns']['gender'],
                                                                         stack_col = self.config['global']['columns']['teleworker_flag'],
@@ -150,7 +158,7 @@ class TeleworkSectionBuilder:
         
         if self.compare and self.survey2 is not None:
             try:
-                fig_telework_gender_stack2 = self.plotter.plot_stacked_bar(df=self.survey2.person[self.survey2.person[self.config['global']['columns']['worker_flag']] ==1], 
+                fig_telework_gender_stack2 = self.plotter.plot_stacked_bar(df=self.person2[self.person2[self.config['global']['columns']['worker_flag']] ==1], 
                                                                             weight_col = self.config['global']['weights']['person'],
                                                                             group_col = self.config['global']['columns']['gender'],
                                                                             stack_col = self.config['global']['columns']['teleworker_flag'],
@@ -167,7 +175,7 @@ class TeleworkSectionBuilder:
 
 
         try:
-            fig_telework_age_stack = self.plotter.plot_stacked_bar(df=self.survey.person[(self.survey.person[self.config['global']['columns']['age']].isin(self.config['global']['orders']['age_order'])) & (self.survey.person[self.config['global']['columns']['worker_flag']] ==1)],  
+            fig_telework_age_stack = self.plotter.plot_stacked_bar(df=self.person[(self.person[self.config['global']['columns']['age']].isin(self.config['global']['orders']['age_order'])) & (self.person[self.config['global']['columns']['worker_flag']] ==1)],  
                                                                         weight_col = self.config['global']['weights']['person'],
                                                                         group_col = self.config['global']['columns']['age'],
                                                                         stack_col = self.config['global']['columns']['teleworker_flag'],
@@ -181,7 +189,7 @@ class TeleworkSectionBuilder:
         
         if self.compare and self.survey2 is not None:
             try:
-                fig_telework_age_stack2 = self.plotter.plot_stacked_bar(df=self.survey2.person[(self.survey2.person[self.config['global']['columns']['age']].isin(self.config['global']['orders']['age_order'])) & (self.survey2.person[self.config['global']['columns']['worker_flag']] ==1)], 
+                fig_telework_age_stack2 = self.plotter.plot_stacked_bar(df=self.person2[(self.person2[self.config['global']['columns']['age']].isin(self.config['global']['orders']['age_order'])) & (self.person2[self.config['global']['columns']['worker_flag']] ==1)], 
                                                                             weight_col = self.config['global']['weights']['person'],
                                                                             group_col = self.config['global']['columns']['age'],
                                                                             stack_col = self.config['global']['columns']['teleworker_flag'],
@@ -223,7 +231,7 @@ class TeleworkSectionBuilder:
             telework_days = self.data[(self.data[self.config['global']['columns']['worker_flag']] == 1) & (self.data[self.config['global']['columns']['telecommute_flag']] == 'Yes')]
             overall_trip_rates_purp_tw = self.summarizer.trip_rates(
                 trips= telework_days,
-                pop=self.survey.person[self.survey.person[self.config['global']['id']['person']].isin(telework_days[self.config['global']['id']['person']].unique())],
+                pop=self.person[self.person[self.config['global']['id']['person']].isin(telework_days[self.config['global']['id']['person']].unique())],
                 trip_group_col=self.config['global']['columns']['purpose'],
                 person_weight_col=self.config['global']['weights']['person'],
                 trip_weight_col=self.config['global']['weights']['trip']
@@ -231,7 +239,7 @@ class TeleworkSectionBuilder:
             non_telework_days = self.data[(self.data[self.config['global']['columns']['worker_flag']] == 1) & (self.data[self.config['global']['columns']['telecommute_flag']] == 'No')]
             overall_trip_rates_purp_ntw = self.summarizer.trip_rates(
                 trips=non_telework_days,
-                pop=self.survey.person[self.survey.person[self.config['global']['id']['person']].isin(non_telework_days[self.config['global']['id']['person']].unique())],
+                pop=self.person[self.person[self.config['global']['id']['person']].isin(non_telework_days[self.config['global']['id']['person']].unique())],
                 trip_group_col=self.config['global']['columns']['purpose'],
                 person_weight_col=self.config['global']['weights']['person'],
                 trip_weight_col=self.config['global']['weights']['trip']
@@ -258,7 +266,7 @@ class TeleworkSectionBuilder:
                     telework_days2 = self.data2[(self.data2[self.config['global']['columns']['worker_flag']] == 1) & (self.data2[self.config['global']['columns']['telecommute_flag']] == 'Yes')]
                     overall_trip_rates_purp_tw2 = self.summarizer.trip_rates(
                         trips= telework_days2,
-                        pop=self.survey2.person[self.survey2.person[self.config['global']['id']['person']].isin(telework_days2[self.config['global']['id']['person']].unique())],
+                        pop=self.person2[self.person2[self.config['global']['id']['person']].isin(telework_days2[self.config['global']['id']['person']].unique())],
                         trip_group_col=self.config['global']['columns']['purpose'],
                         person_weight_col=self.config['global']['weights']['person'],
                         trip_weight_col=self.config['global']['weights']['trip']
@@ -266,7 +274,7 @@ class TeleworkSectionBuilder:
                     non_telework_days2 = self.data2[(self.data2[self.config['global']['columns']['worker_flag']] == 1) & (self.data2[self.config['global']['columns']['telecommute_flag']] == 'No')]
                     overall_trip_rates_purp_ntw2 = self.summarizer.trip_rates(
                         trips=non_telework_days,
-                        pop=self.survey2.person[self.survey2.person[self.config['global']['id']['person']].isin(non_telework_days2[self.config['global']['id']['person']].unique())],
+                        pop=self.person2[self.person2[self.config['global']['id']['person']].isin(non_telework_days2[self.config['global']['id']['person']].unique())],
                         trip_group_col=self.config['global']['columns']['purpose'],
                         person_weight_col=self.config['global']['weights']['person'],
                         trip_weight_col=self.config['global']['weights']['trip']
