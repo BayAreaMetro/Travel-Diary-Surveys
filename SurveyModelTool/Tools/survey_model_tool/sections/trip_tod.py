@@ -44,7 +44,7 @@ class TripTODSectionBuilder:
 
         # --- Figures (with error handling) ---
         try:
-            fig_time_purp = self.plotter.plot_grouped_dist_with_dropdown(df=pd.concat([d for d in [self.data, self.data2] if d is not None], ignore_index = True), 
+            fig_time_purp = self.plotter.plot_grouped_dist_with_dropdown(df=pd.concat([d for d in [self.data, self.data2] if d is not None], ignore_index = True).dropna(subset =self.config['global']['columns']['purpose'] ), 
                                                                          dropdown_col=self.config['global']['columns']['purpose'], 
                                                                          value_col=self.config['global']['columns']['time_bin'], 
                                                                          hue_col = self.compare_col, hue_order = self.compare_order,
@@ -56,7 +56,7 @@ class TripTODSectionBuilder:
             print(f"Skipping fig_time_purp due to error: {e}")
 
         try:
-            fig_time_purp_gender = self.plotter.plot_grouped_dist_with_dropdown(df=self.data, 
+            fig_time_purp_gender = self.plotter.plot_grouped_dist_with_dropdown(df=self.data.dropna(subset = self.config['global']['columns']['purpose']), 
                                                                                  dropdown_col=self.config['global']['columns']['purpose'], 
                                                                                  hue_col=self.config['global']['columns']['gender'], hue_order = self.config['global']['orders']['gender'],
                                                                                  value_col=self.config['global']['columns']['time_bin'], 
@@ -68,7 +68,7 @@ class TripTODSectionBuilder:
         
         if self.compare:
             try:
-                fig_time_purp_gender2 = self.plotter.plot_grouped_dist_with_dropdown(df=self.data2, 
+                fig_time_purp_gender2 = self.plotter.plot_grouped_dist_with_dropdown(df=self.data2.dropna(subset = self.config['global']['columns']['purpose']), 
                                                                                         dropdown_col=self.config['global']['columns']['purpose'], 
                                                                                         hue_col=self.config['global']['columns']['gender'], hue_order = self.config['global']['orders']['gender'],
                                                                                         value_col=self.config['global']['columns']['time_bin'], 
