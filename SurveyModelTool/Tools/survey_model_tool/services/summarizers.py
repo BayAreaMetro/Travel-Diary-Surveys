@@ -75,6 +75,11 @@ class SurveyModelSummarizer:
         ).add_to(m)
         folium.GeoJson(
             geojson_data,
+            style_function=lambda feature: {
+                    "fillOpacity": 0,
+                    "opacity": 0,
+                    "weight": 0,
+                },
             tooltip=GeoJsonTooltip(
                 fields=tooltip_fields,
                 aliases=tooltip_aliases if tooltip_aliases else tooltip_fields,
