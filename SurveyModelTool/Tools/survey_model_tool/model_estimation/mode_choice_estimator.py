@@ -234,11 +234,11 @@ class ModeChoiceEstimator:
         self.data = self.data.merge(skim_map, on = ['alternative','period'], how = 'left')
         # Evaluate availability for each row if 'availability' column exists
         if 'availability' in self.data.columns:
-            # This will create a boolean column 'available' based on the expression in 'availability'
-            self.data['available'] = self.data.apply(
-                lambda row: pd.eval(row['availability'], local_dict=row.to_dict()) if pd.notnull(row['availability']) else True,
-                axis=1
-            )
+            self.data['available'] = True
+            availability_rules = self.data['availability'].dropna().unique()
+            for rule in availability_rules:
+                rule_mask = self.data['availability'] == rule
+                self.data.loc[rule_mask, 'available'] = self.data.loc[rule_mask].eval(rule)
         else:
             self.data['available'] = True  # Default: all available
 
