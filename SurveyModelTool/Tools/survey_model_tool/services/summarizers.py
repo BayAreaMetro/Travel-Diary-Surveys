@@ -62,7 +62,16 @@ class SurveyModelSummarizer:
             folium.Map object
         """
         geojson_data = gdf.to_json()
-        m = folium.Map(location=map_location, zoom_start=zoom_start, tiles='cartodbpositron')
+        CARTO_API_KEY = self.config['CARTO_API_KEY']
+
+        # 2. Build the explicit URL template for Positron
+        # (Use 'light_all' for Positron, 'dark_all' for Dark Matter, or 'voyager' for Voyager)
+        positron_url = (
+            f"https://basemaps.cartocdn.com/rastertiles/light_all/{{z}}/{{x}}/{{y}}.png?key={CARTO_API_KEY}"
+        )
+
+        m = folium.Map(location=map_location, zoom_start=zoom_start, tiles=positron_url,    
+                       attr='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>')
         folium.Choropleth(
             geo_data=geojson_data,
             data=gdf,
