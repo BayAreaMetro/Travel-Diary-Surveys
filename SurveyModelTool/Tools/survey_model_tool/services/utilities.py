@@ -23,6 +23,7 @@ def convert_skim(config):
 
         # Write your .s script to disk
         with open('temp\\skim_converter.s', 'w') as f:
+            # f.write('CONVERTMAT FROM="{}\\base\\hnets\\hwyskimtt.SKM" TO="{}\\temp\\HWYSKMIZ.omx" FORMAT=OMX COMPRESSION=7\n'.format(config['skim_dir'], os.getcwd()))
             f.write('CONVERTMAT FROM="{}\\base\\hnets\\HWYSKMIZ.SKM" TO="{}\\temp\\HWYSKMIZ.omx" FORMAT=OMX COMPRESSION=7\n'.format(config['skim_dir'], os.getcwd()))
             f.write('CONVERTMAT FROM="{}\\base\\transit\\AMTWLOS.DAT" TO="{}\\temp\\AMTWLOS.omx" FORMAT=OMX COMPRESSION=7\n'.format(config['skim_dir'], os.getcwd()))
             f.write('CONVERTMAT FROM="{}\\base\\transit\\MDTWLOS.DAT" TO="{}\\temp\\MDTWLOS.omx" FORMAT=OMX COMPRESSION=7\n'.format(config['skim_dir'], os.getcwd()))
@@ -440,6 +441,9 @@ def format_model_for_cube(df, output_folder, model_name):
     output = output[['Parameter','Value']].set_index('Parameter').T
     output = pd.concat([output]*2958, ignore_index=True)
     output['Zone'] = range(1,2959   )
+    output = output.apply(lambda x: x.str.strip() if x.dtype == "object" else x)
+    for col in output.columns:
+        output[col] = pd.to_numeric(output[col], errors='coerce')
     output.to_csv(r'{}\{}_model_coefs.prn'.format(output_folder, model_name), sep='\t', index=False)
     with open(r'{}\{}_model_coefs_istatement.txt'.format(output_folder, model_name), 'w') as f:
         for i,col in enumerate(output.columns):
@@ -456,6 +460,9 @@ def format_model_for_cube(df, output_folder, model_name):
     for inc in range(1,5):
         for trn in ['bart','cmr','lrt','exp','lcl','pnr','knr']:
             output2['ASC_{}_i{}'.format(trn, inc)] = 0
+    output2 = output2.apply(lambda x: x.str.strip() if x.dtype == "object" else x)
+    for col in output2.columns:
+        output2[col] = pd.to_numeric(output2[col], errors='coerce')
     output2.to_csv(r'{}\{}_model_ascs.prn'.format(output_folder, model_name), sep='\t', index=False)
     with open(r'{}\{}_model_ascs_istatement.txt'.format(output_folder, model_name), 'w') as f:
         for i,col in enumerate(output2.columns):
