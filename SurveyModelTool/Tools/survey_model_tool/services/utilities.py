@@ -433,7 +433,7 @@ def compare_models(ref, ref_model, model_list, name_list= [0,1,2,3,4,5,6], ivt =
         print(f"Error calculating 'Value of Time $/hr': {e}")
     return compare[[col for col in compare if col.startswith('Value')  or 'Sig' in col]].rename(columns = {'Value':'Reference Value'})
 
-def format_model_for_cube(df, output_folder, model_name):
+def format_model_for_cube(df, output_folder, model_name, work = True):
     """Format model output for Cube and save as PRN."""
     output = df.reset_index()
     output = output[output.Category != 'Model_Fit']
@@ -448,7 +448,7 @@ def format_model_for_cube(df, output_folder, model_name):
     with open(r'{}\{}_model_coefs_istatement.txt'.format(output_folder, model_name), 'w') as f:
         for i,col in enumerate(output.columns):
             if col == 'Zone':
-                f.write('Z=#{}, '.format(col, i+1))
+                f.write('Z=#{}, '.format(i+1))
             else:
                 f.write('{}=#{}, '.format(col, i+1))
     output = df.reset_index()
@@ -456,10 +456,16 @@ def format_model_for_cube(df, output_folder, model_name):
     output = output[['Parameter','Value']].set_index('Parameter').T
     output = pd.concat([output]*2958, ignore_index=True)
     output['Zone'] = range(1,2959   )
-    output2 = output.merge(output, how = 'left', on = 'Zone', suffixes = ['_i1','_i2']).merge(output.merge(output, how = 'left', on = 'Zone', suffixes = ['_i3','_i4']), how = 'left', on = 'Zone')
-    for inc in range(1,5):
+    if work:
+        output2 = output.merge(output, how = 'left', on = 'Zone', suffixes = ['_i1','_i2']).merge(output.merge(output, how = 'left', on = 'Zone', suffixes = ['_i3','_i4']), how = 'left', on = 'Zone')
+        for inc in range(1,5):
+            for trn in ['bart','cmr','lrt','exp','lcl','pnr','knr']:
+                output2['ASC_{}_i{}'.format(trn, inc)] = 0
+    else:
+        output2 = output.copy()
         for trn in ['bart','cmr','lrt','exp','lcl','pnr','knr']:
-            output2['ASC_{}_i{}'.format(trn, inc)] = 0
+                for inc in range(1,5):
+                    output2['ASC_{}'.format(trn)] = 0
     output2 = output2.apply(lambda x: x.str.strip() if x.dtype == "object" else x)
     for col in output2.columns:
         output2[col] = pd.to_numeric(output2[col], errors='coerce')
@@ -467,6 +473,6 @@ def format_model_for_cube(df, output_folder, model_name):
     with open(r'{}\{}_model_ascs_istatement.txt'.format(output_folder, model_name), 'w') as f:
         for i,col in enumerate(output2.columns):
             if col == 'Zone':
-                f.write('Z=#{}, '.format(col, i+1))
+                f.write('Z=#{}, '.format(i+1))
             else:
                 f.write('{}=#{}, '.format(col, i+1))
