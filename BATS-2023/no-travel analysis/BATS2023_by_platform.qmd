@@ -1,0 +1,770 @@
+---
+title: "BATS 2023: completeness and no-travel analysis by diary platform"
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    code-fold: true
+    embed-resources: true
+jupyter: tps-for-tm-qmd
+execute:
+  warning: false
+---
+
+Reads the person-day and household-day files written by `BATS2023_completeness.py`
+(run that first) and breaks them down by `diary_platform`. Tables are also saved as CSVs
+to a time-stamped `by_platform_*` folder next to this document.
+
+```{python}
+#| label: setup
+from datetime import datetime
+from pathlib import Path
+
+import polars as pl
+from IPython.display import Markdown, display
+
+pl.Config.set_tbl_rows(-1)
+pl.Config.set_tbl_cols(-1)
+pl.Config.set_fmt_str_lengths(80)
+
+# ---------- Config ----------
+BASE = Path(r"E:\Box\Modeling and Surveys\Surveys\Travel Diary Survey\BATS_2023"
+            r"\Versioned_Data\PreWeight_PreLink_MonToSun_20250610")   # read-only
+PERSON_FILE = BASE / "person.csv"
+DAY_FILE = BASE / "day.csv"
+
+OUT_DIR = Path(r"E:\BATS_no_travel_analysis")   # parent output directory
+
+# Input: the completeness run. Defaults to the most recent completeness_* subfolder;
+# set to a specific folder to use an earlier run.
+INPUT_DIR = None   # e.g. OUT_DIR / "completeness_20261103_055900"
+if INPUT_DIR is None:
+    runs = sorted(OUT_DIR.glob("completeness_*"))
+    assert runs, f"No completeness_* folders found in {OUT_DIR}; run BATS2023_completeness.py first"
+    INPUT_DIR = runs[-1]
+PERSON_DAY_FILE = INPUT_DIR / "person_day_completeness.csv"
+HOUSEHOLD_DAY_FILE = INPUT_DIR / "household_day_completeness.csv"
+
+# Output: this run's own time-stamped subfolder
+RUN_DIR = OUT_DIR / f"by_platform_{datetime.now():%Y%m%d_%H%M%S}"
+RUN_DIR.mkdir(parents=True, exist_ok=True)
+
+JOIN_KEY = "person_id"
+PLATFORM_COL = "diary_platform"
+AGE_COL = "age"
+AGE_LABELS = {1: "Under 5", 2: "5 to 15", 3: "16 to 17", 4: "18 to 24", 5: "25 to 34", 6: "35 to 44",
+              7: "45 to 54", 8: "55 to 64", 9: "65 to 74", 10: "75 to 84", 11: "85 and up"}
+# Age brackets from the codebook: code 9 is "65 to 74"; 9-11 are 65 or older.
+AGE_65_PLUS_MIN_CODE = 9
+ADULT_MIN_CODE = 4   # "18 to 24" is the first bracket with adults only
+TRIPS_COL = "num_trips"
+
+# Reason flags in day.csv (codebook: 1 = selected, 0 = not selected, 995 = missing response)
+CODEBOOK_FILE = Path(r"E:\Box\Modeling and Surveys\Surveys\Travel Diary Survey\BATS_2023\Versioned_Data"
+                     r"\Weighted_PreLink_TueToThu_20250221\mtc_hts_codebook.xlsx")   # read-only
+REASON_PREFIX = "Reason for no travel on date: "
+
+def read_no_travel_labels(codebook, day_file):
+    """Map each no_travel_* flag to its codebook description, with the shared prefix removed."""
+    import openpyxl
+    wb = openpyxl.load_workbook(codebook, read_only=True)
+    labels = {}
+    for row in wb["variable_list"].iter_rows(values_only=True):
+        var = str(row[2] or "").strip()
+        desc = str(row[12] or "").strip()
+        if var.startswith("no_travel_") and desc:
+            labels[var] = desc.removeprefix(REASON_PREFIX)
+    wb.close()
+    day_cols = set(pl.read_csv(day_file, n_rows=0).columns)
+    missing = [v for v in labels if v not in day_cols]
+    assert not missing, f"Codebook reason variables not found in day.csv: {missing}"
+    return dict(sorted(labels.items(), key=lambda kv: int(kv[0].rsplit("_", 1)[1])))
+
+NO_TRAVEL_REASON_LABELS = read_no_travel_labels(CODEBOOK_FILE, DAY_FILE)
+
+def sort_platform_cols(df, index_cols):
+    """Put platform columns in reverse alphabetical order, after the index columns."""
+    return df.select(index_cols + sorted((c for c in df.columns if c not in index_cols), reverse=True))
+
+
+def platform_columns(df, index_cols, value_col, platform_col=PLATFORM_COL):
+    """Pivot long data (one row per index value and platform) so platforms are columns."""
+    wide = df.pivot(on=platform_col, index=index_cols, values=value_col).fill_null(0)
+    return sort_platform_cols(wide, index_cols)
+
+
+def transpose_platforms(df, platform_col=PLATFORM_COL):
+    """Turn a table with one row per platform into one with platforms as columns and metrics as rows."""
+    metrics = [c for c in df.columns if c != platform_col]
+    wide = (df.select(metrics).with_columns(pl.all().cast(pl.Utf8))
+              .transpose(include_header=True, header_name="metric",
+                         column_names=df[platform_col].to_list()))
+    return sort_platform_cols(wide, ["metric"])
+
+
+def require(df, cols, name):
+    missing = [c for c in cols if c not in df.columns]
+    assert not missing, f"{name} is missing columns: {missing}"
+
+
+def show(title, df):
+    display(Markdown(f"**{title}**"))
+    display(df)
+
+
+display(Markdown(f"Reading completeness files from: `{INPUT_DIR}`"))
+```
+
+## Load and join
+
+```{python}
+#| label: load
+person = pl.read_csv(PERSON_FILE, infer_schema_length=None)
+day = pl.read_csv(DAY_FILE, infer_schema_length=None)
+person_day = pl.read_csv(PERSON_DAY_FILE, infer_schema_length=None)
+household_day = pl.read_csv(HOUSEHOLD_DAY_FILE, infer_schema_length=None)
+
+require(person, [JOIN_KEY, PLATFORM_COL, AGE_COL], "person.csv")
+person = person.with_columns(
+    pl.when(pl.col(PLATFORM_COL) == "rmove").then(pl.lit("smartphone"))
+      .otherwise(pl.col(PLATFORM_COL)).alias(PLATFORM_COL)
+)
+require(day, ["hh_id", JOIN_KEY, "day_num", TRIPS_COL], "day.csv")
+require(person_day, ["hh_id", JOIN_KEY, "day_num", "trip_group", TRIPS_COL, "person_day_completeness",
+                     "personDay_complete"], "person_day_completeness.csv")
+require(household_day, ["hh_id", "day_num", "householdDay_complete",
+                        "members_missing_from_day_file", "householdDay_complete_all_members",
+                        "household_day_members_completeness"],
+        "household_day_completeness.csv")
+assert person[JOIN_KEY].is_unique().all(), f"{JOIN_KEY} not unique in person.csv"
+
+platform = person.select([JOIN_KEY, PLATFORM_COL])
+person_attrs = person.select(
+    [JOIN_KEY, PLATFORM_COL, AGE_COL,
+     pl.col(AGE_COL).replace_strict(AGE_LABELS, default="Missing").alias("age_group")]
+)
+
+n_before = day.height
+day = day.join(platform, on=JOIN_KEY, how="left")
+assert day.height == n_before, "Join changed row count"
+person_day = person_day.join(person_attrs, on=JOIN_KEY, how="left", validate="m:1")
+
+display(Markdown(
+    f"- Day rows: {day.height:,} (without a platform match: {day[PLATFORM_COL].null_count():,})\n"
+    f"- Person-day rows without a platform match: {person_day[PLATFORM_COL].null_count():,}"
+))
+```
+
+## Person-day analyses
+
+Everything in this section is run under two universes of person-days:
+
+- **Universe 1:** every person-day in the person-day file (*At least 1 trip* plus *Zero trips, reason given*).
+- **Universe 2:** complete person-days only (*At least 1 trip, complete responses* plus *Zero trips, reason given*).
+
+```{python}
+#| label: universe-function
+def status_crosstab(d):
+    """Counts and row percentages: platforms as columns, one row per completeness status."""
+    counts = (
+        d.group_by([PLATFORM_COL, "person_day_completeness"])
+         .agg(pl.len().alias("n"))
+         .pivot(on="person_day_completeness", index=PLATFORM_COL, values="n")
+         .fill_null(0)
+    )
+    status_cols = sorted(c for c in counts.columns if c != PLATFORM_COL)
+    counts = (counts.select([PLATFORM_COL, *status_cols])
+                    .with_columns(pl.sum_horizontal(status_cols).alias("total")))
+    pct = (counts.with_columns([(pl.col(c) / pl.col("total") * 100).round(1) for c in status_cols])
+                 .drop("total"))
+    counts = counts.drop("total")
+    return transpose_platforms(counts), transpose_platforms(pct)
+
+
+def analyze_universe(d, tag):
+    display(Markdown(f"Person-days in this universe: {d.height:,} of {person_day.height:,}"))
+
+    # ---------- Completeness status ----------
+    display(Markdown("#### Completeness status"))
+    status_counts, status_pct = status_crosstab(d)
+    show("Person-days by completeness status and diary_platform (counts)", status_counts)
+    show("Person-days by completeness status and diary_platform (% of platform)", status_pct)
+
+    # ---------- Response bias: person-days and respondents by age, by diary_platform ----------
+    display(Markdown("#### Response bias analysis"))
+    display(Markdown("##### Respondents by age"))
+    respondents_age = (
+        d.select([JOIN_KEY, PLATFORM_COL, AGE_COL, "age_group"]).unique()
+         .group_by([AGE_COL, "age_group", PLATFORM_COL])
+         .agg(pl.len().alias("respondents"))
+         .with_columns((pl.col("respondents") / pl.col("respondents").sum().over(PLATFORM_COL) * 100)
+                       .round(1).alias("pct_of_platform"))
+    )
+    respondents_age_counts = platform_columns(
+        respondents_age, [AGE_COL, "age_group"], "respondents").sort(AGE_COL, nulls_last=True)
+    respondents_age_pct = platform_columns(
+        respondents_age, [AGE_COL, "age_group"], "pct_of_platform").sort(AGE_COL, nulls_last=True)
+    show("Respondents by age and diary_platform (counts)", respondents_age_counts)
+    show("Respondents by age and diary_platform (% of platform)", respondents_age_pct)
+
+    display(Markdown("##### Respondents aged 65 or older"))
+    older = (
+        d.select([JOIN_KEY, PLATFORM_COL, AGE_COL]).unique()
+         .group_by(PLATFORM_COL)
+         .agg((pl.col(AGE_COL) < AGE_65_PLUS_MIN_CODE).sum().alias("under_65"),
+              (pl.col(AGE_COL) >= AGE_65_PLUS_MIN_CODE).sum().alias("age_65_plus"))
+         .with_columns((pl.col("under_65") + pl.col("age_65_plus")).alias("persons"))
+         .sort(PLATFORM_COL, descending=True)
+    )
+    older_pct = (older.with_columns([(pl.col(c) / pl.col("persons") * 100).round(1)
+                                     for c in ["under_65", "age_65_plus"]])
+                      .drop("persons"))
+    older = transpose_platforms(older)
+    older_pct = transpose_platforms(older_pct)
+    show("Respondents aged 65 or older, by diary_platform (counts)", older)
+    show("Respondents aged 65 or older, by diary_platform (%)", older_pct)
+
+    display(Markdown("##### Person-days by age"))
+    person_days_age = (
+        d.filter(pl.col(AGE_COL) >= ADULT_MIN_CODE)
+         .group_by([AGE_COL, "age_group", PLATFORM_COL])
+         .agg(pl.len().alias("person_days"))
+         .with_columns((pl.col("person_days") / pl.col("person_days").sum().over(PLATFORM_COL) * 100)
+                       .round(1).alias("pct_of_platform"))
+    )
+    person_days_age_counts = platform_columns(
+        person_days_age, [AGE_COL, "age_group"], "person_days").sort(AGE_COL, nulls_last=True)
+    person_days_age_pct = platform_columns(
+        person_days_age, [AGE_COL, "age_group"], "pct_of_platform").sort(AGE_COL, nulls_last=True)
+    show("Person-days by age and diary_platform (counts), ages 18 and over", person_days_age_counts)
+    show("Person-days by age and diary_platform (% of platform), ages 18 and over", person_days_age_pct)
+
+    # ---------- num_trips = 0 vs > 0, by diary_platform ----------
+    counts = (
+        d.group_by([PLATFORM_COL, "trip_group"])
+         .agg(pl.len().alias("n"))
+         .sort([PLATFORM_COL, "trip_group"], descending=[True, False])
+    )
+    crosstab = counts.pivot(on="trip_group", index=PLATFORM_COL, values="n").fill_null(0)
+
+    # Optional: chi-square test of independence (excludes missing num_trips)
+    try:
+        from scipy.stats import chi2_contingency, chi2 as chi2_dist
+        table = crosstab.drop([PLATFORM_COL, "num_trips missing"], strict=False).to_numpy()
+        if table.shape[0] < 2 or table.shape[1] < 2:
+            display(Markdown("Chi-square skipped: need at least 2 platforms and 2 trip groups."))
+        else:
+            chi2, p, dof, _ = chi2_contingency(table)
+            crit_95 = chi2_dist.ppf(0.95, df=dof)
+            crit_999 = chi2_dist.ppf(0.999, df=dof)
+            display(Markdown(
+                f"Chi-square (trip group by platform) = {chi2:.2f}, dof = {dof}, p = {p:.4g}  \n"
+                f"Critical values at dof = {dof}: 95% = {crit_95:.2f}, 99.9% = {crit_999:.2f}"
+            ))
+    except ImportError:
+        pass
+
+    # ---------- Trip rates (mean trips per person-day, with 95% CI) ----------
+    display(Markdown("#### Trip rates"))
+    CI_Z = 1.96  # 95% CI
+
+    def cluster_rate_ci(df, keys):
+        """Ratio sum(y)/sum(x) with a 95% CI that treats each person as one cluster.
+        df needs columns y (numerator), x (person-days, 1 per row) and JOIN_KEY (person id)."""
+        pp = df.group_by(keys + [JOIN_KEY]).agg(pl.col("y").sum(), pl.col("x").sum())
+        tot = pp.group_by(keys).agg(pl.col("y").sum().cast(pl.Float64).alias("Y"),
+                                    pl.col("x").sum().cast(pl.Float64).alias("X"))
+        pp = pp.join(tot, on=keys).with_columns(
+            (pl.col("y") - pl.col("Y") / pl.col("X") * pl.col("x")).alias("z"))
+        out = pp.group_by(keys).agg(pl.col("z").pow(2).sum().alias("zz"),
+                                    pl.len().alias("n_persons"),
+                                    pl.col("X").first().alias("person_days"),
+                                    pl.col("Y").first().alias("y_total"))
+        out = out.with_columns(
+            (pl.col("y_total") / pl.col("person_days")).alias("mean"),
+            pl.when(pl.col("n_persons") > 1)
+              .then(pl.col("n_persons") * pl.col("zz") / ((pl.col("n_persons") - 1) * pl.col("person_days") ** 2))
+              .otherwise(pl.lit(None, dtype=pl.Float64))
+              .sqrt().alias("se"))
+        return out.with_columns(
+            pl.col("person_days").cast(pl.Int64),
+            (CI_Z * pl.col("se")).alias("half_width"),
+            (pl.col("mean") - CI_Z * pl.col("se")).alias("ci_lower"),
+            (pl.col("mean") + CI_Z * pl.col("se")).alias("ci_upper")
+        ).drop(["zz", "se"])
+
+    trip_df = d.drop_nulls(TRIPS_COL).with_columns(pl.col(TRIPS_COL).alias("y"), pl.lit(1).alias("x"))
+    trip_rate_platform = transpose_platforms(
+        cluster_rate_ci(trip_df, [PLATFORM_COL])
+         .with_columns(pl.col("mean").round(2).alias("trips_per_person_day"),
+                       pl.col("ci_lower").round(2).alias("ci_95_lower"),
+                       pl.col("ci_upper").round(2).alias("ci_95_upper"))
+         .select([PLATFORM_COL, "person_days", "trips_per_person_day", "ci_95_lower", "ci_95_upper"])
+    )
+    trip_rate_age_platform = sort_platform_cols(
+        cluster_rate_ci(trip_df.filter(pl.col(AGE_COL) >= ADULT_MIN_CODE), [AGE_COL, "age_group", PLATFORM_COL])
+         .with_columns(pl.col("ci_lower").round(2), pl.col("ci_upper").round(2),
+                       pl.col("mean").round(2).alias("mean_r"))
+         .with_columns(pl.concat_str([pl.col("mean_r").cast(pl.Utf8), pl.lit(" ("),
+                                      pl.col("ci_lower").cast(pl.Utf8), pl.lit("–"),
+                                      pl.col("ci_upper").cast(pl.Utf8), pl.lit(")")]).alias("trips_with_95_ci"))
+         .pivot(on=PLATFORM_COL, index=[AGE_COL, "age_group"], values="trips_with_95_ci")
+         .sort(AGE_COL),
+        [AGE_COL, "age_group"]
+    )
+    show("Trip rate (trips per person-day, 95% CI) by diary_platform", trip_rate_platform)
+    show("Trip rate (trips per person-day, 95% CI) by age and diary_platform, ages 18 and over", trip_rate_age_platform)
+
+    # Chart: mean trips per person-day with 95% CI, by age group and platform (ages 18+)
+    import matplotlib.pyplot as plt
+    ci_chart = cluster_rate_ci(trip_df.filter(pl.col(AGE_COL) >= ADULT_MIN_CODE),
+                               [AGE_COL, "age_group", PLATFORM_COL]).sort(AGE_COL)
+    age_labels = ci_chart.select([AGE_COL, "age_group"]).unique().sort(AGE_COL)
+    fig, ax = plt.subplots(figsize=(7, 4.5))
+    platforms = sorted(ci_chart[PLATFORM_COL].unique().to_list(), reverse=True)
+    markers = ["o", "s", "^", "D", "v", "P"]
+    for i, plat in enumerate(platforms):
+        sub = ci_chart.filter(pl.col(PLATFORM_COL) == plat).sort(AGE_COL)
+        ax.errorbar(sub[AGE_COL].to_list(), sub["mean"].to_list(), yerr=sub["half_width"].to_list(),
+                    marker=markers[i % len(markers)], capsize=3, label=plat)
+    ax.set_xticks(age_labels[AGE_COL].to_list())
+    ax.set_xticklabels(age_labels["age_group"].to_list(), rotation=45, ha="right")
+    ax.set_xlabel("Age group")
+    ax.set_ylabel("Trips per person-day (mean, 95% CI)")
+    ax.set_title("Trip rate by age and diary_platform, ages 18 and over")
+    ax.legend(title="diary_platform")
+    ax.grid(axis="y", alpha=0.3)
+    fig.tight_layout()
+    fig.savefig(RUN_DIR / f"{tag}_trip_rate_by_age_and_platform_chart.png", dpi=150)
+    plt.show()
+
+    # ---------- Trip rates with broader age groups (18-54 and 75+ combined), 95% CI ----------
+    display(Markdown(
+        "This is the same analysis as the tables above, with age groups combined: ages 18 to 54 form one group "
+        "and ages 75 and older form one group. Larger groups have more person-days, so the confidence intervals are narrower."
+    ))
+    trip_rate_broad_age_platform = sort_platform_cols(
+        cluster_rate_ci(
+            trip_df.filter(pl.col(AGE_COL) >= ADULT_MIN_CODE)
+             .with_columns(pl.when(pl.col(AGE_COL) <= 7).then(pl.lit(ADULT_MIN_CODE))
+                             .when(pl.col(AGE_COL) >= 10).then(pl.lit(10))
+                             .otherwise(pl.col(AGE_COL)).alias("broad_order"),
+                           pl.when(pl.col(AGE_COL) <= 7).then(pl.lit("18 to 54"))
+                             .when(pl.col(AGE_COL) >= 10).then(pl.lit("75 and up"))
+                             .otherwise(pl.col("age_group")).alias("broad_group")),
+            ["broad_order", "broad_group", PLATFORM_COL])
+         .with_columns(pl.col("ci_lower").round(2), pl.col("ci_upper").round(2),
+                       pl.col("mean").round(2).alias("mean_r"))
+         .with_columns(pl.concat_str([pl.col("mean_r").cast(pl.Utf8), pl.lit(" ("),
+                                      pl.col("ci_lower").cast(pl.Utf8), pl.lit("–"),
+                                      pl.col("ci_upper").cast(pl.Utf8), pl.lit(")")]).alias("trips_with_95_ci"))
+         .pivot(on=PLATFORM_COL, index=["broad_order", "broad_group"], values="trips_with_95_ci")
+         .sort("broad_order"),
+        ["broad_order", "broad_group"]
+    )
+    show("Trip rate (trips per person-day, 95% CI) by broader age group and diary_platform, ages 18 and over",
+         trip_rate_broad_age_platform.drop("broad_order"))
+
+    # Chart: mean trips per person-day with 95% CI, by broader age group and platform (ages 18+)
+    broad_chart = cluster_rate_ci(
+        trip_df.filter(pl.col(AGE_COL) >= ADULT_MIN_CODE)
+         .with_columns(pl.when(pl.col(AGE_COL) <= 7).then(pl.lit(ADULT_MIN_CODE))
+                         .when(pl.col(AGE_COL) >= 10).then(pl.lit(10))
+                         .otherwise(pl.col(AGE_COL)).alias("broad_order"),
+                       pl.when(pl.col(AGE_COL) <= 7).then(pl.lit("18 to 54"))
+                         .when(pl.col(AGE_COL) >= 10).then(pl.lit("75 and up"))
+                         .otherwise(pl.col("age_group")).alias("broad_group")),
+        ["broad_order", "broad_group", PLATFORM_COL]).sort("broad_order")
+    broad_labels = broad_chart.select(["broad_order", "broad_group"]).unique().sort("broad_order")
+    broad_pos = {v: i for i, v in enumerate(broad_labels["broad_order"].to_list())}
+    fig, ax = plt.subplots(figsize=(7, 4.5))
+    platforms = sorted(broad_chart[PLATFORM_COL].unique().to_list(), reverse=True)
+    markers = ["o", "s", "^", "D", "v", "P"]
+    for i, plat in enumerate(platforms):
+        sub = broad_chart.filter(pl.col(PLATFORM_COL) == plat).sort("broad_order")
+        x = [broad_pos[v] for v in sub["broad_order"].to_list()]
+        ax.errorbar(x, sub["mean"].to_list(), yerr=sub["half_width"].to_list(),
+                    marker=markers[i % len(markers)], capsize=3, label=plat)
+    ax.set_xticks(list(broad_pos.values()))
+    ax.set_xticklabels(broad_labels["broad_group"].to_list(), rotation=45, ha="right")
+    ax.set_xlabel("Age group")
+    ax.set_ylabel("Trips per person-day (mean, 95% CI)")
+    ax.set_title("Trip rate by broader age group and diary_platform, ages 18 and over")
+    ax.legend(title="diary_platform")
+    ax.grid(axis="y", alpha=0.3)
+    fig.tight_layout()
+    fig.savefig(RUN_DIR / f"{tag}_trip_rate_by_broad_age_and_platform_chart.png", dpi=150)
+    plt.show()
+
+    # ---------- No-travel days by age and diary_platform ----------
+    display(Markdown("#### No-travel days by age"))
+
+    def cluster_pct_ci(df, keys):
+        """% of person-days with no travel, with a 95% CI that treats each person as one cluster."""
+        out = cluster_rate_ci(df, keys).with_columns(
+            (pl.col("mean") * 100).round(1).alias("pct_no_travel"),
+            (pl.col("ci_lower").clip(0, 1) * 100).round(1).alias("ci_lower"),
+            (pl.col("ci_upper").clip(0, 1) * 100).round(1).alias("ci_upper"),
+            pl.col("y_total").alias("no_travel_days"),
+        )
+        return out.with_columns(pl.concat_str([pl.col("pct_no_travel").cast(pl.Utf8), pl.lit(" ("),
+                                               pl.col("ci_lower").cast(pl.Utf8), pl.lit("–"),
+                                               pl.col("ci_upper").cast(pl.Utf8), pl.lit(")")]).alias("pct_with_95_ci"))
+
+    def plot_pct_ci(long_df, x_col, label_col, title, file_name):
+        import matplotlib.pyplot as plt
+        labels = long_df.select([x_col, label_col]).unique().sort(x_col)
+        pos = {v: i for i, v in enumerate(labels[x_col].to_list())}
+        fig, ax = plt.subplots(figsize=(7, 4.5))
+        platforms = sorted(long_df[PLATFORM_COL].unique().to_list(), reverse=True)
+        markers = ["o", "s", "^", "D", "v", "P"]
+        for i, plat in enumerate(platforms):
+            sub = long_df.filter(pl.col(PLATFORM_COL) == plat).sort(x_col)
+            y = sub["pct_no_travel"].to_list()
+            yerr = [[a - b for a, b in zip(y, sub["ci_lower"].to_list())],
+                    [b - a for a, b in zip(y, sub["ci_upper"].to_list())]]
+            ax.errorbar([pos[v] for v in sub[x_col].to_list()], y, yerr=yerr,
+                        marker=markers[i % len(markers)], capsize=3, label=plat)
+        ax.set_xticks(list(pos.values()))
+        ax.set_xticklabels(labels[label_col].to_list(), rotation=45, ha="right")
+        ax.set_xlabel("Age group")
+        ax.set_ylabel("% of person-days with no travel (95% CI)")
+        ax.set_title(title, wrap=True)
+        ax.legend(title="diary_platform")
+        ax.grid(axis="y", alpha=0.3)
+        fig.tight_layout()
+        fig.savefig(RUN_DIR / file_name, dpi=150)
+        plt.show()
+
+    no_travel_age_platform = cluster_pct_ci(
+        d.filter(pl.col(AGE_COL) >= ADULT_MIN_CODE)
+         .with_columns((pl.col("trip_group") == "num_trips = 0").cast(pl.Int64).alias("y"), pl.lit(1).alias("x")),
+        [AGE_COL, "age_group", PLATFORM_COL])
+
+    def age_platform_wide(values):
+        return sort_platform_cols(
+            no_travel_age_platform
+            .pivot(on=PLATFORM_COL, index=[AGE_COL, "age_group"], values=values)
+            .sort(AGE_COL),
+            [AGE_COL, "age_group"])
+
+    no_travel_counts = age_platform_wide("no_travel_days").fill_null(0)
+    no_travel_pct = age_platform_wide("pct_with_95_ci")
+    show("No-travel person-days by age and diary_platform (counts), ages 18 and over", no_travel_counts)
+    show("No-travel person-days by age and diary_platform (%, 95% CI), ages 18 and over", no_travel_pct)
+    plot_pct_ci(no_travel_age_platform, AGE_COL, "age_group",
+                "No-travel share of person-days by age and diary_platform, ages 18 and over",
+                f"{tag}_no_travel_pct_by_age_and_platform_chart.png")
+
+    # Broad age groups, matching the broader-group trip-rate table (18-54 and 75+ combined)
+    no_travel_band = cluster_pct_ci(
+        d.filter(pl.col(AGE_COL) >= ADULT_MIN_CODE)
+         .with_columns(pl.when(pl.col(AGE_COL) <= 7).then(pl.lit(ADULT_MIN_CODE))
+                         .when(pl.col(AGE_COL) >= 10).then(pl.lit(10))
+                         .otherwise(pl.col(AGE_COL)).alias("broad_order"),
+                       pl.when(pl.col(AGE_COL) <= 7).then(pl.lit("18 to 54"))
+                         .when(pl.col(AGE_COL) >= 10).then(pl.lit("75 and up"))
+                         .otherwise(pl.col("age_group")).alias("age_band"),
+                         (pl.col("trip_group") == "num_trips = 0").cast(pl.Int64).alias("y"),
+                         pl.lit(1).alias("x")),
+        ["broad_order", "age_band", PLATFORM_COL])
+
+    def band_wide(values):
+        return sort_platform_cols(
+            no_travel_band.pivot(on=PLATFORM_COL, index=["broad_order", "age_band"], values=values)
+                          .sort("broad_order"),
+            ["broad_order", "age_band"]).drop("broad_order")
+
+    no_travel_band_counts = band_wide("no_travel_days").fill_null(0)
+    no_travel_band_pct = band_wide("pct_with_95_ci")
+    show("No-travel person-days by broad age band and diary_platform (counts)", no_travel_band_counts)
+    show("No-travel person-days by broad age band and diary_platform (%, 95% CI)", no_travel_band_pct)
+    plot_pct_ci(no_travel_band, "broad_order", "age_band",
+                "No-travel share of person-days by broad age band and diary_platform, ages 18 and over",
+                f"{tag}_no_travel_pct_by_broad_age_and_platform_chart.png")
+    plot_pct_ci(no_travel_band.filter(pl.col(PLATFORM_COL).is_in(["smartphone", "browser"])),
+                "broad_order", "age_band",
+                "No-travel share of person-days by broad age band: smartphone vs browser, ages 18 and over",
+                f"{tag}_no_travel_pct_by_broad_age_smartphone_vs_browser_chart.png")
+
+    # ---------- Reasons for no travel, by platform ----------
+    display(Markdown("#### Reasons for no travel"))
+    no_travel_reasons = (
+        d.filter(pl.col("trip_group") == "num_trips = 0")
+         .select(["hh_id", JOIN_KEY, "day_num", PLATFORM_COL])
+         .join(day.select(["hh_id", JOIN_KEY, "day_num", *NO_TRAVEL_REASON_LABELS]),
+               on=["hh_id", JOIN_KEY, "day_num"], how="left", validate="m:1")
+    )
+    reason_totals = (
+        no_travel_reasons.group_by(PLATFORM_COL)
+         .agg(pl.len().alias("no_travel_days"),
+              *[(pl.col(c) == 1).sum().alias(c) for c in NO_TRAVEL_REASON_LABELS])
+         .sort(PLATFORM_COL, descending=True)
+    )
+    reason_long = (
+        reason_totals.unpivot(index=[PLATFORM_COL, "no_travel_days"], on=list(NO_TRAVEL_REASON_LABELS),
+                              variable_name="reason_var", value_name="n")
+         .with_columns(
+             pl.col("reason_var").replace_strict(NO_TRAVEL_REASON_LABELS).alias("reason"),
+             pl.col("reason_var").replace_strict({c: i for i, c in enumerate(NO_TRAVEL_REASON_LABELS)})
+               .alias("reason_order"),
+             (pl.col("n") / pl.col("no_travel_days") * 100).round(1).alias("pct"),
+         )
+    )
+
+    reason_index = ["reason_order", "reason"]
+
+    def reason_wide(values):
+        return (sort_platform_cols(
+                    reason_long.pivot(on=PLATFORM_COL, index=reason_index, values=values), reason_index)
+                .sort("reason_order")
+                .drop("reason_order"))
+
+    reason_counts = reason_wide("n").fill_null(0)
+    reason_pct = reason_wide("pct")
+    bases = ", ".join(f"{p}: {n:,}" for p, n in reason_totals.select([PLATFORM_COL, "no_travel_days"]).iter_rows())
+    display(Markdown(f"No-travel person-days by platform (base for percentages): {bases}"))
+    show("Reasons for no travel by diary_platform (counts; a person-day can give more than one reason)",
+         reason_counts)
+    show("Reasons for no travel by diary_platform (% of no-travel person-days)", reason_pct)
+
+    # ---------- Person-level view ----------
+    # Persons with no person-days in this universe do not appear here.
+    display(Markdown("#### Person-level view"))
+    person_level = (
+        d.group_by([JOIN_KEY, PLATFORM_COL])
+         .agg(
+             pl.len().alias("n_days"),
+             (pl.col("trip_group") == "num_trips = 0").sum().alias("n_zero_days"),
+         )
+         .with_columns(
+             (pl.col("n_zero_days") == pl.col("n_days")).alias("all_zero_days"),
+         )
+    )
+
+    # Single-day platforms (browser, call) are omitted: for them all-zero equals the no-travel rate above.
+    summary = (
+        person_level.group_by(PLATFORM_COL)
+            .agg(
+                pl.len().alias("persons"),
+                pl.col("n_days").max().alias("max_days"),
+                pl.col("all_zero_days").mean().mul(100).round(1).alias("pct_all_zero_days"),
+            )
+            .filter(pl.col("max_days") > 1)
+            .drop("max_days")
+            .sort(PLATFORM_COL, descending=True)
+    )
+    summary = transpose_platforms(summary)
+    show("Person-level summary by diary_platform", summary)
+
+    # ---------- Distribution of person-days per person, by platform ----------
+    days_dist_wide = sort_platform_cols(
+        person_level.group_by([PLATFORM_COL, "n_days"])
+            .agg(pl.len().alias("persons"))
+            .pivot(on=PLATFORM_COL, index="n_days", values="persons")
+            .fill_null(0)
+            .sort("n_days"),
+        ["n_days"]
+    )
+    show("Person-days per person, by diary_platform", days_dist_wide)
+
+    # Save (nothing is written to BASE)
+    status_counts.write_csv(RUN_DIR / f"{tag}_person_days_by_completeness_status_and_platform.csv")
+    status_pct.write_csv(RUN_DIR / f"{tag}_person_days_by_completeness_status_and_platform_pct.csv")
+    summary.write_csv(RUN_DIR / f"{tag}_person_level_summary_by_platform.csv")
+    days_dist_wide.write_csv(RUN_DIR / f"{tag}_person_days_distribution_wide.csv")
+    no_travel_counts.write_csv(RUN_DIR / f"{tag}_no_travel_by_age_and_platform_counts.csv")
+    no_travel_pct.write_csv(RUN_DIR / f"{tag}_no_travel_by_age_and_platform_pct.csv")
+    no_travel_band_counts.write_csv(RUN_DIR / f"{tag}_no_travel_by_age_band_and_platform_counts.csv")
+    no_travel_band_pct.write_csv(RUN_DIR / f"{tag}_no_travel_by_age_band_and_platform_pct.csv")
+    reason_counts.write_csv(RUN_DIR / f"{tag}_no_travel_reasons_by_platform_counts.csv")
+    reason_pct.write_csv(RUN_DIR / f"{tag}_no_travel_reasons_by_platform_pct.csv")
+    older.write_csv(RUN_DIR / f"{tag}_age_65_plus_by_platform_counts.csv")
+    older_pct.write_csv(RUN_DIR / f"{tag}_age_65_plus_by_platform_pct.csv")
+    trip_rate_platform.write_csv(RUN_DIR / f"{tag}_trip_rate_by_platform.csv")
+    trip_rate_age_platform.write_csv(RUN_DIR / f"{tag}_trip_rate_by_age_and_platform.csv")
+    trip_rate_broad_age_platform.write_csv(RUN_DIR / f"{tag}_trip_rate_by_broad_age_and_platform.csv")
+    person_days_age_counts.write_csv(RUN_DIR / f"{tag}_person_days_by_age_and_platform_counts.csv")
+    person_days_age_pct.write_csv(RUN_DIR / f"{tag}_person_days_by_age_and_platform_pct.csv")
+    respondents_age_counts.write_csv(RUN_DIR / f"{tag}_respondents_by_age_and_platform_counts.csv")
+    respondents_age_pct.write_csv(RUN_DIR / f"{tag}_respondents_by_age_and_platform_pct.csv")
+```
+
+### Universe 1: all person-days
+
+```{python}
+#| label: universe1
+analyze_universe(person_day, "universe1")
+```
+
+### Universe 2: complete person-days only
+
+```{python}
+#| label: universe2
+analyze_universe(person_day.filter(pl.col("personDay_complete")), "universe2")
+```
+
+## Household-day completeness by platform
+
+The household diary platform is the platform shared by all members of the household
+(from the person-day file), or `mixed` if members used different platforms.
+
+```{python}
+#| label: household-platform
+hh_platform = (
+    person_day.group_by("hh_id")
+       .agg(
+           pl.col(PLATFORM_COL).n_unique().alias("n_platforms"),
+           pl.col(PLATFORM_COL).first().alias("first_platform"),
+       )
+       .with_columns(
+           pl.when(pl.col("n_platforms") == 1).then(pl.col("first_platform"))
+             .otherwise(pl.lit("mixed"))
+             .alias("hh_diary_platform")
+       )
+       .select(["hh_id", "hh_diary_platform"])
+)
+
+household_day = (
+    household_day.join(hh_platform, on="hh_id", how="left")
+                 .with_columns(pl.col("hh_diary_platform").fill_null("unknown"))
+)
+
+household_day_by_platform = (
+    household_day
+    .with_columns(
+        pl.when(pl.col("householdDay_complete")).then(pl.lit("Complete household-day"))
+          .otherwise(pl.lit("Incomplete household-day"))
+          .alias("household_day_status")
+    )
+    .group_by(["hh_diary_platform", "household_day_status"])
+    .agg(pl.len().alias("household_day_records"))
+    .with_columns(
+        (pl.col("household_day_records")
+         / pl.col("household_day_records").sum().over("hh_diary_platform") * 100)
+        .round(1).alias("pct_of_household_days_by_platform")
+    )
+    .sort(["hh_diary_platform", "household_day_status"], descending=[True, False])
+)
+household_status_counts = platform_columns(household_day_by_platform, ["household_day_status"],
+                                           "household_day_records", "hh_diary_platform")
+household_status_pct = platform_columns(household_day_by_platform, ["household_day_status"],
+                                        "pct_of_household_days_by_platform", "hh_diary_platform")
+show("Household-days by completeness status and household diary platform (counts)", household_status_counts)
+show("Household-days by completeness status and household diary platform (% of platform)",
+     household_status_pct)
+```
+
+### Complete household-days per household
+
+Counted under two definitions:
+
+- `among_participating`: complete among participating members (`householdDay_complete`).
+- `all_participated`: all members participated and complete (`householdDay_complete_all_members`).
+
+`among_participating` is needed because of roommategate in BATS 2023: in households with both
+family members and unrelated household members, travel data were collected only from family members.
+Only households with at least one household-day in the person-day file are included.
+
+```{python}
+#| label: household-complete-days
+complete_hh_days_per_hh = (
+    household_day.group_by(["hh_id", "hh_diary_platform"])
+                 .agg(
+                     pl.col("householdDay_complete").sum().alias("n_among_participating"),
+                     pl.col("householdDay_complete_all_members").sum().alias("n_all_participated"),
+                 )
+)
+
+
+def hh_days_dist(count_col, label):
+    return (
+        complete_hh_days_per_hh.group_by(["hh_diary_platform", count_col])
+            .agg(pl.len().alias(f"households_{label}"))
+            .with_columns(
+                (pl.col(f"households_{label}")
+                 / pl.col(f"households_{label}").sum().over("hh_diary_platform") * 100)
+                .round(1).alias(f"pct_{label}")
+            )
+            .rename({count_col: "n_complete_household_days"})
+    )
+
+
+complete_hh_days_dist = (
+    hh_days_dist("n_among_participating", "among_participating")
+    .join(hh_days_dist("n_all_participated", "all_participated"),
+          on=["hh_diary_platform", "n_complete_household_days"], how="full", coalesce=True)
+    .fill_null(0)
+    .sort(["hh_diary_platform", "n_complete_household_days"], descending=[True, False])
+)
+complete_hh_tables = {
+    "households_among_participating": platform_columns(
+        complete_hh_days_dist, ["n_complete_household_days"], "households_among_participating", "hh_diary_platform"),
+    "pct_among_participating": platform_columns(
+        complete_hh_days_dist, ["n_complete_household_days"], "pct_among_participating", "hh_diary_platform"),
+    "households_all_participated": platform_columns(
+        complete_hh_days_dist, ["n_complete_household_days"], "households_all_participated", "hh_diary_platform"),
+    "pct_all_participated": platform_columns(
+        complete_hh_days_dist, ["n_complete_household_days"], "pct_all_participated", "hh_diary_platform"),
+}
+for name, table in complete_hh_tables.items():
+    show(f"Complete household-days per household, by household diary platform ({name})", table)
+```
+
+### Household members missing from the day file
+
+`members_missing_from_day_file` means someone in `person.csv` for the household has no row in
+`day.csv` for that day. `householdDay_complete_all_members` is `householdDay_complete` and nobody missing.
+
+```{python}
+#| label: household-members-missing
+members_missing_by_platform = (
+    household_day.group_by("hh_diary_platform")
+       .agg(
+           pl.len().alias("household_days"),
+           pl.col("householdDay_complete").sum().alias("complete_household_days"),
+           pl.col("members_missing_from_day_file").sum().alias("members_missing_household_days"),
+           pl.col("householdDay_complete_all_members").sum().alias("complete_all_members_household_days"),
+       )
+       .with_columns(
+           (pl.col("complete_household_days") / pl.col("household_days") * 100)
+           .round(1).alias("pct_complete"),
+           (pl.col("members_missing_household_days") / pl.col("household_days") * 100)
+           .round(1).alias("pct_members_missing"),
+           (pl.col("complete_all_members_household_days") / pl.col("household_days") * 100)
+           .round(1).alias("pct_complete_all_members"),
+       )
+       .sort("hh_diary_platform", descending=True)
+)
+members_missing_by_platform = transpose_platforms(members_missing_by_platform, "hh_diary_platform")
+show("Household-days with members missing from the day file, by household diary platform",
+     members_missing_by_platform)
+
+# Four-way split (members missing x responses complete)
+members_status_by_platform = (
+    household_day.group_by(["hh_diary_platform", "household_day_members_completeness"])
+       .agg(pl.len().alias("household_day_records"))
+       .with_columns(
+           (pl.col("household_day_records")
+            / pl.col("household_day_records").sum().over("hh_diary_platform") * 100)
+           .round(1).alias("pct_of_household_days_by_platform")
+       )
+)
+members_status_counts = platform_columns(members_status_by_platform, ["household_day_members_completeness"],
+                                         "household_day_records", "hh_diary_platform")
+members_status_pct = platform_columns(members_status_by_platform, ["household_day_members_completeness"],
+                                      "pct_of_household_days_by_platform", "hh_diary_platform")
+show("Household-days by members missing and completeness, by household diary platform (counts)",
+     members_status_counts)
+show("Household-days by members missing and completeness, by household diary platform (% of platform)",
+     members_status_pct)
+
+for name, table in complete_hh_tables.items():
+    table.write_csv(RUN_DIR / f"complete_household_days_{name}_by_platform.csv")
+household_status_counts.write_csv(RUN_DIR / "household_days_by_completeness_status_and_platform_counts.csv")
+household_status_pct.write_csv(RUN_DIR / "household_days_by_completeness_status_and_platform_pct.csv")
+members_status_counts.write_csv(RUN_DIR / "household_days_members_status_by_platform_counts.csv")
+members_status_pct.write_csv(RUN_DIR / "household_days_members_status_by_platform_pct.csv")
+members_missing_by_platform.write_csv(RUN_DIR / "household_days_members_missing_by_platform.csv")
+display(Markdown(f"Saved outputs to: `{RUN_DIR}`"))
+```
